@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Taro Replay Capture Viewer</title>
+    <style nonce="{{NONCE}}">
+      :root {
+        color-scheme: light dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      body {
+        margin: 0;
+        background: #111217;
+        color: #eeedf2;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        border: 1px solid #696578;
+        border-radius: 0.45rem;
+        padding: 0.55rem 0.85rem;
+        background: #2b2934;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      button:hover,
+      button:focus-visible {
+        border-color: #a89cc8;
+        background: #373341;
+      }
+
+      button.primary {
+        border-color: #7862a8;
+        background: #5f4596;
+      }
+
+      button.danger {
+        border-color: #8a4b56;
+        background: #49262d;
+      }
+
+      header {
+        border-bottom: 1px solid #302e38;
+        padding: 1.5rem clamp(1rem, 4vw, 3rem);
+        background: #18191f;
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: clamp(1.35rem, 3vw, 2rem);
+      }
+
+      header p {
+        max-width: 70rem;
+        margin: 0;
+        color: #bbb7c6;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(18rem, 25rem) minmax(0, 1fr);
+        gap: 1rem;
+        padding: 1rem clamp(1rem, 4vw, 3rem) 3rem;
+      }
+
+      section {
+        min-width: 0;
+        border: 1px solid #302e38;
+        border-radius: 0.75rem;
+        background: #18191f;
+        padding: 1rem;
+      }
+
+      h2,
+      h3 {
+        margin-top: 0;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.35rem;
+        color: #d8d4df;
+        font-weight: 600;
+      }
+
+      input[type='file'],
+      textarea {
+        box-sizing: border-box;
+        width: 100%;
+        border: 1px solid #4a4753;
+        border-radius: 0.5rem;
+        background: #101116;
+        color: inherit;
+      }
+
+      input[type='file'] {
+        padding: 0.55rem;
+      }
+
+      textarea {
+        min-height: 10rem;
+        padding: 0.75rem;
+        resize: vertical;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+      }
+
+      .field {
+        margin-bottom: 1rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .notice,
+      .status {
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+      }
+
+      .notice {
+        margin: 1rem 0 0;
+        border: 1px solid #675625;
+        background: #2b2618;
+        color: #e3d39d;
+      }
+
+      .status {
+        min-height: 1.5rem;
+        margin: 0.8rem 0;
+        background: #24232b;
+        color: #c7c3cf;
+      }
+
+      .status.error {
+        background: #3f2027;
+        color: #f4bbc5;
+      }
+
+      .status.success {
+        background: #1d382d;
+        color: #afe0c8;
+      }
+
+      .capture-list {
+        display: grid;
+        gap: 0.5rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .capture-list button {
+        width: 100%;
+        text-align: left;
+      }
+
+      .capture-list small {
+        display: block;
+        margin-top: 0.15rem;
+        color: #b5b0c0;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+      }
+
+      .summary div {
+        border: 1px solid #34323b;
+        border-radius: 0.45rem;
+        padding: 0.65rem;
+        background: #13141a;
+      }
+
+      .summary dt {
+        color: #aaa5b2;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+      }
+
+      .summary dd {
+        overflow-wrap: anywhere;
+        margin: 0.2rem 0 0;
+      }
+
+      pre {
+        max-height: 34rem;
+        overflow: auto;
+        border: 1px solid #34323b;
+        border-radius: 0.45rem;
+        padding: 0.8rem;
+        background: #0d0e12;
+        color: #d9d5df;
+        font-size: 0.78rem;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .muted {
+        color: #aaa5b2;
+      }
+
+      @media (max-width: 820px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Experimental Taro Replay Capture Viewer</h1>
+      <p>
+        本地检查 recorder capture 的摘要、事件和原始 JSON。数据只保存在当前 Node 进程内；这不是生产
+        ingestion 服务，也不是完整的可视化回放器。
+      </p>
+    </header>
+    <main>
+      <div>
+        <section>
+          <h2>上传 capture</h2>
+          <form id="upload-form">
+            <div class="field">
+              <label id="upload-limit-label" for="capture-file"
+                >JSON 文件（读取服务器上限中…）</label
+              >
+              <input id="capture-file" type="file" accept="application/json,.json" />
+            </div>
+            <div class="field">
+              <label for="capture-json">或粘贴 JSON</label>
+              <textarea
+                id="capture-json"
+                spellcheck="false"
+                placeholder='{"marker":"...","replayId":"...","events":[]}'
+              ></textarea>
+            </div>
+            <div class="actions">
+              <button class="primary" type="submit">上传到本地内存</button>
+              <button id="refresh-button" type="button">刷新列表</button>
+              <button id="clear-button" class="danger" type="button">清空内存</button>
+            </div>
+          </form>
+          <p id="status" class="status" role="status" aria-live="polite">准备就绪。</p>
+          <p class="notice">
+            仅用于脱敏后的开发数据。服务器只监听 127.0.0.1，请勿通过代理暴露到局域网或公网。
+          </p>
+        </section>
+        <section>
+          <h2>已上传 capture</h2>
+          <ul id="capture-list" class="capture-list"></ul>
+          <p id="empty-list" class="muted">尚无 capture。</p>
+        </section>
+      </div>
+      <section>
+        <h2>Capture 详情</h2>
+        <p id="empty-detail" class="muted">从左侧选择一条 capture。</p>
+        <div id="capture-detail" hidden>
+          <dl id="summary" class="summary"></dl>
+          <h3>事件（JSON）</h3>
+          <pre id="events-json"></pre>
+          <h3>完整 capture（JSON）</h3>
+          <pre id="raw-json"></pre>
+        </div>
+      </section>
+    </main>
+    <script nonce="{{NONCE}}">
+      'use strict';
+
+      let maxUploadBytes = Number.POSITIVE_INFINITY;
+      const fileInput = document.querySelector('#capture-file');
+      const uploadLimitLabel = document.querySelector('#upload-limit-label');
+      const jsonInput = document.querySelector('#capture-json');
+      const statusElement = document.querySelector('#status');
+      const listElement = document.querySelector('#capture-list');
+      const emptyListElement = document.querySelector('#empty-list');
+      const detailElement = document.querySelector('#capture-detail');
+      const emptyDetailElement = document.querySelector('#empty-detail');
+      const summaryElement = document.querySelector('#summary');
+      const eventsElement = document.querySelector('#events-json');
+      const rawElement = document.querySelector('#raw-json');
+
+      function setStatus(message, kind) {
+        statusElement.textContent = message;
+        statusElement.className = `status${kind ? ` ${kind}` : ''}`;
+      }
+
+      async function request(path, options) {
+        const response = await fetch(path, options);
+        const value = await response.json();
+        if (!response.ok) {
+          throw new Error(value.error || `Request failed (${response.status}).`);
+        }
+        return value;
+      }
+
+      function readableBytes(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+        return `${(bytes / 1024 / 1024).toFixed(2)} MiB`;
+      }
+
+      function addSummary(label, value) {
+        const container = document.createElement('div');
+        const term = document.createElement('dt');
+        const description = document.createElement('dd');
+        term.textContent = label;
+        description.textContent = value === null || value === undefined ? '—' : String(value);
+        container.append(term, description);
+        summaryElement.append(container);
+      }
+
+      async function showCapture(id) {
+        setStatus('正在读取 capture…');
+        try {
+          const { capture, summary } = await request(`/api/captures/${encodeURIComponent(id)}`);
+          summaryElement.replaceChildren();
+          addSummary('Replay ID', summary.replayId);
+          addSummary('Marker', summary.marker);
+          addSummary('Events', summary.eventCount);
+          addSummary('Size', readableBytes(summary.byteLength));
+          addSummary('Stop reason', summary.stopReason);
+          addSummary('Started', summary.startedAt);
+          addSummary('Ended', summary.endedAt);
+          addSummary('Received', summary.receivedAt);
+          eventsElement.textContent = JSON.stringify(capture.events, null, 2);
+          rawElement.textContent = JSON.stringify(capture, null, 2);
+          emptyDetailElement.hidden = true;
+          detailElement.hidden = false;
+          setStatus('Capture 已加载。', 'success');
+        } catch (error) {
+          setStatus(error.message, 'error');
+        }
+      }
+
+      function renderList(captures) {
+        listElement.replaceChildren();
+        emptyListElement.hidden = captures.length > 0;
+
+        for (const capture of captures) {
+          const item = document.createElement('li');
+          const button = document.createElement('button');
+          const title = document.createElement('span');
+          const metadata = document.createElement('small');
+          button.type = 'button';
+          title.textContent = capture.replayId;
+          metadata.textContent = `${capture.eventCount} events · ${readableBytes(capture.byteLength)} · ${capture.receivedAt}`;
+          button.append(title, metadata);
+          button.addEventListener('click', () => void showCapture(capture.id));
+          item.append(button);
+          listElement.append(item);
+        }
+      }
+
+      async function refreshList() {
+        try {
+          const value = await request('/api/captures');
+          if (Number.isFinite(value.limits?.maxUploadBytes)) {
+            maxUploadBytes = value.limits.maxUploadBytes;
+            uploadLimitLabel.textContent = `JSON 文件（最大 ${readableBytes(maxUploadBytes)}）`;
+          }
+          renderList(value.captures);
+          return value.captures;
+        } catch (error) {
+          setStatus(error.message, 'error');
+          return [];
+        }
+      }
+
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        if (file.size > maxUploadBytes) {
+          fileInput.value = '';
+          setStatus(`文件超过 ${readableBytes(maxUploadBytes)} 上限。`, 'error');
+          return;
+        }
+
+        jsonInput.value = await file.text();
+        setStatus(`已读取 ${file.name}（${readableBytes(file.size)}）。`);
+      });
+
+      document.querySelector('#upload-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const text = jsonInput.value.trim();
+        if (!text) {
+          setStatus('请选择文件或粘贴 capture JSON。', 'error');
+          return;
+        }
+        if (new TextEncoder().encode(text).byteLength > maxUploadBytes) {
+          setStatus(`JSON 超过 ${readableBytes(maxUploadBytes)} 上限。`, 'error');
+          return;
+        }
+
+        let capture;
+        try {
+          capture = JSON.parse(text);
+        } catch {
+          setStatus('JSON 格式无效。', 'error');
+          return;
+        }
+
+        setStatus('正在上传到本地内存…');
+        try {
+          const value = await request('/api/captures', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(capture),
+          });
+          jsonInput.value = '';
+          fileInput.value = '';
+          await refreshList();
+          await showCapture(value.capture.id);
+          setStatus('Capture 已保存到本地内存。', 'success');
+        } catch (error) {
+          setStatus(error.message, 'error');
+        }
+      });
+
+      document.querySelector('#refresh-button').addEventListener('click', async () => {
+        await refreshList();
+        setStatus('列表已刷新。', 'success');
+      });
+
+      document.querySelector('#clear-button').addEventListener('click', async () => {
+        try {
+          await request('/api/captures', { method: 'DELETE' });
+          detailElement.hidden = true;
+          emptyDetailElement.hidden = false;
+          await refreshList();
+          setStatus('内存中的 capture 已清空。', 'success');
+        } catch (error) {
+          setStatus(error.message, 'error');
+        }
+      });
+
+      void refreshList();
+    </script>
+  </body>
+</html>

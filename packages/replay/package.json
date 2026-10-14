@@ -1,0 +1,32 @@
+{
+  "name": "@sentry-taro/internal-replay",
+  "version": "0.1.0-beta.1",
+  "private": true,
+  "description": "Internal Taro Replay implementation for @xumoses/sentry-taro",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "build": "vp build && node scripts/build-worker.cjs && node scripts/verify-worker.cjs",
+    "build:types": "tsc -p tsconfig.build.json",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
+    "test": "vp test run",
+    "verify:worker": "node scripts/verify-worker.cjs",
+    "verify:assets": "node scripts/verify-assets.cjs"
+  },
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "devDependencies": {
+    "@sentry/core": "10.66.0",
+    "@tarojs/runtime": "4.2.0",
+    "@tarojs/taro": "4.2.0",
+    "@types/node": "^20.19.11",
+    "@types/react": "^18.3.12",
+    "fflate": "0.8.2",
+    "react": "18.3.1",
+    "typescript": "^7.0.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.6",
+    "vite-plus": "0.2.6"
+  }
+}

@@ -1,0 +1,610 @@
+import {
+  addBreadcrumb,
+  getClient,
+  SPAN_STATUS_OK,
+  SPAN_STATUS_ERROR,
+  getTraceData,
+  setHttpStatus,
+  startInactiveSpan,
+  withActiveSpan,
+} from '@sentry/core';
+import type { Breadcrumb, Integration, Span } from '@sentry/core';
+import { fill } from '../helpers';
+import { sdk } from '../crossPlatform';
+import {
+  createNetworkHeaderPolicy,
+  readNetworkDataField,
+  sanitizeNetworkDetailUrl,
+  type NetworkDetailOptions,
+  type NetworkHeaderPolicy,
+  type ReplayNetworkDetails,
+} from '../network-details';
+
+/**
+ * Network Breadcrumbs Integration.
+ * Monkey patches miniapp network API (e.g. wx.request, my.httpRequest)
+ * to record network breadcrumbs, including request and response body if configured.
+ * Supports distributed tracing via sentry-trace/baggage header injection.
+ */
+export class NetworkBreadcrumbs implements Integration {
+  /**
+   * @inheritDoc
+   */
+  public static id: string = 'NetworkBreadcrumbs';
+
+  /**
+   * @inheritDoc
+   */
+  public name: string = NetworkBreadcrumbs.id;
+
+  private readonly _networkHeaderPolicy: NetworkHeaderPolicy;
+  private readonly _traceNetworkBody: boolean;
+  private readonly _sensitiveKeys: string[];
+  private readonly _denyUrls: RegExp[];
+  private readonly _enableTracePropagation: boolean;
+  private readonly _tracePropagationTargets: Array<string | RegExp> | undefined;
+  private _originalRequest: Function | null = null;
+  private _originalHttpRequest: Function | null = null;
+
+  public constructor(
+    options: NetworkDetailOptions & {
+      traceNetworkBody?: boolean | undefined;
+      /** 需要脱敏的字段名列表（不区分大小写匹配） */
+      sensitiveKeys?: string[];
+      /** 不记录请求体的 URL 模式 */
+      denyBodyUrls?: Array<string | RegExp>;
+      /** 是否启用分布式追踪头注入（默认 true） */
+      enableTracePropagation?: boolean;
+      /** 追踪目标 URL 白名单，匹配的请求才注入追踪头 */
+      tracePropagationTargets?: Array<string | RegExp>;
+    } = {},
+  ) {
+    this._networkHeaderPolicy = createNetworkHeaderPolicy(options);
+    this._traceNetworkBody = !!options.traceNetworkBody;
+    this._sensitiveKeys = (
+      options.sensitiveKeys || [
+        'password',
+        'passwd',
+        'secret',
+        'token',
+        'access_token',
+        'refresh_token',
+        'authorization',
+        'cookie',
+        'session',
+        'creditcard',
+        'credit_card',
+        'card_number',
+        'cvv',
+        'ssn',
+        'id_card',
+      ]
+    ).map((k) => k.toLowerCase());
+    this._denyUrls = (options.denyBodyUrls || []).map((pattern) =>
+      typeof pattern === 'string' ? new RegExp(pattern) : pattern,
+    );
+    this._enableTracePropagation = options.enableTracePropagation !== false;
+    this._tracePropagationTargets = options.tracePropagationTargets;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public setupOnce(): void {
+    const miniappSdk = sdk();
+
+    // Intercept standard request (WeChat, ByteDance, Swan, etc.)
+    if (miniappSdk && typeof miniappSdk.request === 'function') {
+      this._originalRequest = miniappSdk.request;
+      fill(miniappSdk, 'request', this._createRequestWrapper.bind(this));
+    }
+
+    // Intercept Alipay request
+    if (miniappSdk && typeof miniappSdk.httpRequest === 'function') {
+      this._originalHttpRequest = miniappSdk.httpRequest;
+      fill(miniappSdk, 'httpRequest', this._createRequestWrapper.bind(this));
+    }
+  }
+
+  /**
+   * 清理集成，恢复原始网络请求方法
+   */
+  public cleanup(): void {
+    const miniappSdk = sdk();
+    if (miniappSdk) {
+      if (this._originalRequest && typeof miniappSdk.request === 'function') {
+        miniappSdk.request = this._originalRequest;
+      }
+      if (this._originalHttpRequest && typeof miniappSdk.httpRequest === 'function') {
+        miniappSdk.httpRequest = this._originalHttpRequest;
+      }
+    }
+    this._originalRequest = null;
+    this._originalHttpRequest = null;
+  }
+
+  /**
+   * Wraps the miniapp request API to capture breadcrumbs
+   */
+  private _createRequestWrapper(originalRequest: Function): Function {
+    const headerPolicy = this._networkHeaderPolicy;
+    const traceNetworkBody = this._traceNetworkBody;
+    const sanitizeBody = this._sanitizeBody.bind(this);
+    const shouldDenyBodyUrl = this._shouldDenyBodyUrl.bind(this);
+    const enableTracePropagation = this._enableTracePropagation;
+    const shouldPropagateTrace = this._shouldPropagateTrace.bind(this);
+
+    return function (this: any, options: any): any {
+      if (!options || typeof options !== 'object') {
+        return originalRequest.call(this, options);
+      }
+
+      // Do not mutate the caller's request options or callbacks.
+      const callerOptions = options;
+      try {
+        options = cloneRequestOptions(options);
+      } catch (_error) {
+        return originalRequest.call(this, callerOptions);
+      }
+      const url = normalizeUrl(options.url);
+
+      // Get the configured DSN/Transport URL from the current client
+      const client = getClient();
+      let dsnUrl = '';
+      if (client) {
+        const dsn = client.getOptions().dsn;
+        if (dsn) {
+          try {
+            const dsnMatch = dsn.match(/^(?:https?:\/\/)?(?:[^@\n]+@)?([^:/\n]+)/i);
+            if (dsnMatch && dsnMatch[1]) {
+              dsnUrl = dsnMatch[1];
+            }
+          } catch (_e) {
+            // fallback
+          }
+        }
+      }
+
+      // Ignore Sentry's own requests to prevent infinite loops
+      const hostMatch = sanitizeNetworkDetailUrl(url).match(/^https?:\/\/([^:/\n]+)/i);
+      const requestHost = hostMatch && hostMatch[1] ? hostMatch[1] : '';
+      const tunnel = client?.getOptions().tunnel;
+      const isSentryRequest =
+        (typeof tunnel === 'string' && url.replace(/\/$/, '') === tunnel.replace(/\/$/, '')) ||
+        (dsnUrl && requestHost === dsnUrl) ||
+        requestHost === 'sentry.io' ||
+        requestHost.endsWith('.sentry.io');
+      if (isSentryRequest) {
+        return originalRequest.call(this, options);
+      }
+
+      // 注入分布式追踪头
+      const method = normalizeMethod(options.method);
+      const requestData = options.data;
+      const startTime = Date.now();
+      const requestSpan = startRequestSpan(method, url);
+      let requestSpanFinished = false;
+      const finishSpanOnce = (finish: RequestSpanFinishOptions): void => {
+        if (requestSpanFinished) return;
+        requestSpanFinished = true;
+        finishRequestSpan(requestSpan, finish);
+      };
+
+      if (enableTracePropagation && shouldPropagateTrace(url)) {
+        injectTraceHeaders(options, requestSpan);
+      }
+
+      const headersAllowed = headerPolicy.isAllowed(url);
+      const requestHeaders = headersAllowed ? collectHeaders(options, headerPolicy, 'request') : {};
+      const recordNetworkBreadcrumb = (breadcrumb: Breadcrumb, response: unknown): void => {
+        if (!headersAllowed) {
+          addBreadcrumb(breadcrumb);
+          return;
+        }
+        const replayNetworkDetails: ReplayNetworkDetails = {
+          url: sanitizeNetworkDetailUrl(url),
+          request_headers: requestHeaders,
+          response_headers: collectHeaders(response, headerPolicy, 'response'),
+        };
+        addBreadcrumb(breadcrumb, { replayNetworkDetails });
+      };
+
+      const breadcrumbData: Record<string, any> = {
+        url: sanitizeSpanNameUrl(url),
+        method,
+      };
+
+      if (traceNetworkBody && requestData && !shouldDenyBodyUrl(url)) {
+        try {
+          const body = typeof requestData === 'string' ? requestData : JSON.stringify(requestData);
+          breadcrumbData['request_body'] = sanitizeBody(body);
+          breadcrumbData['request_size'] = body.length;
+        } catch (_e) {
+          breadcrumbData['request_body'] = '[Cannot serialize request body]';
+        }
+      }
+
+      const originalSuccess = options.success;
+      const originalFail = options.fail;
+      const originalComplete = options.complete;
+
+      // Wrap success callback
+      options.success = function (this: any, ...args: any[]) {
+        const res = args[0] || {};
+        const statusCode = getResponseStatusCode(res);
+        const duration = Date.now() - startTime;
+        breadcrumbData['status_code'] = statusCode;
+        breadcrumbData['duration'] = duration;
+        finishSpanOnce({
+          statusCode,
+          status: isErrorStatusCode(statusCode) ? 'error' : 'ok',
+        });
+
+        if (traceNetworkBody && res.data && !shouldDenyBodyUrl(url)) {
+          try {
+            const body = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+            breadcrumbData['response_body'] = sanitizeBody(body);
+            breadcrumbData['response_size'] = body.length;
+          } catch (_e) {
+            breadcrumbData['response_body'] = '[Cannot serialize response body]';
+          }
+        }
+
+        // 慢请求标记为 warning
+        const level = isErrorStatusCode(statusCode)
+          ? 'warning'
+          : duration > 3000
+            ? 'warning'
+            : 'info';
+
+        recordNetworkBreadcrumb(
+          {
+            type: 'http',
+            category: 'xhr',
+            data: breadcrumbData,
+            level,
+          },
+          res,
+        );
+
+        if (typeof originalSuccess === 'function') {
+          return withActiveSpan(requestSpan, () => originalSuccess.apply(this, args));
+        }
+      };
+
+      // Wrap fail callback
+      options.fail = function (this: any, ...args: any[]) {
+        const err = args[0] || {};
+        const duration = Date.now() - startTime;
+        const errorMessage = err.errMsg || err.errorMessage || 'Network request failed';
+        breadcrumbData['error'] = errorMessage;
+        breadcrumbData['duration'] = duration;
+        finishSpanOnce({
+          status: 'error',
+          errorMessage,
+        });
+
+        recordNetworkBreadcrumb(
+          {
+            type: 'http',
+            category: 'xhr',
+            data: breadcrumbData,
+            level: 'error',
+          },
+          err,
+        );
+
+        if (typeof originalFail === 'function') {
+          return withActiveSpan(requestSpan, () => originalFail.apply(this, args));
+        }
+      };
+
+      options.complete = function (this: any, ...args: any[]) {
+        const res = args[0] || {};
+        const statusCode = getResponseStatusCode(res);
+        finishSpanOnce({
+          statusCode,
+          status: isErrorStatusCode(statusCode) ? 'error' : 'ok',
+        });
+
+        if (typeof originalComplete === 'function') {
+          return withActiveSpan(requestSpan, () => originalComplete.apply(this, args));
+        }
+      };
+
+      try {
+        return originalRequest.call(this, options);
+      } catch (error) {
+        finishSpanOnce({
+          status: 'error',
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    };
+  }
+
+  /**
+   * 判断是否应该对该 URL 注入追踪头
+   */
+  private _shouldPropagateTrace(url: string): boolean {
+    if (this._tracePropagationTargets === undefined) {
+      return true; // Preserve the legacy unspecified default; explicit [] disables propagation.
+    }
+    return this._tracePropagationTargets.some((target) => {
+      if (typeof target === 'string') {
+        return url.includes(target);
+      }
+      target.lastIndex = 0;
+      const matches = target.test(url);
+      target.lastIndex = 0;
+      return matches;
+    });
+  }
+
+  /**
+   * 检查 URL 是否在拒绝记录请求体的列表中
+   */
+  private _shouldDenyBodyUrl(url: string): boolean {
+    return this._denyUrls.some((pattern) => {
+      pattern.lastIndex = 0;
+      const matches = pattern.test(url);
+      pattern.lastIndex = 0;
+      return matches;
+    });
+  }
+
+  /**
+   * 对请求/响应体进行敏感字段脱敏
+   */
+  private _sanitizeBody(body: string): string {
+    if (this._sensitiveKeys.length === 0) return body;
+
+    try {
+      const parsed = JSON.parse(body);
+      if (typeof parsed === 'object' && parsed !== null) {
+        this._sanitizeObject(parsed);
+        return JSON.stringify(parsed);
+      }
+    } catch (_e) {
+      // 非 JSON 格式，尝试正则替换常见的 key=value 模式
+      for (const key of this._sensitiveKeys) {
+        const regex = new RegExp(`(${key})=[^&]*`, 'gi');
+        body = body.replace(regex, '$1=[Filtered]');
+      }
+    }
+    return body;
+  }
+
+  /**
+   * 递归脱敏对象中的敏感字段
+   */
+  private _sanitizeObject(obj: Record<string, any>): void {
+    for (const key of Object.keys(obj)) {
+      if (this._sensitiveKeys.includes(key.toLowerCase())) {
+        obj[key] = '[Filtered]';
+      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+        this._sanitizeObject(obj[key]);
+      }
+    }
+  }
+}
+
+type RequestSpanFinishOptions = {
+  status: 'ok' | 'error';
+  statusCode?: unknown;
+  errorMessage?: string;
+};
+
+function startRequestSpan(method: string, url: string): Span | null {
+  try {
+    const serverAddress = extractHost(url);
+    return startInactiveSpan({
+      name: `${method} ${sanitizeSpanNameUrl(url)}`,
+      op: 'http.client',
+      kind: 2,
+      attributes: {
+        'http.request.method': method,
+        'url.full': sanitizeSpanNameUrl(url),
+        'server.address': serverAddress || undefined,
+      },
+    });
+  } catch (_e) {
+    return null;
+  }
+}
+
+/**
+ * 生成 `http.client` span 名用的 URL 清洗：去掉 query/fragment 与 URL 内的 userinfo（账号密码），
+ * 既防敏感信息泄漏，也削掉一部分基数。
+ *
+ * **路径刻意保留原样**——SDK 无法推断 REST 路由模板（如 `/users/123` → `/users/:id`），强行参数化
+ * 会误伤合法路径。若 REST 路径 id 造成 tracing 维度过高，请用 Sentry 的 `beforeSendTransaction`
+ * 统一改写事务 / span 名（对网络与性能 resource span 均生效），见文档「配置 · 采样」。
+ */
+function sanitizeSpanNameUrl(url: string): string {
+  if (url.startsWith('data:')) {
+    return stripDataUrlContent(url);
+  }
+
+  return sanitizeNetworkDetailUrl(url);
+}
+
+function stripDataUrlContent(url: string): string {
+  const mimeTypeMatch = url.match(/^data:([^;,]+)/);
+  const mimeType = mimeTypeMatch && mimeTypeMatch[1] ? mimeTypeMatch[1] : 'text/plain';
+  return `data:${mimeType}`;
+}
+
+function injectTraceHeaders(options: any, span: Span | null): void {
+  if (!span) return;
+
+  try {
+    // Leave accessor-based headers to the native API; telemetry never evaluates them.
+    for (const key of ['header', 'headers']) {
+      const descriptor = Object.getOwnPropertyDescriptor(options, key);
+      if (descriptor && !('value' in descriptor)) return;
+    }
+    const traceData = getTraceData({ span });
+    const sentryTrace = traceData['sentry-trace'];
+    if (!sentryTrace) return;
+
+    const header = {
+      ...(isRecord(options.headers) ? options.headers : {}),
+      ...(isRecord(options.header) ? options.header : {}),
+    };
+    const traceKey = Object.keys(header).find((key) => key.toLowerCase() === 'sentry-trace');
+    const baggageKey =
+      Object.keys(header).find((key) => key.toLowerCase() === 'baggage') || 'baggage';
+    if (!traceKey) {
+      header['sentry-trace'] = sentryTrace;
+    }
+
+    if (traceData.baggage) {
+      header[baggageKey] = mergeBaggageHeader(header[baggageKey], traceData.baggage);
+    }
+
+    // 支持微信用 header、支付宝用 headers
+    options.header = header;
+    options.headers = header;
+  } catch (_e) {
+    // 追踪头注入失败不影响请求
+  }
+}
+
+function finishRequestSpan(span: Span | null, options: RequestSpanFinishOptions): void {
+  if (!span) return;
+
+  try {
+    const statusCode = normalizeStatusCode(options.statusCode);
+    if (statusCode !== undefined) {
+      setHttpStatus(span, statusCode);
+    } else {
+      span.setStatus({
+        code: options.status === 'error' ? SPAN_STATUS_ERROR : SPAN_STATUS_OK,
+        message: options.status === 'error' ? options.errorMessage || 'error' : 'ok',
+      });
+    }
+    if (options.errorMessage) {
+      span.setAttribute('error.message', options.errorMessage);
+    }
+    span.end();
+  } catch (_e) {
+    // ignore
+  }
+}
+
+function normalizeUrl(url: unknown): string {
+  if (typeof url === 'string') {
+    return url;
+  }
+
+  if (url === undefined || url === null) {
+    return '';
+  }
+
+  return String(url);
+}
+
+function normalizeMethod(method: unknown): string {
+  return typeof method === 'string' && method.trim() !== '' ? method.toUpperCase() : 'GET';
+}
+
+function getResponseStatusCode(response: any): unknown {
+  if (!response || typeof response !== 'object') {
+    return undefined;
+  }
+
+  if (response.statusCode !== undefined && response.statusCode !== null) {
+    return response.statusCode;
+  }
+
+  return response.status;
+}
+
+function isErrorStatusCode(statusCode: unknown): boolean {
+  const normalizedStatusCode = normalizeStatusCode(statusCode);
+  return normalizedStatusCode !== undefined && normalizedStatusCode >= 400;
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function mergeBaggageHeader(existingBaggage: unknown, sentryBaggage: string): string {
+  const existing =
+    typeof existingBaggage === 'string'
+      ? existingBaggage
+      : Array.isArray(existingBaggage)
+        ? existingBaggage.filter((item) => typeof item === 'string').join(',')
+        : '';
+
+  if (!existing) {
+    return sentryBaggage;
+  }
+
+  const hasSentryBaggage = existing.split(',').some((item) => item.trim().startsWith('sentry-'));
+
+  return hasSentryBaggage ? existing : `${existing},${sentryBaggage}`;
+}
+
+function normalizeStatusCode(statusCode: unknown): number | undefined {
+  if (typeof statusCode === 'number' && Number.isFinite(statusCode)) {
+    return statusCode;
+  }
+
+  if (typeof statusCode === 'string' && statusCode.trim() !== '') {
+    const parsed = Number(statusCode);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  return undefined;
+}
+
+function extractHost(url: string): string {
+  try {
+    const hostMatch = sanitizeNetworkDetailUrl(url).match(/^https?:\/\/([^:/\n]+)/i);
+    return hostMatch && hostMatch[1] ? hostMatch[1] : '';
+  } catch (_e) {
+    return '';
+  }
+}
+
+/** Preserve native options without evaluating header accessors for telemetry. */
+function cloneRequestOptions(options: Record<string, unknown>): Record<string, unknown> {
+  const clone: Record<string, unknown> = {};
+  for (const key of Object.keys(options)) {
+    if (key === 'header' || key === 'headers') {
+      const descriptor = Object.getOwnPropertyDescriptor(options, key);
+      if (descriptor)
+        Object.defineProperty(clone, key, {
+          ...descriptor,
+          ...('value' in descriptor ? { writable: true } : {}),
+          configurable: true,
+        });
+    } else {
+      Object.defineProperty(clone, key, {
+        value: options[key],
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+    }
+  }
+  return clone;
+}
+
+function collectHeaders(
+  value: unknown,
+  policy: NetworkHeaderPolicy,
+  direction: 'request' | 'response',
+): Record<string, string> {
+  // Filter before merging aliases, then apply the combined per-direction budget again.
+  return policy.filterHeaders(
+    {
+      ...policy.filterHeaders(readNetworkDataField(value, 'headers'), direction),
+      ...policy.filterHeaders(readNetworkDataField(value, 'header'), direction),
+    },
+    direction,
+  );
+}

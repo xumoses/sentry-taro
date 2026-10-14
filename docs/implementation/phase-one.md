@@ -1,0 +1,138 @@
+# 第一阶段实施进度
+
+更新时间：2026-10-14。候选版本：`@xumoses/sentry-taro@0.1.0-beta.1`。
+
+状态：**第一阶段本地候选包验收已完成**。本地代码合并、统一公开入口、自动化与产物检查，以及首个验证项目的候选包接入、开发者工具、真实 Sentry 错误与 Replay 关联和实际 Playback 均已通过。本结论绑定下文指定的候选 tarball 和本轮受控场景，不代表全部功能、其他环境或真机已经验收。范围依据为[合并方案](../plans/package-merge.md)及[回归测试方案](../plans/public-regression-testing.md)。
+
+2026-10-14 补充决策：第一阶段通过候选 tarball 的本地微信开发者工具和真实 Sentry 接收、Replay 关联、Playback 验证后即可收束，保留可复现候选包记录，不必公网发布。npm 发布、正式依赖与锁文件切换、发布包 CI 及旧包弃用移至第二阶段发布工作；体验版和真机验证在第二阶段重构完成后进行，以 iOS 为准，Android 后续补充。正式发布版本与标签届时决定，不预先承诺 stable。
+
+## 固定来源与包布局
+
+| 来源 | 导入基线 | 方式 |
+| --- | --- | --- |
+| `xumoses-sentry-miniapp` | `728b008`，原版本 `1.13.1-beta.7` | 检查后的源码与测试快照 |
+| `sentry-miniapp-replay-taro` | `5ff1a19`，原版本 `0.1.0-beta.6` | 检查后的源码、测试、devtools 与 Worker 快照 |
+
+不合并源仓库 Git 历史。公开内容仅保留通用代码和合成测试，不引入企业源码、原始事件、录制、应用 sourcemap 或内部验收身份。继承的上游和内嵌依赖声明保存在根 `THIRD_PARTY_NOTICES`，运行时产物及独立 Worker 保留必要通知。
+
+根包是唯一发布包，两个内部工作区均为 `private: true`：
+
+| 位置 | 职责 |
+| --- | --- |
+| `src` | 统一公共导出及 Replay 调用简化 |
+| `packages/sdk` | 已有 SDK 实现与 Jest 测试 |
+| `packages/replay` | Replay 协调、React/Taro 适配、Vitest 测试、Worker 与 viewer |
+| `dist` | 最终 CJS、ESM、UMD、声明、轻量入口、Worker 与 devtools |
+| `examples/taro-react` | 面向潜在使用者的轻量接入展示 |
+
+主入口绑定同包 SDK/client/coordinator。`/react/root`、`/taro/lifecycle` 保持轻量，框架运行时由应用提供；`/worker` 保持独立脚本。`/react` 保留低层单次录制 hook。原生宿主与 Taro 混合接入仍须共享唯一 bridge，避免两端分别初始化 SDK。
+
+## 已实现的 API 与工具链分期
+
+`replayIntegration()` 默认使用同包 SDK；`taroReplayIntegration` 保留兼容名称，并继续接受显式 `sdk`。Replay 仍需显式开启，低层 recorder 与 React API 保留既有选项。公开节点类型的重名导出已消歧，节点事件监听器的类型兼容调整已通过根类型与严格消费者声明检查。
+
+录制、采样、隐私、压缩与投递策略沿用导入基线。控制接口保留现有语义：buffer 状态下 `bridge.flush()` 不主动发送缓冲录制；`sendBufferedReplay()` 执行显式发送；`Sentry.flush()` 等待 SDK transport，不主动切分录制分段。系统性的官方 API 行为对齐留在第二阶段。
+
+| 层次 | 当前版本与用途 |
+| --- | --- |
+| 开发环境 | Node.js `24.21.0`，pnpm `9.15.9`，单一锁文件 |
+| 根构建与公开声明 | Vite `6.4.1`，TypeScript `5.8.3` |
+| SDK 测试与检查 | Jest `29.7.0`、ts-jest `29.4.14`、ESLint `8.57.1` |
+| Replay 构建与检查 | Vite+ `0.2.6` 及其 Vite alias，TypeScript `7.0.2` |
+| Replay 测试 | Vite+ 内的 Vitest `4.1.10` |
+| 运行时基线 | `@sentry/core@10.66.0`，`fflate@0.8.2` |
+| 目标框架 | Taro `4.2.x`、React `18`；本地依赖为 `4.2.0`、`18.3.1` |
+
+消费者包的 Node.js engine 仍为 `>=20`；开发工作区需要更高版本以运行当前工具，`.node-version` 固定为 `24.21.0`。这两项不代表微信基础库兼容承诺。第二阶段统一独立 Vite、Vitest、Oxlint、Oxfmt 及 TypeScript 配置，迁移剩余 Jest 测试。
+
+## 已验证的本地结果
+
+下列结果针对当前工作区候选版本；不能替代后续发布版本及真实项目验收。
+
+| 检查 | 当前结果 | 能证明的范围 |
+| --- | --- | --- |
+| SDK Jest | 781 个测试通过 | 已迁入 SDK 的自动化回归 |
+| Replay Vitest | 178 个测试通过 | Replay、必跑 SDK 契约及新增合成回归 |
+| 合计 | **959 个测试通过** | 本地自动化断言，不包含设备或外部服务验收 |
+| 根类型与 lint 命令 | 通过 | SDK 类型、统一声明类型及两个内部工作区现有检查 |
+| 统一构建 | 通过 | CJS/ESM/UMD、声明、子入口、独立 Worker 与 devtools 组合产物 |
+| 产物验证 | 通过 | 公共导出、ES2015 语法、轻量入口边界、许可证与便携 sourcemap |
+| 根运行时导出对比 | 通过 | 旧 SDK 的 77 项、旧 Replay 的 4 项导出均无缺失，当前根入口共 82 项；名称检查不等于完整行为等价证明 |
+| tarball 隔离消费 | 通过 | 无 React/Taro 的临时消费者中，严格根声明检查与 24 条运行时断言通过，包括 CJS/ESM/core 的 client/scope 一致性、buffer/send/stop 及子路径解析 |
+
+原先依赖 `TARO_REPLAY_SDK_SOURCE` 才执行的四组 SDK 契约测试，现在直接使用本仓库 SDK 源码，缺少环境变量不会跳过。公开 API 新增六条真实 client/recorder 测试，使用合成小程序运行时和内存 transport，覆盖默认 SDK、显式兼容 SDK、错误与 Replay 关联、错误缓冲晋升、未开启/采样排除及 iOS 合成堆栈归类。
+
+Worker 检查覆盖独立执行、zlib/Unicode 往返、缺少 `TextEncoder` 的环境及内嵌许可。主包检查覆盖无需外部运行时模块的加载和资源解码。sourcemap 包含源码内容，并检查无机器绝对路径、无重复 source、搬运后的路径仍对应相同源码。公开示例只展示接入，未将其计入通过项。
+
+隔离消费者通过合成 `wx` 和内存 transport 触发真实 SDK 捕获，并核对包身份、CJS/ESM 与依赖 core 的 client/scope 一致性，以及缓冲、显式发送和停止的实际行为；类型检查覆盖根导入、Replay 选项、公共节点及事件监听器类型。该检查由 `verify:consumer` 脚本重复执行。子路径解析检查本身只证明文件可定位，项目在微信开发者工具中的实际结果另列于下文。tarball 消费通过也不代表 npm 已发布。
+
+### 已修复的合成系统版本回归
+
+通用触发条件：系统字符串在正常版本号后附加架构后缀，例如 `macOS 15.4.1 arm64`。原解析未正确拆分部分此类输入。
+
+[`runtime-os-regression.test.ts`](../../packages/replay/test/runtime-os-regression.test.ts) 使用完全人工构造的系统字符串，覆盖 macOS、Windows、Android、iOS、已知架构后缀和未知尾缀。修复前同一组案例 **7 失败、9 通过**；最小修复后 **16 个全部通过**。修复只调整系统名称与版本解析，保留完整原系统字符串；未知格式不被强行改写，也不新增真机架构采集。
+
+该回归证明合成输入下的解析行为得到修复，不宣称已经完成任何真实设备、企业事件或外部 Sentry 数据验证。
+
+## 首个验证项目的候选包进度
+
+本轮使用的候选包为 `@xumoses/sentry-taro@0.1.0-beta.1`，文件大小 **1,497,095 字节**，SHA-512（Base64）为：
+
+```text
+Wos7vexkajq0yU2BxbuidD+8HcaxLGaa2S2/pF93+1hr1cSkc4hTg4sPXHypKzix/AcUzueNGPVaQDmNwzchZA==
+```
+
+相同候选版本可能重新打包，必须通过文件校验值区分产物。本节结果只绑定上述 tarball；后续重建不得仅凭相同版本号沿用验收结论。
+
+| 检查 | 当前结果 | 结论范围 |
+| --- | --- | --- |
+| 候选包安装与一致性 | 通过 | 原生侧及 Taro 侧安装内容均与同一 tarball 逐文件匹配 |
+| 原生 npm 产物生成 | 通过，零警告 | 当前候选包可被原生构建流程消费 |
+| Taro 生产构建 | 通过 | 当前接入可以生成 Taro 生产产物 |
+| 项目既有检查 | 60 项 Node 脚本测试、22 项 Taro 测试及 typecheck 通过 | 项目侧检查结果，单独计数，不并入本仓库的 959 项测试 |
+| 微信开发者工具 | 基础库 `3.7.12`；实际重载、首页与受控场景通过 | 本轮本地小程序环境可运行，不推断其他基础库或真机结果 |
+| Replay 状态与投递 | `buffer` 经受控错误转为 `session`；9 个分段均为 HTTP 200 / accepted | 本轮录制已实际上传；停止后 `stopped`、`recording=false`、`pending=0`、`accepted=9`、`dropped=0`、`retries=0` |
+| Worker | `compressed=9`、`fallback=0` | 本轮分段全部经 Worker 压缩，未发生压缩回退；回退行为仍由自动化覆盖 |
+| 服务侧关联与 SDK 身份 | 错误与 Replay 双向关联；两者均为 `sentry.javascript.taro@0.1.0-beta.1` | 确认本轮候选包产生的受控错误与正在检查的录制属于同一次关联 |
+| 录制读取与隐私 | 9 个分段、47 个事件读取完整且时间非递减；普通输入 1 条增量、密码 7 条增量 | 本轮显式选择性遮罩配置下普通字段可见；密码增量全部为星号，读取的录制中未出现合成密码原文 |
+| 实际 Playback | 播放至结束，浏览器未出现 error | 合成场景样式、普通输入、密码遮罩及动态子节点删除可见，后续画面成功切换至验证项目首页 |
+
+上述结果分别来自开发者工具状态、服务侧 API 读取和实际播放器检查，完成本轮候选包的受控错误上报、录制上传、关联、隐私、页面衔接及播放验证。选择性遮罩场景中普通输入可见是显式配置的预期行为，不改变统一包默认遮罩的约定，也不宣称默认配置已另行完成同一套实际服务验收。
+
+候选源码 snapshot、manifest 与原始验收证据已在非公开环境绑定上述 tarball 校验值。公开仅记录匿名范围，不保存具体项目身份、服务地址、事件或 Replay 标识、录制、截图及内部源码。
+
+## 可重复执行的命令
+
+在 Node.js `24.21.0` 和 pnpm `9.15.9` 环境下，从仓库根目录运行：
+
+```sh
+pnpm install --frozen-lockfile
+pnpm test
+pnpm run typecheck
+pnpm run lint
+pnpm run build
+pnpm run verify:package
+pnpm pack --pack-destination .artifacts
+pnpm run verify:consumer --online
+```
+
+`pnpm pack` 的 `prepack` 会重新构建并检查产物；它仅生成本地 tarball。`verify:consumer` 默认读取 `.artifacts/xumoses-sentry-taro-0.1.0-beta.1.tgz`，也可通过位置参数传入其他 `.tgz` 路径；默认离线，缓存完整时可省略 `--online`。新环境的依赖元数据缓存可能不完整，上述命令使用 `--online` 从公开 npm registry 拉取依赖，只进行临时安装和验证，不发布包。
+
+`test:sdk` 与 `test:replay` 可分别运行内部测试。第一阶段保留候选包版本、源码状态、文件校验值及验收结果；第二阶段发布前再决定版本与 npm 标签，并绑定实际发布版本重新验证相关范围。
+
+## 第一阶段验收结果
+
+| 门槛 | 当前结论 |
+| --- | --- |
+| 首个验证项目候选包接入 | 通过；安装逐文件一致性、原生与 Taro 构建、项目既有检查及真实服务受控场景已完成 |
+| 微信开发者工具 | 通过；本轮启动、受控错误、缓冲到会话录制、选择性遮罩、页面衔接、Worker 及停止收尾已验证 |
+| 真实 Sentry 接收与 Playback | 通过；错误与 Replay 双向关联、分段读取、密码原文未入录制以及实际播放至结束已验证 |
+| 可复现候选包记录 | 已绑定；公开记录版本、字节数及 SHA-512，源码状态、manifest 与原始验收证据留在非公开环境 |
+
+本轮未执行 npm 发布、正式依赖与锁文件迁移、远程发布包 CI、体验版或真机验收，未弃用旧包；这些项目不属于当前第一阶段门槛。代码 CI 配置存在不代表已在远端执行。实现与本轮验收记录一并保存在第一阶段提交中；本页文档更新不改变已验收的 tarball 内容。
+
+## 第二阶段发布与设备验收
+
+第二阶段安排 npm 发布、正式依赖与锁文件迁移、发布包 CI，并在新包发布及正式迁移验收通过后将旧包 deprecate。版本和发布标签届时决定。
+
+第二阶段重构完成后，使用 iOS 体验版真机验证运行、上报、关联和实际播放，并记录设备及微信基础库版本；Android 后续补充。demo 验证体系以及复杂 API/工具链重构按既定方案后续处理。

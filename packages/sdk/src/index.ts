@@ -1,0 +1,160 @@
+// Sentry Miniapp SDK for WeChat Mini Program
+// Based on @sentry/core
+// Development Mode: Auto-rebuild enabled
+
+// Install polyfills for miniapp environment
+import { ensurePolyfills } from './polyfills';
+ensurePolyfills();
+
+// Export types from @sentry/core (types moved from @sentry/types to @sentry/core)
+export type {
+  Breadcrumb,
+  BreadcrumbHint,
+  Event,
+  EventHint,
+  Exception,
+  SdkInfo,
+  Session,
+  SeverityLevel,
+  StackFrame,
+  Stacktrace,
+  Thread,
+  User,
+  Integration,
+  Options,
+  Client,
+  Transport,
+  BaseTransportOptions,
+  Attachment,
+  CaptureContext,
+  ScopeContext,
+  EventProcessor,
+  Span,
+  SpanAttributes,
+  SpanStatus,
+  SpanJSON,
+  StartSpanOptions,
+  Log,
+  Metric,
+  MetricOptions,
+  MeasurementUnit,
+} from '@sentry/core';
+
+// Export core functions from @sentry/core
+export {
+  Scope,
+  getGlobalScope,
+  withIsolationScope,
+  isInitialized,
+  setAttribute,
+  setAttributes,
+  setConversationId,
+  logger,
+  metrics,
+  consoleLoggingIntegration,
+  startSpanManual,
+  withActiveSpan,
+  getActiveSpan,
+  getRootSpan,
+  getTraceData,
+  continueTrace,
+  startNewTrace,
+  suppressTracing,
+  setHttpStatus,
+  spanToJSON,
+  spanIsSampled,
+  updateSpanName,
+  SPAN_STATUS_OK,
+  SPAN_STATUS_ERROR,
+  SPAN_STATUS_UNSET,
+  functionToStringIntegration,
+  extraErrorDataIntegration,
+  eventFiltersIntegration,
+  spanStreamingIntegration,
+  withStreamedSpan,
+  addEventProcessor,
+  addIntegration,
+  captureException,
+  captureEvent,
+  captureMessage,
+  getClient,
+  getCurrentScope,
+  getIsolationScope,
+  withScope,
+  startSpan,
+  startInactiveSpan,
+  setContext,
+  setExtra,
+  setExtras,
+  setTag,
+  setTags,
+  setUser,
+  addBreadcrumb,
+  flush,
+  close,
+  lastEventId,
+  isEnabled,
+  // Session management APIs
+  startSession,
+  endSession,
+  captureSession,
+} from '@sentry/core';
+
+// Export SDK specific exports
+export { SDK_NAME, SDK_VERSION } from './version';
+export { init, showReportDialog, wrap, captureFeedback, setConsent, getConsent } from './sdk';
+export type {
+  MiniappOptions,
+  SendFeedbackParams,
+  MinigameFrameRateOptions,
+  MinigameJankLevels,
+} from './types';
+export { MiniappClient } from './client';
+export * as Integrations from './integrations/index';
+export * as Transports from './transports/index';
+
+// Performance API exports
+export {
+  getPerformanceManager,
+  type PerformanceEntry,
+  type NavigationPerformanceEntry,
+  type RenderPerformanceEntry,
+  type ResourcePerformanceEntry,
+  type UserTimingPerformanceEntry,
+  type PerformanceManager,
+  type PerformanceObserver,
+} from './crossPlatform';
+export {
+  performanceIntegration,
+  type PerformanceIntegrationOptions,
+} from './integrations/performance';
+
+// Throwaway Taro DOM Replay POC. Explicitly opt-in; not part of default integrations.
+export {
+  TARO_DOM_REPLAY_POC_MARKER,
+  startTaroDomReplayPoc,
+  type StartTaroDomReplayPocOptions,
+  type TaroDomReplayPocController,
+  type TaroReplayMutationObserverConstructor,
+  type TaroReplayMutationObserverLike,
+  type TaroReplayMutationRecordLike,
+  type TaroReplayNodeLike,
+  type TaroReplayPocCapture,
+  type TaroReplayPocEvent,
+  type TaroReplayPocMetadata,
+} from './replay-poc';
+
+// Export Session utility functions from @sentry/core
+export { makeSession, closeSession, updateSession } from '@sentry/core';
+
+// Export default integrations
+export { defaultIntegrations, getDefaultIntegrations } from './sdk';
+
+// Export stack trace parser for advanced customization
+export { miniappStackParser } from './stacktrace';
+
+export { pageTracingIntegration } from './integrations/pagetracing';
+
+export type { NetworkDetailOptions } from './network-details';
+
+export type { MiniappRuntimeContexts } from './runtime-contexts';
