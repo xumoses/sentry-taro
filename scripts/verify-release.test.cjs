@@ -140,12 +140,6 @@ test('checks published metadata and downloaded bytes with anonymous nonredirecti
 test('rejects published mismatches and nonregistry tarball origins', async (t) => {
   const cases = [
     [
-      'missing version',
-      (metadata) => {
-        metadata.versions = {};
-      },
-    ],
-    [
       'wrong integrity',
       (metadata) => {
         metadata.versions[config.version].dist.integrity = 'sha512-other';
@@ -177,7 +171,10 @@ test('rejects published mismatches and nonregistry tarball origins', async (t) =
       const remote = registryFixture(manifest, bytes);
       mutate(remote.metadata);
       await assert.rejects(
-        verifyPublishedArtifact(artifact, { fetchImpl: remote.fetchImpl, attempts: 1 }),
+        verifyPublishedArtifact(artifact, {
+          fetchImpl: remote.fetchImpl,
+          sleepImpl: async () => assert.fail('Must not retry a published mismatch'),
+        }),
       );
       assert.equal(remote.calls.length, 1);
     });
@@ -191,12 +188,17 @@ test('rejects a published tarball whose bytes differ from registry metadata', as
   changed[0] ^= 1;
   const remote = registryFixture(manifest, changed);
   await assert.rejects(
-    verifyPublishedArtifact(artifact, { fetchImpl: remote.fetchImpl, attempts: 1 }),
+    verifyPublishedArtifact(artifact, {
+      fetchImpl: remote.fetchImpl,
+      sleepImpl: async () => assert.fail('Must not retry a mismatched tarball'),
+    }),
     /SHA-512/,
   );
+  assert.equal(remote.calls.length, 2);
 });
 
-test('bounds registry propagation retries to five attempts with two-second waits', async (t) => {
+test('bounds publish-time scanning waits to forty-one attempts thirty seconds apart', async (t) => {
+  t.mock.method(console, 'warn', () => {});
   const { directory } = fixture(t);
   const artifact = verifyArtifact(directory, config, sourceCommit);
   let calls = 0;
@@ -209,10 +211,137 @@ test('bounds registry propagation retries to five attempts with two-second waits
     waits.push(milliseconds);
   };
   await assert.rejects(verifyPublishedArtifact(artifact, { fetchImpl, sleepImpl }), /HTTP 404/);
-  assert.equal(calls, 5);
-  assert.deepEqual(waits, [2_000, 2_000, 2_000, 2_000]);
+  assert.equal(calls, 41);
+  assert.deepEqual(waits, Array(40).fill(30_000));
   await assert.rejects(
-    verifyPublishedArtifact(artifact, { fetchImpl, attempts: 6 }),
-    /between 1 and 5/,
+    verifyPublishedArtifact(artifact, { fetchImpl, attempts: 42 }),
+    /between 1 and 41/,
   );
+});
+
+test('waits for missing versions or tags before confirming downloaded bytes', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  for (const pending of [{ versions: {} }, { versions: null }, 'missing tag']) {
+    await t.test(JSON.stringify(pending), async (subtest) => {
+      const { directory, manifest, bytes } = fixture(subtest);
+      const artifact = verifyArtifact(directory, config, sourceCommit);
+      const remote = registryFixture(manifest, bytes);
+      let requests = 0;
+      const waits = [];
+      await verifyPublishedArtifact(artifact, {
+        fetchImpl: async (url, options) => {
+          requests += 1;
+          if (requests === 1) {
+            return {
+              ok: true,
+              json: async () =>
+                pending === 'missing tag' ? { ...remote.metadata, 'dist-tags': {} } : pending,
+            };
+          }
+          return remote.fetchImpl(url, options);
+        },
+        sleepImpl: async (milliseconds) => waits.push(milliseconds),
+        attempts: 2,
+      });
+      assert.equal(requests, 3);
+      assert.deepEqual(waits, [30_000]);
+    });
+  }
+});
+
+test('retries temporary HTTP failures in metadata and tarball requests', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  for (const status of [404, 429, 500, 503]) {
+    for (const failRequest of [1, 2]) {
+      await t.test(`HTTP ${status} at request ${failRequest}`, async (subtest) => {
+        const { directory, manifest, bytes } = fixture(subtest);
+        const artifact = verifyArtifact(directory, config, sourceCommit);
+        const remote = registryFixture(manifest, bytes);
+        let requests = 0;
+        const waits = [];
+        await verifyPublishedArtifact(artifact, {
+          fetchImpl: async (url, options) => {
+            requests += 1;
+            if (requests === failRequest) return { ok: false, status };
+            return remote.fetchImpl(url, options);
+          },
+          sleepImpl: async (milliseconds) => waits.push(milliseconds),
+          attempts: 2,
+        });
+        assert.equal(requests, failRequest + 2);
+        assert.deepEqual(waits, [30_000]);
+      });
+    }
+  }
+});
+
+test('retries network failures and request timeouts', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const errors = [
+    new TypeError('fetch failed', {
+      cause: Object.assign(new Error('connection reset'), { code: 'ECONNRESET' }),
+    }),
+    new DOMException('request timed out', 'TimeoutError'),
+  ];
+  for (const error of errors) {
+    await t.test(error.message, async (subtest) => {
+      const { directory, manifest, bytes } = fixture(subtest);
+      const artifact = verifyArtifact(directory, config, sourceCommit);
+      const remote = registryFixture(manifest, bytes);
+      let requests = 0;
+      const waits = [];
+      await verifyPublishedArtifact(artifact, {
+        fetchImpl: async (url, options) => {
+          requests += 1;
+          if (requests === 1) throw error;
+          return remote.fetchImpl(url, options);
+        },
+        sleepImpl: async (milliseconds) => waits.push(milliseconds),
+        attempts: 2,
+      });
+      assert.equal(requests, 3);
+      assert.deepEqual(waits, [30_000]);
+    });
+  }
+});
+
+test('fails immediately for permanent HTTP errors, invalid metadata, and redirects', async (t) => {
+  const responses = [
+    ...[400, 401, 403].map((status) => ({
+      label: `HTTP ${status}`,
+      fetchImpl: async () => ({ ok: false, status }),
+    })),
+    {
+      label: 'invalid JSON',
+      fetchImpl: async () => ({
+        ok: true,
+        json: async () => {
+          throw new SyntaxError('Invalid JSON');
+        },
+      }),
+    },
+    {
+      label: 'redirect blocked',
+      fetchImpl: async () => {
+        throw new TypeError('fetch failed', { cause: new Error('unexpected redirect') });
+      },
+    },
+  ];
+  for (const { label, fetchImpl } of responses) {
+    await t.test(label, async (subtest) => {
+      const { directory } = fixture(subtest);
+      const artifact = verifyArtifact(directory, config, sourceCommit);
+      let requests = 0;
+      await assert.rejects(
+        verifyPublishedArtifact(artifact, {
+          fetchImpl: async (...args) => {
+            requests += 1;
+            return fetchImpl(...args);
+          },
+          sleepImpl: async () => assert.fail('Must not retry permanent errors'),
+        }),
+      );
+      assert.equal(requests, 1);
+    });
+  }
 });

@@ -1,6 +1,6 @@
 # 第二阶段实施进度
 
-更新时间：2026-10-15。状态：**工具链迁移和 10.76.2 运行时对齐已通过本地验证；同一候选的宿主接入、受控错误、Replay 关联与实际 Playback 已通过，真机、CI 及上传体积待验收**。本文件记录第二阶段证据；[第一阶段记录](./phase-one.md)保留其原候选包和验收范围，不因本轮改动自动延续为新产物的通过结论。
+更新时间：2026-10-15。状态：**`0.1.0-beta.1` 已发布 npm 并通过公开安装验证；工具链迁移和 10.76.2 运行时对齐已通过本地验证，宿主接入、受控错误、Replay 关联与 Playback 保留各自候选的验收记录；真机、远端 CI、OIDC 及上传体积待验收**。本文件记录第二阶段证据；[第一阶段记录](./phase-one.md)保留其原候选包和验收范围，不因本轮改动自动延续为新产物的通过结论。
 
 ## 已确认范围
 
@@ -201,3 +201,20 @@ OHXSUpTvdMkx7pRfyhxZjvC53SpeDN6KbYjni3XtbH+FYHnerLH1MYAlVWkhFYx4aw4Ygez0M89aQakv
 ```
 
 本次修改尚未提交或推送，远端仍只有初始 `main`，没有发布 tag。GitHub 保护设置已生效不等于工作流已在远端运行；远端 CI、审批暂停与 OIDC 发包仍未实际验收。**保持停在真正发布之前，等待用户确认。**
+
+## 首次 npm 发布结果
+
+2026-10-15，经确认后使用普通 npm 认证发布确切候选，执行 `npm publish <tarball> --tag=beta --access=public --ignore-scripts`。源码提交为 `138d301f341e83076834daef23b6cbc764ae0318`，准备时工作区干净；未重新打包或修改已批准的文件。
+
+- 包：`@xumoses/sentry-taro@0.1.0-beta.1`，public；registry 记录发布时间为 `2026-10-15T05:34:53.230Z`。
+- 候选：`.artifacts/releases/0.1.0-beta.1-46qDzE/xumoses-sentry-taro-0.1.0-beta.1.tgz`，1,026,754 字节。
+- SHA-256：`2ee27d225521bc80b58cca08f04b8e591a3d2ffa43a8c39f469838d85e46ebd4`。
+- SHA-512（Base64）：`8nwVIl4jbmMDo/NsLk4GpXd7UiPBvqVPv2osfNJraz46A7u9Oitgy0tJyyEx4fKIDNXdN+EwfVhxebo8E+tBOQ==`。
+
+发布前冻结安装、格式/lint、类型、1,019 项 SDK/Replay 测试、51 项发布工具测试、产物/Worker、生产 bundle、在线隔离消费者和 npm dry-run 均通过。发布后匿名查询 registry，校验版本、`beta` 指向与 `dist.integrity`，下载公开 tarball 并与批准文件逐字节比较通过；随后从官方 registry 按精确版本安装，确认锁文件 integrity、严格类型、CJS/ESM 和真实 SDK/Replay 运行时通过。
+
+npm 在首包处理期间自动生成 `0.0.0-stage`，处理完成后 `beta` 与 `latest` 均指向 `0.1.0-beta.1`。本次没有执行 `npm stage`，也未删除任何版本；额外 `latest` 标签的 CLI 删除请求返回 403，目前保留两个标签。建议消费者固定版本或显式使用 `@beta`。
+
+上传被接受后曾短暂返回 404，约两分钟后目标版本可见。发布后校验已扩展为最多 41 次、30 秒间隔，只对暂未可见与暂时性请求错误重试；发布 job 超时调整为 30 分钟。确定的完整性或来源不符立即失败，不会重新发布。这些发布后工具和文档修正不属于已发布 tarball。
+
+`release.json` 保留发布前清单，同目录 `publish-attempt.json` 和 `publication.json` 分别保存上传回执及公开下载、安装核验。npm 首发已完成；GitHub 源码尚未推送、未创建或推送 tag，远端 CI 和 OIDC 尚未运行。`npm` Environment 保护已配置，`NPM_OIDC_PUBLISH_ENABLED=false`，后续候选准备好时再绑定 trusted publisher。

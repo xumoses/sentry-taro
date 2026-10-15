@@ -59,7 +59,7 @@ jobs:
     # Enable only after the npm trusted publisher and environment are configured.
     if: vars.NPM_OIDC_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     environment:
       name: npm
       url: https://www.npmjs.com/package/@xumoses/sentry-taro

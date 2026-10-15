@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-beta.1 — 2026-10-15
 
-首个发布候选为 `0.1.0-beta.1`；尚未发布 npm。正式发布时将本节整理为对应版本并记录发布日期。
+首个 npm 版本，已通过公开 registry 的固定版本安装、完整性、严格类型及运行时消费验证。
 
 - 合并监控 SDK 与 Taro Replay，对外统一为 `@xumoses/sentry-taro`；Replay 显式开启。
 - 对齐 `@sentry/core@10.76.2` 的公共 API 与运行时行为，新增 Replay 直接控制接口及会话策略。

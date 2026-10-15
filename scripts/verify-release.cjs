@@ -7,6 +7,38 @@ const { setTimeout: sleep } = require('node:timers/promises');
 const { verifyVersions } = require('./release-config.cjs');
 
 const registry = 'https://registry.npmjs.org/';
+const maxPublicationAttempts = 41;
+const publicationRetryDelay = 30_000;
+
+class RegistryNotReadyError extends Error {}
+
+function checkRegistryResponse(response, operation) {
+  const message = `${operation}: HTTP ${response.status}`;
+  if (
+    response.status === 404 ||
+    response.status === 429 ||
+    (response.status >= 500 && response.status <= 599)
+  ) {
+    throw new RegistryNotReadyError(message);
+  }
+  assert.ok(response.ok, message);
+}
+
+function isNetworkError(error) {
+  // Fetch also throws TypeError for invalid URLs and blocked redirects. Retry
+  // only transport failures; security checks must fail without another request.
+  for (let current = error; current; current = current.cause) {
+    if (
+      ['AbortError', 'TimeoutError'].includes(current.name) ||
+      /^(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|EPIPE|UND_ERR_(?:CONNECT_TIMEOUT|HEADERS_TIMEOUT|BODY_TIMEOUT|SOCKET))$/.test(
+        current.code || '',
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function verifyBytes(bytes, manifest) {
   assert.equal(bytes.length, manifest.bytes, 'Tarball size does not match release.json');
@@ -65,11 +97,11 @@ function verifyArtifact(directory, config, expectedCommit, requireClean = false)
 
 async function verifyPublishedArtifact(
   artifact,
-  { fetchImpl = fetch, sleepImpl = sleep, attempts = 5 } = {},
+  { fetchImpl = fetch, sleepImpl = sleep, attempts = maxPublicationAttempts } = {},
 ) {
   assert.ok(
-    Number.isInteger(attempts) && attempts >= 1 && attempts <= 5,
-    'Use between 1 and 5 attempts',
+    Number.isInteger(attempts) && attempts >= 1 && attempts <= maxPublicationAttempts,
+    `Use between 1 and ${maxPublicationAttempts} attempts`,
   );
   const { manifest } = artifact;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -80,17 +112,23 @@ async function verifyPublishedArtifact(
         redirect: 'error',
         signal: AbortSignal.timeout(20_000),
       });
-      assert.ok(response.ok, `Registry metadata lookup failed: HTTP ${response.status}`);
+      checkRegistryResponse(response, 'Registry metadata lookup failed');
       const metadata = await response.json();
       const published = metadata.versions?.[manifest.version];
-      assert.ok(published, 'Published version is not visible in the registry yet');
+      if (!published) {
+        throw new RegistryNotReadyError('Published version is not visible in the registry yet');
+      }
       assert.equal(
         published.dist?.integrity,
         manifest.integrity,
         'Published integrity does not match the candidate',
       );
+      const publishedTag = metadata['dist-tags']?.[manifest.tag];
+      if (publishedTag === undefined) {
+        throw new RegistryNotReadyError('Published npm tag is not visible in the registry yet');
+      }
       assert.equal(
-        metadata['dist-tags']?.[manifest.tag],
+        publishedTag,
         manifest.version,
         'Published npm tag does not select the expected version',
       );
@@ -109,18 +147,22 @@ async function verifyPublishedArtifact(
         redirect: 'error',
         signal: AbortSignal.timeout(20_000),
       });
-      assert.ok(
-        tarballResponse.ok,
-        `Published tarball download failed: HTTP ${tarballResponse.status}`,
-      );
+      checkRegistryResponse(tarballResponse, 'Published tarball download failed');
       verifyBytes(Buffer.from(await tarballResponse.arrayBuffer()), manifest);
       return;
     } catch (error) {
-      if (attempt === attempts) throw error;
+      if (
+        attempt === attempts ||
+        (!(error instanceof RegistryNotReadyError) && !isNetworkError(error))
+      ) {
+        throw error;
+      }
       console.warn(
-        `Publication verification attempt ${attempt}/${attempts} failed: ${error.message}`,
+        `Publication verification attempt ${attempt}/${attempts} is not ready: ${error.message}. Retrying in ${publicationRetryDelay / 1_000}s.`,
       );
-      await sleepImpl(2_000);
+      // npm publish-time scanning can delay visibility beyond fifteen minutes.
+      // This polls the accepted version; it never republishes the tarball.
+      await sleepImpl(publicationRetryDelay);
     }
   }
 }

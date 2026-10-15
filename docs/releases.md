@@ -1,8 +1,8 @@
 # npm 发布流程
 
-常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。当前候选仍为 `@xumoses/sentry-taro@0.1.0-beta.1`，公开访问，npm 标签为 `beta`。准备命令只验证和生成候选；真正发布前必须停下，提交确切产物和检查结果供用户确认。
+常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`@xumoses/sentry-taro@0.1.0-beta.1` 已于 2026-10-15 公开发布，`beta` 与 `latest` 当前均指向该版本；推荐固定版本或显式使用 `@beta`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
 
-该包尚未在 npm 创建，首次发布有单独的初始化步骤：npm 要求包已经存在才能绑定 trusted publisher。先配置和验证发布流程，用户确认后首次发布真实候选，再为后续版本启用 OIDC。不能将 OIDC 工作流已写好表述为 npm 信任关系已建立或首次发布已验证。
+首版已通过常规 npm 认证发布，并完成 registry 完整性及公开安装验证。GitHub 审批保护已配置，发布开关仍关闭；npm trusted publisher 尚未绑定，远端 CI 与 OIDC 发布尚未实际验证。后续版本准备就绪时再建立信任关系并启用工作流，避免未验证的配置提前过期。首次发布证据见[第二阶段记录](./implementation/phase-two.md#首次-npm-发布结果)。
 
 ## CI、Git tag 与 npm 标签
 
@@ -85,9 +85,9 @@ vp run release:prepare
 
 ## 首次发布的初始化
 
-npm 的 [`npm trust` 前提](https://docs.npmjs.com/cli/v12/commands/npm-trust/#prerequisites)明确要求包已存在，账户启用 2FA 且具有包写权限。当前包查询返回 404，尚不能建立这条 OIDC 信任关系。首次发布需要用户另行确认后，通过常规 npm 认证发布真实的 `0.1.0-beta.1` 候选；之后的版本使用上面的 tag、审批和 OIDC 流程。
+npm 的 [`npm trust` 前提](https://docs.npmjs.com/cli/v12/commands/npm-trust/#prerequisites)明确要求包已存在，账户启用 2FA 且具有包写权限。本项目已在首次发布确认后，通过常规 npm 认证发布真实的 `0.1.0-beta.1` 候选；之后的版本采用上面的 tag、审批和 OIDC 流程。以下保留首次初始化的操作边界。
 
-不要用 `npm stage publish` 绕过首次发布确认。对不存在的包，该命令会立即公开 `0.0.0-stage` 占位版本，只有待审批版本的内容继续保留在 staging 区。这同样是外部发布行为，本流程不创建占位版本。参见 [npm staged publishing](https://docs.npmjs.com/staged-publishing/)。
+不要用 `npm stage publish` 绕过首次发布确认。对不存在的包，该命令会立即公开 `0.0.0-stage` 占位版本，只有待审批版本的内容继续保留在 staging 区。这同样是外部发布行为，本流程不主动用 stage 命令创建占位版本。参见 [npm staged publishing](https://docs.npmjs.com/staged-publishing/)。本次普通 `npm publish` 后 registry 也出现了 `0.0.0-stage`，实际版本和渠道状态保存在发布结果中。
 
 首次发布前，用 `npm whoami --registry=https://registry.npmjs.org/` 核对当前登录身份；未登录时使用 `npm login --registry=https://registry.npmjs.org/`，按 npm 要求完成 2FA。凭据不得写进仓库、发布清单或公开日志。登录成功与目标包的发布权限仍需分别确认。首次直接发布的认证要求见 [npm scoped 包发布说明](https://docs.npmjs.com/creating-and-publishing-scoped-public-packages/#direct-publishing)。
 
@@ -112,6 +112,8 @@ npm publish ./确切.tgz --tag beta --access public --registry=https://registry.
 7. 发布后核对 registry 的版本、`dist.integrity` 与渠道指向，再进行公开包消费和宿主验收。
 
 若候选的源码、manifest 或文档发生变化，应重新准备和审查候选，不能沿用旧校验值或审批。npm 同名同版本不能重复发布；发布 job 若在上传成功后失败，应先检查 registry 状态，不要直接重跑发布。参见 [npm publish 文档](https://docs.npmjs.com/cli/v12/commands/npm-publish/)。
+
+npm 接受上传后还会进行扫描，可安装性会延迟，官方说明通常约五分钟，繁忙时可能超过十五分钟。发布后校验只重试查询和下载：最多 41 次，每次间隔 30 秒，发布 job 超时为 30 分钟。暂未可见、限流、服务端错误和网络超时可重试；已存在版本的 hash、渠道或 tarball 来源不符立即失败。等待期间不要重新执行发布。参见 [npm 发布扫描说明](https://github.blog/changelog/2026-07-28-npm-publish-time-malware-scanning-and-dual-use-metadata/)。
 
 ## 验收边界
 
