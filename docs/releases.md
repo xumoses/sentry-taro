@@ -1,8 +1,8 @@
 # npm 发布流程
 
-常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`@xumoses/sentry-taro@0.1.0-beta.3` 已于 2026-10-15 通过该流程公开发布；`beta` 当前指向 `0.1.0-beta.3`，`latest` 保留在 `0.1.0-beta.1`。推荐固定版本或显式使用 `@beta`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
+常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`@xumoses/sentry-taro@0.1.0-beta.4` 已于 2026-10-15 通过该流程公开发布；`beta` 当前指向 `0.1.0-beta.4`，`latest` 保留在 `0.1.0-beta.1`。推荐固定版本或显式使用 `@beta`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
 
-首版通过常规 npm 认证发布；`0.1.0-beta.2` 首次完成 OIDC 发布，`0.1.0-beta.3` 也已完成远端准备、Environment 审批暂停、用户批准后发布、registry 完整性和公开安装验证。`NPM_OIDC_PUBLISH_ENABLED=true`。证据见[首版发布记录](./implementation/phase-two.md#首次-npm-发布结果)、[首次 OIDC 发布记录](./implementation/phase-two.md#首次-oidc-发布结果)及[Taro 构建插件版本发布](./implementation/phase-two.md#taro-构建插件版本发布)。
+首版通过常规 npm 认证发布；`0.1.0-beta.2` 首次完成 OIDC 发布，`0.1.0-beta.3` 和 `0.1.0-beta.4` 也已完成远端准备、Environment 审批暂停、用户批准后发布、registry 完整性和公开安装验证。`NPM_OIDC_PUBLISH_ENABLED=true`。证据见[首版发布记录](./implementation/phase-two.md#首次-npm-发布结果)、[首次 OIDC 发布记录](./implementation/phase-two.md#首次-oidc-发布结果)、[Taro 构建插件版本发布](./implementation/phase-two.md#taro-构建插件版本发布)及[微信最终映射兼容修复版本发布](./implementation/phase-two.md#微信最终映射兼容修复版本发布)。
 
 ## CI、Git tag 与 npm 标签
 
@@ -22,12 +22,12 @@
 显式指定下一个版本，例如：
 
 ```sh
-vp run release:version 0.1.0-beta.4
+vp run release:version 0.1.0-beta.5
 ```
 
 命令同步根目录、`packages/sdk`、`packages/replay` 三个 `package.json` 的版本、SDK 的 `SDK_VERSION` 和根包 `publishConfig.tag`。支持稳定版本及 `alpha.N`、`beta.N`、`rc.N` 预发布版本。它不自动提交、不创建或推送 Git tag，也不发布包。
 
-检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前已发布 `0.1.0-beta.3`，包含 Taro 构建插件及资源、身份、sourcemap 和 Worker 工具；后续版本仍须重新准备候选，公开 `beta` 以 registry 实际状态为准。
+检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前已发布 `0.1.0-beta.4`，在 Taro 构建插件基础上修复微信最终 sourcemap ZIP 的归档根路径和 Worker 映射兼容性；后续版本仍须重新准备候选，公开 `beta` 以 registry 实际状态为准。
 
 ## 准备候选
 
@@ -117,6 +117,6 @@ npm 接受上传后还会进行扫描，可安装性会延迟，官方说明通�
 
 ## 验收边界
 
-`0.1.0-beta.3` 的 [Actions run 38735008427](https://github.com/xumoses/sentry-taro/actions/runs/38735008427) 已验证远端 tag 工作流、审批暂停、OIDC 发布及发布后 registry 核验。该结果对应本次源码提交和确切产物；后续版本仍须完成各自检查与审批，本地 dry-run 不能代替远端执行证据。
+`0.1.0-beta.4` 的 [Actions run 38763722097](https://github.com/xumoses/sentry-taro/actions/runs/38763722097) 已验证远端 tag 工作流、审批暂停、OIDC 发布及发布后 registry 核验。该结果对应本次源码提交和确切产物；后续版本仍须完成各自检查与审批，本地 dry-run 不能代替远端执行证据。
 
 iOS/Android 真机、体验版及微信上传包体积仍待各自验收。本地检查、tarball 消费、真实 Sentry 接收、Playback、远端 CI 和设备表现是不同证据；发布 beta 不自动补齐这些结论，也不自动弃用旧包。
