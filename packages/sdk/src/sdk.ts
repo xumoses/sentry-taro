@@ -1,4 +1,5 @@
 import { snapshotNetworkOptions } from './network-details';
+import { applyBuildMetadataDefaults } from './build-metadata';
 import {
   getClient,
   initAndBind,
@@ -182,7 +183,7 @@ export function init(options: MiniappOptions = {}): MiniappClient | undefined {
       });
     }
   }
-  options = { ...safeOptions, ...networkDetails } as MiniappOptions;
+  options = applyBuildMetadataDefaults({ ...safeOptions, ...networkDetails } as MiniappOptions);
 
   const previous = getClient();
   if (previous instanceof MiniappClient) {

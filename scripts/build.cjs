@@ -13,23 +13,34 @@ function run(command, args) {
 // directories, then copy their assets without deleting existing entrypoints.
 run('vp', ['run', 'build:main']);
 run(process.execPath, [join(root, 'packages/replay/scripts/build-worker.cjs')]);
-const replayDist = join(root, 'packages/replay/dist');
-for (const name of readdirSync(replayDist)) {
-  if (name.endsWith('.d.ts') || name === 'index.cjs.js' || name === 'index.mjs') continue;
-  cpSync(join(replayDist, name), join(root, 'dist', name), { recursive: true });
-  if (name.endsWith('.map')) {
-    const source = join(replayDist, name);
-    const target = join(root, 'dist', name);
-    const map = JSON.parse(readFileSync(source, 'utf8'));
-    // Moving a map changes the base for its relative sources. Keep the map
-    // tied to the same public source files after assembling the final package.
-    map.sources = map.sources.map((entry) =>
-      entry.startsWith('../node_modules/')
-        ? entry
-        : relative(dirname(target), resolve(dirname(source), entry)).replace(/\\/g, '/'),
-    );
-    writeFileSync(target, JSON.stringify(map));
+for (const [replayDist, destination] of [
+  [join(root, 'packages/replay/dist'), join(root, 'dist')],
+  [join(root, 'packages/taro-plugin/dist'), join(root, 'dist/taro-plugin')],
+]) {
+  for (const name of readdirSync(replayDist)) {
+    if (name.endsWith('.d.ts')) continue;
+    cpSync(join(replayDist, name), join(destination, name), { recursive: true });
+    if (name.endsWith('.map')) {
+      const source = join(replayDist, name);
+      const target = join(destination, name);
+      const map = JSON.parse(readFileSync(source, 'utf8'));
+      // Moving a map changes the base for its relative sources. Keep the map
+      // tied to the same public source files after assembling the final package.
+      map.sources = map.sources.map((entry) =>
+        entry.startsWith('../node_modules/')
+          ? relative(
+              dirname(target),
+              join(root, 'node_modules', entry.slice('../node_modules/'.length)),
+            ).replace(/\\/g, '/')
+          : relative(dirname(target), resolve(dirname(source), entry)).replace(/\\/g, '/'),
+      );
+      writeFileSync(target, JSON.stringify(map));
+    }
   }
 }
+cpSync(
+  join(root, 'packages/taro-plugin/THIRD_PARTY_NOTICES'),
+  join(root, 'dist/taro-plugin/THIRD_PARTY_NOTICES'),
+);
 cpSync(join(root, 'packages/replay/devtools'), join(root, 'dist/devtools'), { recursive: true });
 run('vp', ['run', 'build:types']);

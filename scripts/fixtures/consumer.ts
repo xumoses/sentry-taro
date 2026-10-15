@@ -1,4 +1,52 @@
 import * as Sentry from '@xumoses/sentry-taro';
+import sentryTaroPlugin, {
+  generateReplayAssets,
+  uploadSourceMaps,
+  createSentryBuildMetadata,
+  readSentryBuildMetadata,
+  writeSentryBuildMetadata,
+  writeReplayWorker,
+  getSentryMiniProgramNpmIgnores,
+  type SourceMapUploadOptions,
+  type SentryTaroPluginOptions,
+} from '@xumoses/sentry-taro/taro-plugin';
+
+const pluginOptions: SentryTaroPluginOptions = {
+  disable: true,
+  replay: { sourceRoot: 'src', outputRoot: 'dist', imagePriority: ['brand.svg'] },
+  errorHandler(error: Error) {
+    throw error;
+  },
+};
+generateReplayAssets(pluginOptions);
+sentryTaroPlugin(
+  {
+    paths: { appPath: '.', sourcePath: 'src', outputPath: 'dist' },
+    onBuildFinish(_callback) {},
+    modifyRunnerOpts(_callback) {},
+    modifyWebpackChain(_callback) {},
+  },
+  pluginOptions,
+);
+
+const buildMetadata = createSentryBuildMetadata({
+  projectDir: '.',
+  release: { name: 'synthetic@1', dist: 'build-1' },
+});
+writeSentryBuildMetadata({ metadata: buildMetadata, outputRoot: 'dist', format: 'module' });
+const savedMetadata = readSentryBuildMetadata({
+  outputRoot: 'dist',
+  expected: { name: 'synthetic@1' },
+});
+writeReplayWorker({ projectDir: '.', filename: 'sentry-replay.js' });
+const uploadOptions: SourceMapUploadOptions = {
+  disable: true,
+  release: { name: savedMetadata.release || 'synthetic@1', create: false, finalize: false },
+  sourcemaps: { assets: '**/*.map', ignore: ['ignored/**'] },
+  wechat: { sourceMapPath: 'final.zip' },
+};
+void uploadSourceMaps(uploadOptions);
+void getSentryMiniProgramNpmIgnores();
 
 const options: Sentry.ReplayIntegrationOptions = {
   replaysOnErrorSampleRate: 1,

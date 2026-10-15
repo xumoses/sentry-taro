@@ -46,3 +46,5 @@ export type {
 } from './compression';
 
 export { decodeReplayAssetData } from './replay-assets';
+export { createReplayAssetProviders } from './replay-asset-providers';
+export type { ReplayAssetProviderOptions, ReplayAssetProviders } from './replay-asset-providers';

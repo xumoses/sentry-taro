@@ -111,6 +111,8 @@ Recordings must last about 5 seconds before delivery, so interact with the page 
 
 Default masking protects page content. Review exception messages and context you attach yourself. Your application supplies replay styles and images.
 
+Use the optional [`taro-plugin`](./docs/guides/taro-plugin.md) build entry for Replay assets, release identity, source-map repair, Worker preparation, and explicit final WeChat sourcemap upload.
+
 See the [Replay guide](./docs/guides/replay.md) for setup, privacy and troubleshooting.
 
 ## Documentation

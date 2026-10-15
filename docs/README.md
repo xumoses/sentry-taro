@@ -5,6 +5,7 @@
 ## 使用指南
 
 - [Replay 接入与隐私](./guides/replay.md)：初始化、页面生命周期、采样、遮罩和静态资源。
+- [Taro 构建插件](./guides/taro-plugin.md)：自动生成 Replay 样式和图片、纯 Taro 与混合宿主接入。
 - [Worker 压缩](./guides/worker.md)：复制独立资产、配置小程序 Worker 和了解失败回退行为。
 - [原生与 Taro 混合应用](./guides/hybrid-apps.md)：复用宿主 SDK，通过 bridge 接入 Taro 页面。
 - [API 与运行行为](./guides/api.md)：公共入口、Replay 控制、发送时机与功能边界。
@@ -35,6 +36,7 @@
 
 以下记录保留各阶段的方案和验证证据，具体结论对应当时的源码、产物与环境。
 
+- [Taro 构建插件迁移](./plans/taro-build-plugin.md)：职责、官方选项对齐和验证范围。
 - [统一包合并方案](./plans/package-merge.md)：范围、API 与工具链分期、发布和验收顺序。
 - [第一阶段记录](./implementation/phase-one.md)：原候选包的本地验收与公开回归。
 - [第二阶段记录](./implementation/phase-two.md)：工具链迁移、运行时对齐、发布和设备验证状态。

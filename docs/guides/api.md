@@ -119,14 +119,15 @@ Replay 的公开 `flush()` / `stop()` 不会将传输错误作为 Promise reject
 
 ## 导入入口与能力边界
 
-| 入口                                   | 用途                                               |
-| -------------------------------------- | -------------------------------------------------- |
-| `@xumoses/sentry-taro`                 | SDK、`replayIntegration` 和公开类型                |
-| `@xumoses/sentry-taro/taro/lifecycle`  | 全局 Taro 页面生命周期接入                         |
-| `@xumoses/sentry-taro/react/root`      | `useTaroReplaySnapshot` 和逐页 `useTaroReplayRoot` |
-| `@xumoses/sentry-taro/react`           | 低层单次录制 hook；hide/unload 后不自动恢复        |
-| `@xumoses/sentry-taro/worker`          | 构建时复制的独立 Worker 资产                       |
-| `@xumoses/sentry-taro/devtools/server` | 本地 capture 查看工具的服务端入口                  |
+| 入口                                   | 用途                                                                          |
+| -------------------------------------- | ----------------------------------------------------------------------------- |
+| `@xumoses/sentry-taro`                 | SDK、`replayIntegration` 和公开类型                                           |
+| `@xumoses/sentry-taro/taro/lifecycle`  | 全局 Taro 页面生命周期接入                                                    |
+| `@xumoses/sentry-taro/react/root`      | `useTaroReplaySnapshot` 和逐页 `useTaroReplayRoot`                            |
+| `@xumoses/sentry-taro/react`           | 低层单次录制 hook；hide/unload 后不自动恢复                                   |
+| `@xumoses/sentry-taro/taro-plugin`     | Node 构建插件、产物准备与最终 sourcemap 上传，见 [插件指南](./taro-plugin.md) |
+| `@xumoses/sentry-taro/worker`          | 构建时复制的独立 Worker 资产                                                  |
+| `@xumoses/sentry-taro/devtools/server` | 本地 capture 查看工具的服务端入口                                             |
 
 附带 viewer 只展示 capture 摘要、事件与 JSON，不渲染实际回放。实际 Playback 使用 Sentry。
 

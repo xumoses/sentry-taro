@@ -81,7 +81,7 @@ function main() {
         2,
       ),
     );
-    for (const name of ['consumer.ts', 'consumer.cjs']) {
+    for (const name of ['consumer.ts', 'consumer.cjs', 'plugin-consumer.cjs']) {
       fs.copyFileSync(path.join(__dirname, 'fixtures', name), path.join(directory, name));
     }
     const installArgs = [
@@ -111,7 +111,13 @@ function main() {
     } else {
       run('pnpm', installArgs, directory, 'Tarball installation', installTimeout);
     }
-    for (const peer of ['react', '@types/react', '@tarojs/runtime', '@tarojs/taro']) {
+    for (const peer of [
+      'react',
+      '@types/react',
+      '@tarojs/runtime',
+      '@tarojs/taro',
+      '@sentry/cli',
+    ]) {
       assert.ok(
         !fs.existsSync(path.join(directory, 'node_modules', peer)),
         `Unexpected peer installed: ${peer}`,
@@ -128,8 +134,9 @@ function main() {
       'Strict consumer declarations',
     );
     run(process.execPath, ['consumer.cjs', pkg.version], directory, 'Consumer runtime');
+    run(process.execPath, ['plugin-consumer.cjs'], directory, 'Packed Taro plugin');
     console.log(
-      'Packed consumer passed: isolated install, strict declarations, no React/Taro peers.',
+      'Packed consumer passed: isolated install, strict declarations, no React/Taro/CLI peers.',
     );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true, maxRetries: 3 });

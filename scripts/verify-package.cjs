@@ -20,6 +20,7 @@ const requiredExports = [
   'taroReplayIntegration',
   'createTaroReplay',
   'decodeReplayAssetData',
+  'createReplayAssetProviders',
 ];
 
 function files(directory) {
@@ -70,8 +71,13 @@ async function main() {
   );
   let parsed = 0;
   for (const file of publishFiles) {
-    // The optional viewer runs on Node; all mini-program assets must parse as ES2015.
-    if (!/\.(?:mjs|js)$/.test(file) || file.includes(`${path.sep}devtools${path.sep}`)) continue;
+    // The optional viewer and build plugin run on Node; mini-program assets use ES2015.
+    if (
+      !/\.(?:mjs|js)$/.test(file) ||
+      file.includes(`${path.sep}devtools${path.sep}`) ||
+      file.includes(`${path.sep}taro-plugin${path.sep}`)
+    )
+      continue;
     parse(fs.readFileSync(file, 'utf8'), {
       ecmaVersion: 2015,
       sourceType: file.endsWith('.mjs') ? 'module' : 'script',
@@ -91,7 +97,7 @@ async function main() {
       assert.ok(!path.isAbsolute(source) && !/^[a-z]:[\\/]/i.test(source), 'Absolute source path');
       assert.ok(!/(?:^|\/)(?:Users|home|private|tmp)\//i.test(source), 'Machine source path');
       assert.equal(typeof map.sourcesContent[index], 'string');
-      if (!source.startsWith('../node_modules/')) {
+      if (!/^(?:\.\.\/)+node_modules\//.test(source)) {
         const local = path.resolve(path.dirname(file), source);
         assert.ok(local.startsWith(root + path.sep), 'Source escapes repository');
         assert.ok(

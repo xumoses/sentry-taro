@@ -5,6 +5,10 @@ import type { PackUserConfig } from 'vite-plus/pack';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const notices = readFileSync(resolve(root, 'THIRD_PARTY_NOTICES'), 'utf8');
+const pluginNotices = readFileSync(
+  resolve(root, 'packages/taro-plugin/THIRD_PARTY_NOTICES'),
+  'utf8',
+);
 
 function portableSource(source: string): string {
   const normalized = source.replace(/\\/g, '/');
@@ -48,6 +52,42 @@ const main: PackUserConfig = {
 };
 
 export const pack: PackUserConfig[] = [
+  {
+    name: 'taro-build-plugin',
+    entry: { index: resolve(root, 'packages/taro-plugin/src/index.ts') },
+    outDir: resolve(root, 'packages/taro-plugin/dist'),
+    platform: 'node',
+    target: 'node20',
+    format: ['esm', 'cjs'],
+    dts: false,
+    clean: true,
+    sourcemap: true,
+    minify: false,
+    deps: {
+      alwaysBundle: [/.*/],
+      neverBundle: ['@sentry/cli'],
+      onlyBundle: [
+        'adm-zip',
+        'picomatch',
+        'acorn',
+        'postcss',
+        'postcss-selector-parser',
+        'postcss-value-parser',
+        'picocolors',
+        'nanoid',
+        'source-map-js',
+        'cssesc',
+        'util-deprecate',
+      ],
+    },
+    outExtensions: ({ format }) => ({ js: format === 'es' ? '.mjs' : '.cjs.js' }),
+    outputOptions: {
+      exports: 'named',
+      codeSplitting: false,
+      sourcemapPathTransform: portableSource,
+      banner: `/*!\n${pluginNotices}\n*/`,
+    },
+  },
   {
     ...main,
     name: 'sdk-esm',

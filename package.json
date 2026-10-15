@@ -43,7 +43,12 @@
     },
     "./worker": "./dist/worker/replay-compression.js",
     "./devtools/server": "./dist/devtools/server.cjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./taro-plugin": {
+      "types": "./dist/types/packages/taro-plugin/src/index.d.ts",
+      "import": "./dist/taro-plugin/index.mjs",
+      "require": "./dist/taro-plugin/index.cjs.js"
+    }
   },
   "bin": {
     "sentry-taro-viewer": "./dist/devtools/server.cjs"
@@ -80,7 +85,8 @@
     "release:version": "node scripts/release-version.cjs",
     "release:check": "node scripts/release-check.cjs",
     "prepack": "vp run build && vp run verify:package",
-    "prepublishOnly": "vp check && vp run typecheck && vp test run && vp run test:release && vp run release:check"
+    "prepublishOnly": "vp check && vp run typecheck && vp test run && vp run test:release && vp run release:check",
+    "test:taro-plugin": "vp test run --project taro-plugin"
   },
   "dependencies": {
     "@sentry/core": "10.76.2",
@@ -89,7 +95,8 @@
   "peerDependencies": {
     "@tarojs/runtime": "~4.2.0",
     "@tarojs/taro": "~4.2.0",
-    "react": "^18.0.0"
+    "react": "^18.0.0",
+    "@sentry/cli": "^3.6.2"
   },
   "peerDependenciesMeta": {
     "@tarojs/runtime": {
@@ -100,15 +107,28 @@
     },
     "react": {
       "optional": true
+    },
+    "@sentry/cli": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@jridgewell/trace-mapping": "0.3.31",
+    "@sentry/cli": "3.6.2",
+    "@types/adm-zip": "0.5.7",
     "@types/node": "26.6.5",
+    "@types/picomatch": "4.0.2",
     "@types/react": "18.3.31",
     "@vitest/coverage-v8": "5.0.4",
     "acorn": "8.19.0",
+    "adm-zip": "0.6.0",
+    "picomatch": "4.0.3",
+    "postcss": "8.5.30",
+    "postcss-selector-parser": "7.1.1",
+    "postcss-value-parser": "4.2.0",
     "typescript": "7.0.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.2.0",
-    "vite-plus": "1.2.0"
+    "vite-plus": "1.2.0",
+    "webpack-sources": "3.3.3"
   }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- 新增 `@xumoses/sentry-taro/taro-plugin` 构建入口，迁入 Replay 样式转换、按路由资源提取、压缩及预算控制。
+- 同一构建入口迁入 release/dist 身份保存与注入、Taro sourcemap 位点修复、微信最终映射上传、Worker 准备及原生 npm 排除项辅助；上传按需使用官方 CLI。
+- SVG 自动发现覆盖页面和组件目录；保留源码内容校验，并对资源未收录或超限输出诊断。
+- 默认生成 JSON 资源，通过 `createReplayAssetProviders` 在纯 Taro 应用内惰性读取；混合宿主可继续生成 CommonJS 资源模块。
+- 通用插件配置对齐 Sentry 的 `disable`、`silent`、`debug` 和 `errorHandler` 语义。
+
 ## 0.1.0-beta.2 — 2026-10-15
 
 首次通过 Git tag、GitHub Actions 人工审批及 npm OIDC 发布。发布后 registry 完整性、匿名公开安装、严格类型及运行时消费验证通过；[发布记录](./docs/implementation/phase-two.md#首次-oidc-发布结果)保留确切产物和工作流证据。

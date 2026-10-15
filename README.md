@@ -103,7 +103,7 @@ installTaroReplayPageLifecycle({ bridge: replay.bridge });
 
 该示例在本地缓冲操作，并在捕获异常时按 100% 的错误采样率尝试上传；请根据流量调整采样。默认录制至少约 5 秒才发送，测试时先操作页面，再触发异常。
 
-默认遮罩用于保护页面内容；你主动附加的异常文本和上下文仍需自行检查。回放的样式和图片由应用提供，完整配置、隐私选项及排查方法见 [Replay 指南](./docs/guides/replay.md)。
+默认遮罩用于保护页面内容；你主动附加的异常文本和上下文仍需自行检查。回放的样式和图片可由 [Taro 构建插件](./docs/guides/taro-plugin.md) 自动准备，完整配置、隐私选项及排查方法见 [Replay 指南](./docs/guides/replay.md)。
 
 ## 使用文档
 

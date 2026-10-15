@@ -16,7 +16,11 @@ export default defineConfig({
   },
   lint,
   test: {
-    projects: ['packages/sdk/vitest.config.ts', 'packages/replay/vitest.config.ts'],
+    projects: [
+      'packages/sdk/vitest.config.ts',
+      'packages/replay/vitest.config.ts',
+      'packages/taro-plugin/vitest.config.ts',
+    ],
     coverage: {
       provider: 'v8',
       // Vitest 5 resolves these globs from each selected project's root.
