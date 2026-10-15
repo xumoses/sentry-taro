@@ -1,6 +1,6 @@
 {
   "name": "@sentry-taro/internal-replay",
-  "version": "0.1.0-beta.3",
+  "version": "0.1.0-beta.4",
   "private": true,
   "description": "Internal Taro Replay implementation for @xumoses/sentry-taro",
   "license": "MIT",
