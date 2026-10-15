@@ -1,6 +1,6 @@
 {
   "name": "@xumoses/sentry-taro",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "description": "Sentry monitoring and opt-in session replay for Taro 4.2 React mini programs",
   "license": "MIT",
   "author": "xumoses",
