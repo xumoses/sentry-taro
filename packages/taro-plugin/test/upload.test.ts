@@ -194,6 +194,71 @@ describe('final WeChat source-map upload', () => {
     expect(readFileSync(archive)).toEqual(before);
   });
 
+  test('accepts archive-rooted WeChat ZIP entries and preserves main and subpackage map bytes', async () => {
+    const { root } = fixture();
+    const archive = join(root, 'rooted-final.zip');
+    const zip = new AdmZip();
+    const entries = {
+      '__APP__/': '',
+      '__APP__/app-service.js.map': MAP,
+      '__FULL__/': '',
+      '__FULL__/app-service.js.map': 'aggregate must not upload',
+      'subpackage/': '',
+      'subpackage/app-service.js.map': MAP,
+    };
+    for (const [name, content] of Object.entries(entries)) {
+      zip.addFile(name, Buffer.from(content));
+      // Set the raw ZIP name: addFile may sanitize an initial slash itself.
+      zip.getEntry(name)!.entryName = `/${name}`;
+    }
+    zip.writeZip(archive);
+    const before = readFileSync(archive);
+    mocked.upload.mockImplementation(async (_release, settings) => {
+      expect(snapshot(settings.include[0])).toEqual({
+        'app-service.js': Buffer.from('//# sourceMappingURL=app-service.js.map\n').toString(
+          'base64',
+        ),
+        'app-service.js.map': Buffer.from(MAP).toString('base64'),
+        'subpackage/app-service.js': Buffer.from(
+          '//# sourceMappingURL=app-service.js.map\n',
+        ).toString('base64'),
+        'subpackage/app-service.js.map': Buffer.from(MAP).toString('base64'),
+      });
+      return [];
+    });
+    const result = await uploadSourceMaps(options(archive));
+    expect(result?.sourceMaps).toBe(2);
+    expect(result?.generatedCompanions).toEqual(['app-service.js', 'subpackage/app-service.js']);
+    expect(readFileSync(archive)).toEqual(before);
+  });
+
+  test.each([false, true])(
+    'handles the final Worker map with an existing JS companion: %s',
+    async (hasJavaScript) => {
+      const workerMap = JSON.stringify({ ...JSON.parse(MAP), file: 'workers.js' });
+      const { input } = fixture({
+        '__APP__/app-service.js.map': MAP,
+        '__APP__/workers.js.map': workerMap,
+        '__FULL__/workers.js.map': 'aggregate must not upload',
+        ...(hasJavaScript ? { '__APP__/workers.js': REAL_JS } : {}),
+      });
+      const before = snapshot(input);
+      mocked.upload.mockImplementation(async (_release, settings) => {
+        expect(readFileSync(join(settings.include[0], 'workers.js.map'), 'utf8')).toBe(workerMap);
+        expect(readFileSync(join(settings.include[0], 'workers.js'), 'utf8')).toBe(
+          hasJavaScript ? REAL_JS : '//# sourceMappingURL=workers.js.map\n',
+        );
+        return [];
+      });
+      const result = await uploadSourceMaps(options(input));
+      expect(result?.sourceMaps).toBe(2);
+      expect(result?.generatedCompanions).toEqual(
+        hasJavaScript ? ['app-service.js'] : ['app-service.js', 'workers.js'],
+      );
+      expect(snapshot(input)).toEqual(before);
+    },
+  );
+
   test.each(['**/*.js', '**/*.map', './**/*.map'])(
     'resolves %s against normalized paths and includes the associated files',
     async (assets) => {
@@ -392,7 +457,13 @@ describe('final WeChat source-map upload', () => {
 
   test.each([
     '../escape.js',
-    '/absolute.js',
+    '//absolute.js',
+    '/../../escape.js',
+    '/./dot.js',
+    '/C:/drive.js',
+    '/folder\\escape.js',
+    '/folder//double.js',
+    '/',
     'C:/drive.js',
     'folder\\escape.js',
     './dot.js',
@@ -437,6 +508,22 @@ describe('final WeChat source-map upload', () => {
     await expect(uploadSourceMaps(options(archive))).rejects.toThrow('Duplicate path');
     expect(mocked.constructor).not.toHaveBeenCalled();
   });
+
+  test.each(['__APP__/app-service.js.map', '__APP__/'])(
+    'rejects rooted and relative aliases of the same ZIP path: %s',
+    async (name) => {
+      const { root } = fixture();
+      const archive = join(root, 'aliased.zip');
+      const zip = new AdmZip();
+      zip.addFile(name, Buffer.from(name.endsWith('/') ? '' : MAP));
+      const placeholder = name.endsWith('/') ? 'placeholder/' : 'placeholder.map';
+      zip.addFile(placeholder, Buffer.from(name.endsWith('/') ? '' : MAP));
+      zip.getEntry(placeholder)!.entryName = `/${name}`;
+      zip.writeZip(archive);
+      await expect(uploadSourceMaps(options(archive))).rejects.toThrow('Duplicate path');
+      expect(mocked.constructor).not.toHaveBeenCalled();
+    },
+  );
 
   test('rejects declared ZIP expansion beyond the limit before inflating entries', async () => {
     const { root } = fixture();

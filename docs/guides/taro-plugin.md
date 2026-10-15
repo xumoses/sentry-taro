@@ -157,8 +157,10 @@ await uploadSourceMaps({
 ```
 
 `wechat.sourceMapPath` 接受微信下载 ZIP 或保留其原始结构的目录。函数在临时目录中
-安全解包/复制、展平 `__APP__`、排除 `__FULL__` 并保留子包。缺失真实 JS 的
-`app-service.js.map` 会配一个仅含 sourceMappingURL 的文件；已有真实 JS 保持原样。
+安全解包/复制、展平 `__APP__`、排除 `__FULL__` 并保留子包。ZIP 条目中的单个前导 `/`
+表示归档根，解包前会移除；路径穿越、平台特殊路径及规范化后的重名仍会失败。
+缺失真实 JS 的 `app-service.js.map` 和 `workers.js.map` 会配一个仅含对应
+sourceMappingURL 的文件；已有真实 JS 保持原样。
 缺少主包、有效映射或完整 JS/map 配对会失败，不回退上传本地项目目录。
 上传固定使用 `rewrite: false`、`validate: true`、`dedupe: true`；默认 URL 前缀
 `https://usr` 与 SDK 微信栈帧规范化相匹配。完成或失败后清理临时目录，不修改输入。

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- 修复微信最终 sourcemap ZIP 使用单个前导 `/` 表示归档根时被误拒绝的问题，保留路径穿越和规范化重名校验。
+- 为缺少真实 JS 的微信 `workers.js.map` 补齐映射引用文件，保留已有 JS 和最终映射原始字节。
+
 ## 0.1.0-beta.3 — 2026-10-15
 
 - 新增 `@xumoses/sentry-taro/taro-plugin` 构建入口，迁入 Replay 样式转换、按路由资源提取、压缩及预算控制。

@@ -207,11 +207,17 @@ function extractArchive(source: string, destination: string): void {
     throw new Error('Final source-map ZIP exceeds 256 MiB');
   const entries = new AdmZip(readFileSync(source)).getEntries();
   const names = new Set<string>();
+  const paths = new Map<AdmZip.IZipEntry, string>();
   let bytes = 0;
   for (const entry of entries) {
-    const path = safePath(entry.entryName);
+    // WeChat prefixes final archive entries with one slash to denote its archive root.
+    // Strip exactly that marker, then retain all traversal and platform-path checks.
+    const path = safePath(
+      entry.entryName.startsWith('/') ? entry.entryName.slice(1) : entry.entryName,
+    );
     if (names.has(path)) throw new Error('Duplicate path in final source-map ZIP');
     names.add(path);
+    paths.set(entry, path);
     const kind = (entry.attr >>> 16) & 0xf000;
     if (kind === 0xa000) throw new Error('Symbolic links are not allowed in source-map artifacts');
     if (kind !== 0 && kind !== (entry.isDirectory ? 0x4000 : 0x8000)) {
@@ -221,7 +227,7 @@ function extractArchive(source: string, destination: string): void {
     if (bytes > MAX_EXTRACTED_BYTES) throw new Error('Final source-map artifacts exceed 512 MiB');
   }
   for (const entry of entries) {
-    const to = join(destination, safePath(entry.entryName));
+    const to = join(destination, paths.get(entry)!);
     if (entry.isDirectory) mkdirSync(to, { recursive: true });
     else {
       const data = entry.getData();
@@ -268,10 +274,11 @@ function prepare(source: string, extracted: string, normalized: string): string[
   }
   const companions: string[] = [];
   for (const path of targets) {
-    if (basename(path) !== 'app-service.js.map') continue;
+    const mapName = basename(path);
+    if (mapName !== 'app-service.js.map' && mapName !== 'workers.js.map') continue;
     const companion = path.slice(0, -4);
     if (!targets.has(companion)) {
-      writeFileSync(join(normalized, companion), '//# sourceMappingURL=app-service.js.map\n', {
+      writeFileSync(join(normalized, companion), `//# sourceMappingURL=${mapName}\n`, {
         flag: 'wx',
       });
       companions.push(companion);
