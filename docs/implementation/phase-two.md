@@ -1,6 +1,6 @@
 # 第二阶段实施进度
 
-更新时间：2026-10-15。状态：**`0.1.0-beta.2` 已通过 GitHub Actions、人工审批及 npm OIDC 发布，公开安装验证通过；工具链迁移和 10.76.2 运行时对齐已通过本地验证，宿主接入、受控错误、Replay 关联与 Playback 保留各自候选的验收记录；真机、宿主 CI 及上传体积待验收**。本文件记录第二阶段证据；[第一阶段记录](./phase-one.md)保留其原候选包和验收范围，不因本轮改动自动延续为新产物的通过结论。
+更新时间：2026-10-15。状态：**`0.1.0-beta.3` 已通过 GitHub Actions、人工审批及 npm OIDC 发布，registry 完整性与公开安装验证通过，包含独立 Taro 构建插件；工具链迁移和 10.76.2 运行时对齐已通过本地验证，宿主接入、受控错误、Replay 关联与 Playback 保留各自候选的验收记录；真机、宿主 CI 及上传体积待验收**。本文件记录第二阶段证据；[第一阶段记录](./phase-one.md)保留其原候选包和验收范围，不因本轮改动自动延续为新产物的通过结论。
 
 ## 已确认范围
 
@@ -13,12 +13,12 @@
 
 目标组合为 Vite Plus 1.2.0、Node.js 26.12.0、pnpm 12.13.0。实际项目版本以根 `package.json`、`.node-version` 和锁文件为准；Vite、Vitest、Oxlint、Oxfmt 等跟随 Vite Plus 的整套版本。
 
-| 工作项                     | 当前状态           | 验收依据                                                                          |
-| -------------------------- | ------------------ | --------------------------------------------------------------------------------- |
-| 环境、依赖和锁文件统一     | 本地通过           | 实际 Node.js/pnpm 版本、冻结锁文件安装及 peer 检查                                |
-| Jest/ts-jest、ESLint 迁移  | 本地通过           | 76 个测试文件、959 项测试，`vp check` 和两次严格 TypeScript 检查                  |
-| `vp pack` 库构建与产物格式 | 本地通过           | ESM/CJS、独立 Worker、声明、map、通知及 tarball 隔离消费者检查                    |
-| CI 入口统一                | 远端发布工作流通过 | `0.1.0-beta.2` 的准备与发布 job 成功；见[首次 OIDC 发布结果](#首次-oidc-发布结果) |
+| 工作项                     | 当前状态           | 验收依据                                                                                |
+| -------------------------- | ------------------ | --------------------------------------------------------------------------------------- |
+| 环境、依赖和锁文件统一     | 本地通过           | 实际 Node.js/pnpm 版本、冻结锁文件安装及 peer 检查                                      |
+| Jest/ts-jest、ESLint 迁移  | 本地通过           | 76 个测试文件、959 项测试，`vp check` 和两次严格 TypeScript 检查                        |
+| `vp pack` 库构建与产物格式 | 本地通过           | ESM/CJS、独立 Worker、声明、map、通知及 tarball 隔离消费者检查                          |
+| CI 入口统一                | 远端发布工作流通过 | `0.1.0-beta.3` 的准备与发布 job 成功；见[Taro 构建插件版本发布](#taro-构建插件版本发布) |
 
 CI 使用 [`voidzero-dev/setup-vp@v1.21.2`](https://github.com/voidzero-dev/setup-vp/tree/v1.21.2) 管理环境，固定 action 版本并读取项目的 Vite Plus 和 Node.js 声明。`vp pack` 构建库；`vp pm pack` 通过项目包管理器运行 `prepack` 并生成 npm tarball，两者不是同一操作。
 
@@ -236,3 +236,21 @@ npm 返回的 SLSA v1 provenance 已核对声明字段：仓库为 `https://gith
 发布后使用匿名身份和全新缓存，从官方 registry 固定安装 `0.1.0-beta.2`，锁文件 integrity、严格类型、CJS/ESM、SDK/Replay 行为及 5 个子路径检查通过。`beta` 指向 `0.1.0-beta.2`；按已确认的渠道安排，`latest` 保留在 `0.1.0-beta.1`。准备清单保存在 `.artifacts/actions/38690018889/candidate/release.json`，同 run 的 `publication.json` 汇总发布证据；公开消费报告为 `.artifacts/oidc-beta2-public-consumer.json`。
 
 本次完成的是远端发包与公开包消费验收。既有真实 Sentry、Replay 关联和 Playback 证据仍对应各节记录的候选；本次未重做宿主接入、宿主 CI、体验版、iOS/Android 真机或微信上传体积验收，也未弃用旧包。发布后的文档更新不重建或替换已发布 tarball。
+
+## Taro 构建插件版本发布
+
+2026-10-15，`0.1.0-beta.3` 在用户确认确切候选后，通过 [Actions run 38735008427](https://github.com/xumoses/sentry-taro/actions/runs/38735008427) 的 `npm` Environment 审批和 OIDC 发布。`prepare` 与 `publish` 均成功；新增能力见 [Taro 构建插件指南](../guides/taro-plugin.md)。
+
+- 版本：`@xumoses/sentry-taro@0.1.0-beta.3`，public；registry 发布时间为 `2026-10-15T12:40:36.342Z`（北京时间 20:40）。
+- 源码：`d57f0cf555e928d74a3c9d0d790441ef20aeaaf3`；Git tag 为 `v0.1.0-beta.3`。
+- Actions artifact：`11972990620`；文件 `xumoses-sentry-taro-0.1.0-beta.3.tgz`，1,949,124 字节。
+- SHA-256：`deef1801c720aa3962ce34da0491039e74ded103a541edbe9003599a1ebd4dae`。
+- SHA-512（Base64）：`cqspYI647glSK4jbMoUNiVOl2i9BZ4Yrhie+l+7FekipRBXtOxSYQXpA+vJWfmJL86krV+iP8UPzXhvY1EwOSQ==`。
+
+远端候选通过冻结安装、格式/lint、类型、1,187 项 SDK/Replay/插件测试、72 项发布工具测试、构建与产物、Worker、生产 bundle、隔离消费者和 npm dry-run。审批前下载的 Actions tarball 与本地验证候选逐字节一致；发布后再次匿名下载 npm tarball，大小、SHA-256 和 SHA-512 均与候选一致。`beta` 指向 `0.1.0-beta.3`，`latest` 保留在 `0.1.0-beta.1`。
+
+SLSA v1 provenance 声明中的仓库、工作流、tag、源码提交、run 和 subject SHA-512 均与候选一致；[Sigstore 透明日志](https://search.sigstore.dev/?logIndex=3264807392)记录此次声明。本次核对声明字段，未执行独立密码学验签。候选清单与发布证据保存在忽略的 `.artifacts/github/38735008427/` 中。
+
+发布后使用匿名身份、全新目录和缓存，从官方 registry 固定安装 `0.1.0-beta.3`。锁文件完整性、严格类型、CJS/ESM、SDK/Replay 生命周期、运行时子路径与 `taro-plugin` 消费均通过；插件额外验证页面 SVG、资源读取、metadata、Worker 辅助及官方 CLI 的按需加载。报告保存在 `.artifacts/oidc-beta3-public-consumer.json`。
+
+该版本的宿主插件迁移、体验版、iOS/Android 真机与微信上传体积仍需各自验收。发布记录不扩展既有真实 Sentry 和 Playback 证据的适用范围。
