@@ -1,11 +1,14 @@
-import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 // Mock @sentry/core
-const mockStartSession = jest.fn();
-const mockEndSession = jest.fn();
-const mockCaptureSession = jest.fn();
+const { mockStartSession, mockEndSession, mockCaptureSession } = vi.hoisted(() => {
+  const mockStartSession = vi.fn();
+  const mockEndSession = vi.fn();
+  const mockCaptureSession = vi.fn();
+  return { mockStartSession, mockEndSession, mockCaptureSession };
+});
 
-jest.mock('@sentry/core', () => ({
+vi.mock('@sentry/core', () => ({
   startSession: mockStartSession,
   endSession: mockEndSession,
   captureSession: mockCaptureSession,
@@ -20,13 +23,13 @@ describe('SessionIntegration', () => {
   let savedApp: any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     _resetAppLifecycle(); // 清共享 App 包装状态，避免用例间残留
     capturedAppOptions = null;
 
     // 新模型经共享 appLifecycle 猴补全局 App（不再是 wx.App）
     savedApp = (globalThis as any).App;
-    originalApp = jest.fn((options: any) => {
+    originalApp = vi.fn((options: any) => {
       capturedAppOptions = options;
     });
     (globalThis as any).App = originalApp;
@@ -48,7 +51,7 @@ describe('SessionIntegration', () => {
     const integration = new SessionIntegration();
     integration.setupOnce();
 
-    (globalThis as any).App({ onLaunch: jest.fn() });
+    (globalThis as any).App({ onLaunch: vi.fn() });
     capturedAppOptions.onLaunch();
 
     expect(mockStartSession).toHaveBeenCalledWith({ ignoreDuration: true });
@@ -59,7 +62,7 @@ describe('SessionIntegration', () => {
     const integration = new SessionIntegration();
     integration.setupOnce();
 
-    (globalThis as any).App({ onShow: jest.fn() });
+    (globalThis as any).App({ onShow: vi.fn() });
     capturedAppOptions.onShow();
 
     expect(mockStartSession).toHaveBeenCalled();
@@ -69,7 +72,7 @@ describe('SessionIntegration', () => {
     const integration = new SessionIntegration();
     integration.setupOnce();
 
-    (globalThis as any).App({ onLaunch: jest.fn(), onShow: jest.fn() });
+    (globalThis as any).App({ onLaunch: vi.fn(), onShow: vi.fn() });
 
     capturedAppOptions.onLaunch();
     mockStartSession.mockClear();
@@ -83,7 +86,7 @@ describe('SessionIntegration', () => {
     const integration = new SessionIntegration();
     integration.setupOnce();
 
-    (globalThis as any).App({ onLaunch: jest.fn(), onHide: jest.fn() });
+    (globalThis as any).App({ onLaunch: vi.fn(), onHide: vi.fn() });
 
     capturedAppOptions.onLaunch();
     capturedAppOptions.onHide();
@@ -98,9 +101,9 @@ describe('SessionIntegration', () => {
     const integration = new SessionIntegration();
     integration.setupOnce();
 
-    const originalOnLaunch = jest.fn();
-    const originalOnShow = jest.fn();
-    const originalOnHide = jest.fn();
+    const originalOnLaunch = vi.fn();
+    const originalOnShow = vi.fn();
+    const originalOnHide = vi.fn();
 
     (globalThis as any).App({
       onLaunch: originalOnLaunch,
@@ -121,7 +124,7 @@ describe('SessionIntegration', () => {
     const integration = new SessionIntegration();
     integration.setupOnce();
 
-    (globalThis as any).App({ onLaunch: jest.fn(), onHide: jest.fn(), onShow: jest.fn() });
+    (globalThis as any).App({ onLaunch: vi.fn(), onHide: vi.fn(), onShow: vi.fn() });
 
     capturedAppOptions.onLaunch();
     mockStartSession.mockClear();

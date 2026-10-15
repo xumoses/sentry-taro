@@ -121,8 +121,10 @@ export function installTaroReplayPageLifecycle({
         try {
           if (bridge.attachRoot(createRuntime(page, getReplayStyles, getReplayImageSources))) {
             attachedPages.add(page);
-            activePage = page;
           }
+          // Sampling can be off while the coordinator retains this visible root
+          // for an explicit start(). Hiding must still release that ownership.
+          activePage = page;
         } catch {
           // Replay is diagnostic-only and must never alter Taro page navigation.
         }
@@ -151,7 +153,7 @@ export function installTaroReplayPageLifecycle({
         hiddenPages.add(page);
         scheduledPages.delete(page);
         if (unload) readyPages.delete(page);
-        if (!attachedPages.delete(page)) return;
+        attachedPages.delete(page);
       }
       if (activePage !== page) return;
       activePage = undefined;

@@ -106,8 +106,8 @@ describe('unified public SDK with real client and recorder', () => {
     async (mode) => {
       const integration =
         mode === 'default SDK'
-          ? Sentry.replayIntegration()
-          : Sentry.taroReplayIntegration({ sdk: Sentry });
+          ? Sentry.replayIntegration({ minReplayDuration: 0 })
+          : Sentry.taroReplayIntegration({ minReplayDuration: 0, sdk: Sentry });
       const f = setup(integration);
       const page = runtime();
       expect(Sentry.getClient()).toBe(f.client);
@@ -134,7 +134,7 @@ describe('unified public SDK with real client and recorder', () => {
   );
 
   test('client sampling keeps a buffer local until an accepted error promotes it', async () => {
-    const integration = Sentry.replayIntegration();
+    const integration = Sentry.replayIntegration({ minReplayDuration: 0 });
     const f = setup(integration, { replaysSessionSampleRate: 0, replaysOnErrorSampleRate: 1 });
     const page = runtime();
     expect(integration.bridge.attachRoot(page.value)).toBe(true);
@@ -155,7 +155,7 @@ describe('unified public SDK with real client and recorder', () => {
   test.each(['integration omitted', 'sampled out'] as const)(
     '%s preserves error reporting without starting recording',
     async (mode) => {
-      const integration = Sentry.replayIntegration();
+      const integration = Sentry.replayIntegration({ minReplayDuration: 0 });
       const f =
         mode === 'integration omitted'
           ? setup()

@@ -1,41 +1,41 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vite-plus/test';
 import { captureException, getCurrentScope } from '@sentry/core';
 import { GlobalHandlers } from '../src/integrations/globalhandlers';
 
 // Mock @sentry/core
-jest.mock('@sentry/core', () => ({
-  captureException: jest.fn(),
-  getCurrentScope: jest.fn(),
+vi.mock('@sentry/core', () => ({
+  captureException: vi.fn(),
+  getCurrentScope: vi.fn(),
 }));
 
 // Mock crossPlatform
-const mockSdk: any = {};
+const mockSdk = vi.hoisted(() => ({}) as any);
 
-jest.mock('../src/crossPlatform', () => ({
-  sdk: jest.fn(() => mockSdk),
+vi.mock('../src/crossPlatform', () => ({
+  sdk: vi.fn(() => mockSdk),
 }));
 
 describe('GlobalHandlers', () => {
   let mockScope: any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockScope = {
-      setTag: jest.fn(),
-      setContext: jest.fn(),
+      setTag: vi.fn(),
+      setContext: vi.fn(),
     };
-    (getCurrentScope as jest.Mock).mockReturnValue(mockScope);
+    (getCurrentScope as Mock).mockReturnValue(mockScope);
 
     // 重置 mockSdk
     Object.keys(mockSdk).forEach((key) => delete mockSdk[key]);
-    mockSdk.onError = jest.fn();
-    mockSdk.onUnhandledRejection = jest.fn();
-    mockSdk.onPageNotFound = jest.fn();
-    mockSdk.onMemoryWarning = jest.fn();
-    mockSdk.offError = jest.fn();
-    mockSdk.offUnhandledRejection = jest.fn();
-    mockSdk.offPageNotFound = jest.fn();
-    mockSdk.offMemoryWarning = jest.fn();
+    mockSdk.onError = vi.fn();
+    mockSdk.onUnhandledRejection = vi.fn();
+    mockSdk.onPageNotFound = vi.fn();
+    mockSdk.onMemoryWarning = vi.fn();
+    mockSdk.offError = vi.fn();
+    mockSdk.offUnhandledRejection = vi.fn();
+    mockSdk.offPageNotFound = vi.fn();
+    mockSdk.offMemoryWarning = vi.fn();
   });
 
   describe('setupOnce', () => {
@@ -274,11 +274,11 @@ describe('GlobalHandlers', () => {
       integration.setupOnce();
       integration.cleanup();
 
-      jest.clearAllMocks();
-      mockSdk.onError = jest.fn();
-      mockSdk.onUnhandledRejection = jest.fn();
-      mockSdk.onPageNotFound = jest.fn();
-      mockSdk.onMemoryWarning = jest.fn();
+      vi.clearAllMocks();
+      mockSdk.onError = vi.fn();
+      mockSdk.onUnhandledRejection = vi.fn();
+      mockSdk.onPageNotFound = vi.fn();
+      mockSdk.onMemoryWarning = vi.fn();
 
       integration.setupOnce();
       expect(mockSdk.onError).toHaveBeenCalled();

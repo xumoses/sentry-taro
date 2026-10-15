@@ -5,7 +5,7 @@ The inherited SDK and bundled runtime dependencies retain the following notices.
 These notices must accompany copies or substantial portions of the respective software.
 Worker and JavaScript distributions retain their applicable bundled notices.
 
-@sentry/core 10.66.0
+@sentry/core 10.76.2
 Source: https://github.com/getsentry/sentry-javascript
 
 MIT License

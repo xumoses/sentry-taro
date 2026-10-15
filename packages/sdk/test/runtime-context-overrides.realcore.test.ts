@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, expect, test } from 'vite-plus/test';
 import * as Sentry from '../src/index';
 import { installedIntegrations, type Envelope } from '@sentry/core';
 import { resetPlatformCache } from '../src/crossPlatform';

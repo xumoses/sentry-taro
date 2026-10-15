@@ -1,16 +1,13 @@
 /**
- * PROTOTYPE — Taro virtual DOM -> rrweb event recorder.
- *
- * Question being tested: can Taro's in-memory DOM and MutationObserver produce
- * a small, Sentry-compatible rrweb recording without a browser DOM?
- *
- * This module is deliberately opt-in and has no persistence or automatic SDK
- * integration. It should remain on the replay POC branch until the experiment
- * has been evaluated in a real mini program.
+ * Taro runtime DOM -> rrweb-compatible event recorder.
+ * The historical POC names and capture marker remain beta compatibility contracts.
+ * This opt-in module owns serialization, privacy and bounded recording; sampling,
+ * idle policy, Replay identity and delivery belong to the Replay coordinator.
  */
 
 import { uuid4, type Breadcrumb } from '@sentry/core';
 
+import { REPLAY_BUFFER_WINDOW_MS, REPLAY_MAX_DURATION_MS } from './replay-constants';
 import {
   normalizeReplayRpx,
   sanitizeReplayStyle,
@@ -576,7 +573,8 @@ function cloneCapture(capture: TaroReplayPocCapture): TaroReplayPocCapture {
 }
 
 /**
- * Starts the throwaway Taro DOM recorder. Call this after the Taro page root is
+ * Starts the low-level Taro DOM recorder. The POC spelling is retained for beta compatibility.
+ * Call this after the Taro page root is
  * mounted (for example in useReady), and call stop from useUnload.
  */
 export function startTaroDomReplayPoc(
@@ -589,14 +587,24 @@ export function startTaroDomReplayPoc(
 
   const now = options.now || Date.now;
   const startedAt = now();
-  const maxDurationMs = boundedInteger(options.maxDurationMs, 30_000, 1, 60 * 60_000);
+  const maxDurationMs = boundedInteger(
+    options.maxDurationMs,
+    REPLAY_MAX_DURATION_MS,
+    1,
+    REPLAY_MAX_DURATION_MS,
+  );
   const maxEvents = boundedInteger(options.maxEvents, 500, 1, 100_000);
   const maxBytes = boundedInteger(options.maxBytes, 512 * 1024, 1, 20 * 1024 * 1024);
   const mutationLimit = boundedInteger(options.mutationLimit, 10_000, 1, 100_000);
   let rollingWindowMs =
     options.rollingWindowMs === undefined
       ? undefined
-      : boundedInteger(options.rollingWindowMs, 30_000, 0, 60_000);
+      : boundedInteger(
+          options.rollingWindowMs,
+          REPLAY_BUFFER_WINDOW_MS,
+          0,
+          REPLAY_BUFFER_WINDOW_MS,
+        );
   const maskAllText = options.maskAllText !== false;
   const maskInputValues = options.maskAllInputs ?? options.maskInputValues !== false;
   const blockAllMedia = options.blockAllMedia !== false;
@@ -1493,7 +1501,7 @@ export function startTaroDomReplayPoc(
     if (resources.timer) clearTimeout(resources.timer);
     resources.timer = setTimeout(
       () => stop('duration'),
-      boundedInteger(durationMs, maxDurationMs, 1, 60 * 60_000),
+      boundedInteger(durationMs, maxDurationMs, 1, REPLAY_MAX_DURATION_MS),
     );
     return true;
   }

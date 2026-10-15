@@ -65,12 +65,18 @@ export function useTaroReplayRoot(options: UseTaroReplayRootOptions): ReplayCoor
   const snapshot = useTaroReplaySnapshot(options);
   const owner = useRef({});
   const hidden = useRef(false);
+  const attached = useRef(false);
   const attach = () => {
-    if (!bridge || hidden.current || rootOwners.get(bridge) === owner.current) return;
-    if (bridge.attachRoot(createRuntime())) rootOwners.set(bridge, owner.current);
+    if (!bridge || hidden.current || (rootOwners.get(bridge) === owner.current && attached.current))
+      return;
+    attached.current = bridge.attachRoot(createRuntime());
+    // A visible root is also needed by manual start when automatic sampling is off.
+    // Keep failed recording attaches retryable, but always release visibility on hide.
+    rootOwners.set(bridge, owner.current);
   };
   const detach = () => {
     hidden.current = true;
+    attached.current = false;
     if (bridge && rootOwners.get(bridge) === owner.current) {
       rootOwners.delete(bridge);
       bridge.detachRoot();

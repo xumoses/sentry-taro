@@ -1,4 +1,4 @@
-import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { makeOfflineTransport } from '@sentry/core';
 import { createMiniappOfflineStore } from '../src/transports/offlineStore';
 import { resetPlatformCache } from '../src/crossPlatform';
@@ -24,14 +24,14 @@ describe('离线缓存（真 makeOfflineTransport + 小程序 store）', () => {
   beforeEach(() => {
     mem = {};
     g.wx = {
-      setStorageSync: jest.fn((k: string, v: string) => {
+      setStorageSync: vi.fn((k: string, v: string) => {
         mem[k] = v;
       }),
-      getStorageSync: jest.fn((k: string) => mem[k]),
-      removeStorageSync: jest.fn((k: string) => {
+      getStorageSync: vi.fn((k: string) => mem[k]),
+      removeStorageSync: vi.fn((k: string) => {
         delete mem[k];
       }),
-      request: jest.fn(),
+      request: vi.fn(),
     };
     resetPlatformCache();
   });
@@ -42,7 +42,7 @@ describe('离线缓存（真 makeOfflineTransport + 小程序 store）', () => {
   });
 
   it('底层 send 失败 → envelope 落入小程序 storage', async () => {
-    const baseSend = jest.fn(() => Promise.reject(new Error('network down')));
+    const baseSend = vi.fn(() => Promise.reject(new Error('network down')));
     const makeBase = () => ({ send: baseSend, flush: () => Promise.resolve(true) });
 
     const offline = makeOfflineTransport(makeBase as any)({
@@ -63,10 +63,12 @@ describe('离线缓存（真 makeOfflineTransport + 小程序 store）', () => {
 
   it('storage 中已有积压 → 恢复后经 makeOfflineTransport 取回重发', async () => {
     // 预置一条积压（新格式：{envelope, timestamp}[]）
-    mem[OFFLINE_KEY] = JSON.stringify([{ envelope: makeEnvelope('queued-1'), timestamp: 1640995200000 }]);
+    mem[OFFLINE_KEY] = JSON.stringify([
+      { envelope: makeEnvelope('queued-1'), timestamp: 1640995200000 },
+    ]);
 
     const sent: any[] = [];
-    const baseSend = jest.fn((env: any) => {
+    const baseSend = vi.fn((env: any) => {
       sent.push(env);
       return Promise.resolve({ statusCode: 200 });
     });

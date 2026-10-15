@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
   startTaroDomReplayPoc,
   type StartTaroDomReplayPocOptions,
@@ -54,7 +54,7 @@ function harness(root: Node) {
       callback = fn;
     }
     observe() {}
-    disconnect = jest.fn();
+    disconnect = vi.fn();
   }
   return {
     MutationObserver: Observer,
@@ -71,8 +71,8 @@ function start(options: StartTaroDomReplayPocOptions) {
 }
 afterEach(() => {
   active.splice(0).forEach((controller) => controller.stop());
-  jest.restoreAllMocks();
-  jest.useRealTimers();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 function json(events: unknown): string {
   return JSON.stringify(events);
@@ -328,7 +328,7 @@ describe('Replay privacy and supported native events', () => {
   it.each([NaN, Infinity, -Infinity])(
     'keeps duration, event, byte and mutation bounds finite for %s',
     (invalid) => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const root = element();
       const h = harness(root);
       const duration = start({
@@ -336,7 +336,9 @@ describe('Replay privacy and supported native events', () => {
         MutationObserver: h.MutationObserver,
         maxDurationMs: invalid,
       });
-      jest.advanceTimersByTime(30000);
+      vi.advanceTimersByTime(30000);
+      expect(duration.getCapture().stopReason).toBeNull();
+      vi.advanceTimersByTime(60 * 60_000 - 30000);
       expect(duration.getCapture().stopReason).toBe('duration');
 
       const events = start({ root, MutationObserver: h.MutationObserver, maxEvents: invalid });
@@ -424,7 +426,7 @@ describe('Replay privacy and supported native events', () => {
   it('does not repeatedly serialize a large unchanged checkpoint for every scroll event', () => {
     const root = element('scroll-view');
     const h = harness(root);
-    const stringify = jest.spyOn(JSON, 'stringify');
+    const stringify = vi.spyOn(JSON, 'stringify');
     const controller = start({
       root,
       MutationObserver: h.MutationObserver,
@@ -707,8 +709,8 @@ describe('bounded session streaming', () => {
   });
 
   it('promotes the error buffer without rebuilding IDs, privacy state or the observer', () => {
-    jest.useFakeTimers();
-    jest.setSystemTime(1000);
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
     const input = element('input', { value: 'private-value', type: 'password' });
     const root = element('view', {}, [input]);
     const h = harness(root);
@@ -722,7 +724,7 @@ describe('bounded session streaming', () => {
     h.emit('input', { target: input, detail: { value: 'before-promotion' } });
     const prepared = controller.getCapture();
     const inputId = prepared.events.at(-1)!.data['id'];
-    jest.advanceTimersByTime(50);
+    vi.advanceTimersByTime(50);
     expect(controller.promoteToSession(200)).toBe(true);
     expect(controller.getCapture().events).toEqual([]);
     expect(controller.getCapture().replayId).toBe(prepared.replayId);
@@ -736,16 +738,16 @@ describe('bounded session streaming', () => {
     expect(json(after)).not.toContain('after-promotion');
     expect(after.events.at(-1)!.data).toMatchObject({ source: 3, id: 1, y: 123 });
     expect(controller.getCapture().events).toEqual([]);
-    jest.advanceTimersByTime(60);
+    vi.advanceTimersByTime(60);
     expect(controller.getCapture().stopReason).toBeNull();
-    jest.advanceTimersByTime(140);
+    vi.advanceTimersByTime(140);
     expect(controller.getCapture().stopReason).toBe('duration');
     expect(controller.promoteToSession(100)).toBe(false);
     expect(json(prepared)).not.toContain('before-promotion');
   });
 
   it('never drains an incomplete initial checkpoint, rolling buffer, or oversized event', () => {
-    const drain = jest.fn();
+    const drain = vi.fn();
     const root = element('view', {}, [text('small')]);
     const h = harness(root);
     const initial = start({

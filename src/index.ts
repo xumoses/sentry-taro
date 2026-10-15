@@ -10,5 +10,9 @@ export type {
   TaroReplayMutationRecordLike,
 } from '../packages/sdk/src/replay-poc';
 
-export { replayIntegration, taroReplayIntegration } from './replay';
+export { getReplay, replayIntegration, taroReplayIntegration } from './replay';
 export type { ReplayIntegrationOptions, TaroReplayIntegrationOptions } from './replay';
+export type {
+  ReplayRecordingMode,
+  SendBufferedReplayOptions,
+} from '../packages/replay/src/coordinator/types';

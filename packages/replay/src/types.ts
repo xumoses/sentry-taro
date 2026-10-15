@@ -45,6 +45,9 @@ export interface TaroReplayNodeLike {
   attributes?: TaroReplayAttributeLike[] | ArrayLike<TaroReplayAttributeLike>;
   getAttribute?: (name: string) => unknown;
   hasAttribute?: (name: string) => boolean;
+  /** Runtime event signatures vary (including Taro's third capture argument). */
+  addEventListener?: (...args: any[]) => void;
+  removeEventListener?: (...args: any[]) => void;
 }
 
 export interface TaroReplayMutationRecordLike {

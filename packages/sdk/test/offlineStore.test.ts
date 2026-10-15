@@ -1,8 +1,9 @@
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite-plus/test';
 import { createMiniappOfflineStore } from '../src/transports/offlineStore';
 import { sdk } from '../src/crossPlatform';
 
-jest.mock('../src/crossPlatform', () => ({
-  sdk: jest.fn(),
+vi.mock('../src/crossPlatform', () => ({
+  sdk: vi.fn(),
 }));
 
 describe('OfflineStore', () => {
@@ -10,16 +11,16 @@ describe('OfflineStore', () => {
 
   beforeEach(() => {
     mockStorage = {};
-    (sdk as jest.Mock).mockReturnValue({
-      getStorageSync: jest.fn((key: string) => mockStorage[key]),
-      setStorageSync: jest.fn((key: string, value: string) => {
+    (sdk as Mock).mockReturnValue({
+      getStorageSync: vi.fn((key: string) => mockStorage[key]),
+      setStorageSync: vi.fn((key: string, value: string) => {
         mockStorage[key] = value;
       }),
     });
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should push and shift envelopes', async () => {
@@ -86,12 +87,12 @@ describe('OfflineStore', () => {
 
   describe('健壮性：损坏自愈与体积上限', () => {
     it('存储被写坏（非法 JSON）时清键自愈，之后可正常使用', async () => {
-      const removeStorageSync = jest.fn((key: string) => {
+      const removeStorageSync = vi.fn((key: string) => {
         delete mockStorage[key];
       });
-      (sdk as jest.Mock).mockReturnValue({
-        getStorageSync: jest.fn((key: string) => mockStorage[key]),
-        setStorageSync: jest.fn((key: string, value: string) => {
+      (sdk as Mock).mockReturnValue({
+        getStorageSync: vi.fn((key: string) => mockStorage[key]),
+        setStorageSync: vi.fn((key: string, value: string) => {
           mockStorage[key] = value;
         }),
         removeStorageSync,

@@ -1,27 +1,48 @@
-const mockSpanSetAttribute = jest.fn();
-const mockSpanSetStatus = jest.fn();
-const mockSpanEnd = jest.fn();
-const mockSpan = {
-  setAttribute: mockSpanSetAttribute,
-  setStatus: mockSpanSetStatus,
-  end: mockSpanEnd,
-};
-const mockStartInactiveSpan = jest.fn(() => mockSpan);
-const mockGetTraceData = jest.fn(() => ({
-  'sentry-trace': 'trace-id-span-id-1',
-  baggage: 'sentry-trace_id=trace-id,sentry-public_key=public-key,sentry-sampled=true',
-}));
-const mockSetHttpStatus = jest.fn((span, statusCode) => {
-  span.setAttribute('http.response.status_code', statusCode);
-  span.setStatus({ code: statusCode >= 400 ? 2 : 1 });
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite-plus/test';
+const {
+  mockSpanSetAttribute,
+  mockSpanSetStatus,
+  mockSpanEnd,
+  mockSpan,
+  mockStartInactiveSpan,
+  mockGetTraceData,
+  mockSetHttpStatus,
+} = vi.hoisted(() => {
+  const mockSpanSetAttribute = vi.fn();
+  const mockSpanSetStatus = vi.fn();
+  const mockSpanEnd = vi.fn();
+  const mockSpan = {
+    setAttribute: mockSpanSetAttribute,
+    setStatus: mockSpanSetStatus,
+    end: mockSpanEnd,
+  };
+  const mockStartInactiveSpan = vi.fn(() => mockSpan);
+  const mockGetTraceData = vi.fn(() => ({
+    'sentry-trace': 'trace-id-span-id-1',
+    baggage: 'sentry-trace_id=trace-id,sentry-public_key=public-key,sentry-sampled=true',
+  }));
+  const mockSetHttpStatus = vi.fn((span, statusCode) => {
+    span.setAttribute('http.response.status_code', statusCode);
+    span.setStatus({ code: statusCode >= 400 ? 2 : 1 });
+  });
+  return {
+    mockSpanSetAttribute,
+    mockSpanSetStatus,
+    mockSpanEnd,
+    mockSpan,
+    mockStartInactiveSpan,
+    mockGetTraceData,
+    mockSetHttpStatus,
+  };
 });
 
 // Mock the core module to avoid redefine property errors
-jest.mock('@sentry/core', () => {
+
+vi.mock('@sentry/core', () => {
   return {
     withActiveSpan: (_span: unknown, callback: () => unknown) => callback(),
-    addBreadcrumb: jest.fn(),
-    getClient: jest.fn(() => ({
+    addBreadcrumb: vi.fn(),
+    getClient: vi.fn(() => ({
       getOptions: () => ({ dsn: 'https://key@sentry.io/123' }),
     })),
     getTraceData: mockGetTraceData,
@@ -36,24 +57,24 @@ import * as crossPlatform from '../src/crossPlatform';
 import { addBreadcrumb, getClient } from '@sentry/core';
 
 describe('NetworkBreadcrumbs Integration', () => {
-  let requestMock: jest.Mock;
+  let requestMock: Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    requestMock = jest.fn((options) => {
+    requestMock = vi.fn((options) => {
       if (options.success) {
         options.success({ statusCode: 200, data: { status: 'ok' } });
       }
     });
 
-    jest.spyOn(crossPlatform, 'sdk').mockReturnValue({
+    vi.spyOn(crossPlatform, 'sdk').mockReturnValue({
       request: requestMock,
     });
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should patch request and add breadcrumb without body by default', () => {
@@ -180,7 +201,7 @@ describe('NetworkBreadcrumbs Integration', () => {
     });
     expect(addBreadcrumb).toHaveBeenCalledTimes(1);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // sentry.io.evil.com should NOT be filtered
     miniappSdk.request({
@@ -207,7 +228,7 @@ describe('NetworkBreadcrumbs Integration', () => {
 
   it('should ignore self-hosted sentry requests based on DSN', () => {
     // Override the getClient mock for this test
-    (getClient as jest.Mock).mockReturnValueOnce({
+    (getClient as Mock).mockReturnValueOnce({
       getOptions: () => ({ dsn: 'http://mykey@sentry.example.test:9000/1' }),
     });
 
@@ -226,13 +247,13 @@ describe('NetworkBreadcrumbs Integration', () => {
   });
 
   it('should capture failure and add error breadcrumb', () => {
-    const failRequestMock = jest.fn((options) => {
+    const failRequestMock = vi.fn((options) => {
       if (options.fail) {
         options.fail({ errMsg: 'request:fail timeout' });
       }
     });
 
-    jest.spyOn(crossPlatform, 'sdk').mockReturnValue({
+    vi.spyOn(crossPlatform, 'sdk').mockReturnValue({
       request: failRequestMock,
     });
 
@@ -321,13 +342,13 @@ describe('NetworkBreadcrumbs Integration', () => {
   });
 
   it('should finish request span from complete callback when success/fail are not called', () => {
-    const completeOnlyRequestMock = jest.fn((options) => {
+    const completeOnlyRequestMock = vi.fn((options) => {
       if (options.complete) {
         options.complete({ statusCode: 204 });
       }
     });
 
-    jest.spyOn(crossPlatform, 'sdk').mockReturnValue({
+    vi.spyOn(crossPlatform, 'sdk').mockReturnValue({
       request: completeOnlyRequestMock,
     });
 
@@ -347,14 +368,14 @@ describe('NetworkBreadcrumbs Integration', () => {
   });
 
   it('should wrap Alipay httpRequest and create request span', () => {
-    const httpRequestMock = jest.fn((options) => {
+    const httpRequestMock = vi.fn((options) => {
       if (options.success) {
         options.success({ status: 201, data: { status: 'ok' } });
       }
     });
 
-    jest.spyOn(crossPlatform, 'sdk').mockReturnValue({
-      request: jest.fn(),
+    vi.spyOn(crossPlatform, 'sdk').mockReturnValue({
+      request: vi.fn(),
       httpRequest: httpRequestMock,
     } as any);
 
@@ -422,7 +443,7 @@ describe('NetworkBreadcrumbs Integration', () => {
     };
     const before = JSON.stringify(options);
     crossPlatform.sdk().request(options);
-    const [breadcrumb, hint] = jest.mocked(addBreadcrumb).mock.calls[0]!;
+    const [breadcrumb, hint] = vi.mocked(addBreadcrumb).mock.calls[0]!;
     expect(hint).toEqual({
       replayNetworkDetails: {
         url: 'https://api.example.com/items',
@@ -432,7 +453,7 @@ describe('NetworkBreadcrumbs Integration', () => {
     });
     expect(breadcrumb.data).not.toHaveProperty('request_headers');
     expect(breadcrumb.data).not.toHaveProperty('response_headers');
-    expect(JSON.stringify(jest.mocked(addBreadcrumb).mock.calls)).not.toMatch(
+    expect(JSON.stringify(vi.mocked(addBreadcrumb).mock.calls)).not.toMatch(
       /auth-canary|cookie-canary|body-canary|query-canary|password/,
     );
     expect(JSON.stringify(options)).toBe(before);
@@ -440,7 +461,7 @@ describe('NetworkBreadcrumbs Integration', () => {
 
   it('captures Alipay httpRequest failure headers and preserves callbacks and return values', () => {
     const receiver = { native: true };
-    const request = jest.fn((options) => {
+    const request = vi.fn((options) => {
       expect(
         options.fail.call(receiver, {
           errorMessage: 'failed',
@@ -450,16 +471,16 @@ describe('NetworkBreadcrumbs Integration', () => {
       expect(options.complete.call(receiver, {})).toBe('complete-return');
       return 'request-task';
     });
-    jest.mocked(crossPlatform.sdk).mockReturnValue({ request: requestMock, httpRequest: request });
+    vi.mocked(crossPlatform.sdk).mockReturnValue({ request: requestMock, httpRequest: request });
     new NetworkBreadcrumbs({
       networkDetailAllowUrls: ['api.example.com'],
       networkResponseHeaders: ['X-Response-ID'],
     }).setupOnce();
-    const fail = jest.fn(function (this: unknown) {
+    const fail = vi.fn(function (this: unknown) {
       expect(this).toBe(receiver);
       return 'failure-return';
     });
-    const complete = jest.fn(function (this: unknown) {
+    const complete = vi.fn(function (this: unknown) {
       expect(this).toBe(receiver);
       return 'complete-return';
     });
@@ -471,7 +492,7 @@ describe('NetworkBreadcrumbs Integration', () => {
         complete,
       }),
     ).toBe('request-task');
-    expect(jest.mocked(addBreadcrumb).mock.calls[0]![1]).toEqual({
+    expect(vi.mocked(addBreadcrumb).mock.calls[0]![1]).toEqual({
       replayNetworkDetails: {
         url: 'https://api.example.com/a',
         request_headers: { accept: '*/*' },
@@ -490,17 +511,17 @@ describe('NetworkBreadcrumbs Integration', () => {
     });
     new NetworkBreadcrumbs({ networkDetailAllowUrls: ['api.example.com'] }).setupOnce();
     const header = { accept: 'original' };
-    const success = jest.fn(() => 'success-return');
+    const success = vi.fn(() => 'success-return');
     const options = { url: 'https://api.example.com/a', header, success };
     crossPlatform.sdk().request(options);
     header.accept = 'later';
-    const getter = jest.fn(() => {
+    const getter = vi.fn(() => {
       throw new Error('getter');
     });
     const response = Object.defineProperty({ statusCode: 200 }, 'header', { get: getter });
     expect(nativeOptions.success(response)).toBe('success-return');
     expect(getter).not.toHaveBeenCalled();
-    expect(jest.mocked(addBreadcrumb).mock.calls[0]![1]).toEqual({
+    expect(vi.mocked(addBreadcrumb).mock.calls[0]![1]).toEqual({
       replayNetworkDetails: {
         url: options.url,
         request_headers: { accept: 'original' },
@@ -516,7 +537,7 @@ describe('NetworkBreadcrumbs Integration', () => {
     ).not.toThrow();
     nativeOptions.success({ statusCode: 200 });
     expect(getter).not.toHaveBeenCalled();
-    expect(jest.mocked(addBreadcrumb).mock.calls[1]![1]).toEqual({
+    expect(vi.mocked(addBreadcrumb).mock.calls[1]![1]).toEqual({
       replayNetworkDetails: { url: options.url, request_headers: {}, response_headers: {} },
     });
   });

@@ -1,4 +1,11 @@
-import { captureException, withScope, getClient } from '@sentry/core';
+import {
+  addNonEnumerableProperty,
+  captureException,
+  getClient,
+  getOriginalFunction,
+  markFunctionWrapped,
+  withScope,
+} from '@sentry/core';
 import type { WrappedFunction } from '@sentry/core';
 
 /**
@@ -22,13 +29,13 @@ export function wrap(
 
   try {
     // We don't wanna wrap it twice
-    if ((fn as any).__sentry__) {
+    if (getOriginalFunction(fn)) {
       return fn;
     }
 
     // If this has already been wrapped in the past, return that wrapped function
-    if (fn.__sentry_wrapped__) {
-      return fn.__sentry_wrapped__;
+    if (Object.prototype.hasOwnProperty.call(fn, '__sentry_wrapped__')) {
+      return typeof fn.__sentry_wrapped__ === 'function' ? fn.__sentry_wrapped__ : fn;
     }
   } catch (_e) {
     // Just accessing custom props in some environments
@@ -80,25 +87,12 @@ export function wrap(
     // no-empty
   }
 
-  fn.prototype = fn.prototype || {};
-  sentryWrapped.prototype = fn.prototype;
-
-  Object.defineProperty(fn, '__sentry_wrapped__', {
-    enumerable: false,
-    value: sentryWrapped,
-  });
-
-  // Signal that this function has been wrapped/filled already
-  Object.defineProperties(sentryWrapped, {
-    __sentry__: {
-      enumerable: false,
-      value: true,
-    },
-    __sentry_original__: {
-      enumerable: false,
-      value: fn,
-    },
-  });
+  // Core helpers preserve identity without throwing for frozen functions or read-only properties.
+  markFunctionWrapped(sentryWrapped, fn);
+  // A frozen original may prevent core from sharing prototypes; the new wrapper is still writable.
+  addNonEnumerableProperty(sentryWrapped, '__sentry_original__', fn);
+  addNonEnumerableProperty(fn, '__sentry_wrapped__', sentryWrapped);
+  addNonEnumerableProperty(sentryWrapped, '__sentry__', true);
 
   // Restore original function name
   try {

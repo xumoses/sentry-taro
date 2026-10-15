@@ -5,7 +5,7 @@ const envelopes: unknown[] = [];
 export const getCollectedEnvelopeCount = (): number => envelopes.length;
 export const replay = Sentry.replayIntegration({
   // Only synthetic constants are rendered by this demo.
-  privacy: { maskAllText: false },
+  maskAllText: false,
 });
 
 Sentry.init({
@@ -15,7 +15,7 @@ Sentry.init({
   traceNetworkBody: false,
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1,
-  integrations: [...Sentry.getDefaultIntegrations(), replay],
+  integrations: [replay],
   transport: () => ({
     send: async (envelope) => {
       envelopes.push(envelope);

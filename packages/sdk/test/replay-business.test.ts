@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import {
   startTaroDomReplayPoc,
   type TaroReplayNodeLike,
@@ -443,19 +443,19 @@ describe('Taro business component replay semantics', () => {
   it('records native picker change events while preserving handlers, restart state and teardown', () => {
     const observer = harness();
     const listeners = new Set<(event: TaroReplayScrollEventLike) => void>();
-    const application = jest.fn();
+    const application = vi.fn();
     listeners.add(application);
     const column = element('picker-view-column', { 'data-fixture': 'column' }, [
       element('view'),
       element('view'),
     ]);
     const picker = Object.assign(element('picker-view', { defaultValue: [0] }, [column]), {
-      addEventListener: jest.fn(
+      addEventListener: vi.fn(
         (name: string, listener: (event: TaroReplayScrollEventLike) => void) => {
           if (name === 'change') listeners.add(listener);
         },
       ),
-      removeEventListener: jest.fn(
+      removeEventListener: vi.fn(
         (name: string, listener: (event: TaroReplayScrollEventLike) => void) => {
           if (name === 'change') listeners.delete(listener);
         },

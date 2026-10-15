@@ -4,9 +4,7 @@ import type {
   BaseTransportOptions,
   Event,
   EventHint,
-  Integration,
   Transport,
-  Breadcrumb,
   Options,
 } from '@sentry/core';
 
@@ -52,18 +50,7 @@ export interface MinigameFrameRateOptions {
 /**
  * Configuration options for the Sentry Miniapp SDK.
  */
-export interface MiniappOptions
-  extends
-    Omit<
-      Options,
-      | 'integrations'
-      | 'defaultIntegrations'
-      | 'tracesSampler'
-      | 'beforeSend'
-      | 'beforeBreadcrumb'
-      | 'transport'
-    >,
-    NetworkDetailOptions {
+export interface MiniappOptions extends Options<BaseTransportOptions>, NetworkDetailOptions {
   /** Sentry DSN */
   dsn?: string;
 
@@ -79,7 +66,7 @@ export interface MiniappOptions
   /** Probability that a logical Replay session records and uploads normally. */
   replaysSessionSampleRate?: number;
 
-  /** Probability that a non-session-sampled Replay keeps a local error buffer. */
+  /** Probability that an error uploads the local Replay buffer; any positive rate enables buffering. */
   replaysOnErrorSampleRate?: number;
 
   /** Release version */
@@ -109,24 +96,13 @@ export interface MiniappOptions
    * });
    * ```
    */
-  tracesSampler?: (samplingContext: {
-    /** span 名称 */
-    name: string;
-    /** span 初始属性 */
-    attributes?: Record<string, unknown>;
-    /** 父级 span 是否被采样 */
-    parentSampled?: boolean;
-    /** 来自上游 trace 的采样率 */
-    parentSampleRate?: number;
-    /** 继承父级采样决策或使用回退采样率 */
-    inheritOrSampleWith: (fallbackSampleRate: number) => number;
-  }) => number | boolean;
+  tracesSampler?: NonNullable<Options['tracesSampler']>;
 
   /** Transport function */
   transport?: (transportOptions: BaseTransportOptions) => Transport;
 
   /** Before send hook */
-  beforeSend?: (event: Event, hint?: EventHint) => Event | null | PromiseLike<Event | null>;
+  beforeSend?: NonNullable<Options['beforeSend']>;
 
   /**
    * Observes an event after processors, `beforeSend`, and error sampling accepted it,
@@ -135,10 +111,11 @@ export interface MiniappOptions
   beforeSendEvent?: (event: Event, hint?: EventHint) => void;
 
   /** Before breadcrumb hook */
-  beforeBreadcrumb?: (breadcrumb: Breadcrumb, hint?: Record<string, unknown>) => Breadcrumb | null;
+  beforeBreadcrumb?: NonNullable<Options['beforeBreadcrumb']>;
 
   /**
-   * Miniapp platform label stored on events. Runtime platform detection is automatic.
+   * Miniapp label stored in contexts.miniapp.platform; event.platform remains javascript.
+   * Runtime platform detection is automatic when this override is omitted.
    * 取值与运行时 `AppName` 对齐（百度小程序的全局对象是 `swan`，故用 `swan` 表示，无独立 `baidu`）。
    */
   platform?: 'wechat' | 'alipay' | 'bytedance' | 'qq' | 'swan' | 'dingtalk' | 'kuaishou';
@@ -236,19 +213,21 @@ export interface MiniappOptions
   /** Array of strings or regexes; matching error messages/types are dropped before sending */
   ignoreErrors?: Array<string | RegExp>;
 
-  /** Integrations */
-  integrations?: Integration[] | ((defaults: Integration[]) => Integration[]);
+  /** Structured Logs remain opt-in until the target service supports them. Default false. */
+  enableLogs?: boolean;
 
-  /** Default integrations */
-  defaultIntegrations?: false | Integration[];
+  /** Metrics remain opt-in until the target service supports them. Default false. */
+  enableMetrics?: boolean;
 }
 
 /**
  * Client options for the Miniapp SDK.
  */
-export interface MiniappClientOptions extends ClientOptions<BaseTransportOptions> {
-  options?: MiniappOptions;
-}
+export type MiniappClientOptions = Omit<
+  MiniappOptions,
+  'integrations' | 'stackParser' | 'transport'
+> &
+  ClientOptions<BaseTransportOptions>;
 
 /**
  * All properties the report dialog supports
@@ -277,20 +256,5 @@ export interface ReportDialogOptions {
   onLoad?(): void;
 }
 
-/**
- * Parameters for sending user feedback
- */
-export interface SendFeedbackParams {
-  message: string;
-  name?: string;
-  email?: string;
-  url?: string;
-  source?: string;
-  associatedEventId?: string;
-  /**
-   * Set an object that will be merged sent as tags data with the event.
-   */
-  tags?: {
-    [key: string]: string | number | boolean;
-  };
-}
+/** Feedback payload follows the pinned official core contract. */
+export type { SendFeedbackParams } from '@sentry/core';

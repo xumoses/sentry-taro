@@ -32,6 +32,7 @@ describe('Replay promotion bounds', () => {
     const limits = { maxEvents: 1 };
     let calls = 0;
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -85,6 +86,7 @@ describe('Replay promotion bounds', () => {
     });
     const limits = { maxEvents: 1 };
     const integration = taroReplayIntegration({
+      minReplayDuration: 0,
       sdk: { ...fixture.sdk, getClient: () => client },
       replaysOnErrorSampleRate: 1,
       limits,

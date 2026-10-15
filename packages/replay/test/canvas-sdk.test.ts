@@ -52,6 +52,7 @@ describe('workspace Canvas SDK and public integration bridge', () => {
     runtime.document.getElementById = (id) =>
       id === 'chart' ? chart : id === 'unmarked' ? unmarked : root;
     const integration = taroReplayIntegration({
+      minReplayDuration: 0,
       sdk: f.sdk,
       recordCanvas: true,
       replaysSessionSampleRate: 1,

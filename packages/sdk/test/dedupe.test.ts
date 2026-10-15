@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { beforeEach, describe, expect, it } from 'vite-plus/test';
 import { Dedupe, dedupeIntegration } from '../src/integrations/dedupe';
 import type { Event } from '@sentry/core';
 

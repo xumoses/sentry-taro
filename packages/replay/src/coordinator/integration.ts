@@ -7,6 +7,8 @@ import { ReplayCoordinator } from './ReplayCoordinator';
 import type {
   ReplayCoordinatorOptions,
   ReplayCoordinatorSnapshot,
+  ReplayRecordingMode,
+  SendBufferedReplayOptions,
   TaroReplayBridge,
 } from './types';
 
@@ -17,10 +19,20 @@ export interface TaroReplayIntegrationOptions extends Omit<
   sdk: SentryMiniappReplaySdk;
   replaysSessionSampleRate?: number;
   replaysOnErrorSampleRate?: number;
+  /** Official privacy options; top-level values take precedence over privacy.*. */
+  maskAllText?: boolean;
+  maskAllInputs?: boolean;
+  blockAllMedia?: boolean;
 }
 
 export interface TaroReplayIntegration extends Integration {
   readonly bridge: TaroReplayBridge;
+  start(): void;
+  startBuffering(): void;
+  stop(options?: { flush?: boolean }): Promise<void>;
+  flush(options?: SendBufferedReplayOptions): Promise<void>;
+  getReplayId(onlyIfSampled?: boolean): string | undefined;
+  getRecordingMode(): ReplayRecordingMode | undefined;
   cleanup(): void;
 }
 
@@ -28,6 +40,12 @@ export function taroReplayIntegration(
   options: TaroReplayIntegrationOptions,
 ): TaroReplayIntegration {
   const networkOptions = snapshotNetworkOptions(options);
+  const privacy = {
+    ...options.privacy,
+    ...(options.maskAllText === undefined ? {} : { maskAllText: options.maskAllText }),
+    ...(options.maskAllInputs === undefined ? {} : { maskAllInputs: options.maskAllInputs }),
+    ...(options.blockAllMedia === undefined ? {} : { blockAllMedia: options.blockAllMedia }),
+  };
   let coordinator: ReplayCoordinator | undefined;
   const listeners = new Set<(snapshot: ReplayCoordinatorSnapshot) => void>();
   const coordinatorSubscriptions = new Map<
@@ -47,7 +65,8 @@ export function taroReplayIntegration(
     stop: (options) => coordinator?.stop(options) || Promise.resolve(),
     reset: () => coordinator?.reset(),
     destroy: () => coordinator?.destroy(),
-    getReplayId: () => coordinator?.getReplayId(),
+    getReplayId: (onlyIfSampled) => coordinator?.getReplayId(onlyIfSampled),
+    getRecordingMode: () => coordinator?.getRecordingMode(),
     sendBufferedReplay: () => coordinator?.sendBufferedReplay() || Promise.resolve(),
     recordPageScroll: (position) => coordinator?.recordPageScroll(position),
     recordViewport: (size) => coordinator?.recordViewport(size),
@@ -69,8 +88,21 @@ export function taroReplayIntegration(
   };
 
   return {
-    name: 'TaroReplay',
+    name: 'Replay',
     bridge,
+    start: () => {
+      coordinator?.start();
+    },
+    startBuffering: () => {
+      coordinator?.startBuffering();
+    },
+    // Official controls resolve after transport errors; the coordinator reports
+    // the failure through its diagnostics. The compatibility bridge keeps its
+    // existing promise contract for callers that explicitly handle rejection.
+    stop: (options) => coordinator?.stop(options).catch(() => {}) || Promise.resolve(),
+    flush: (options) => coordinator?.flushReplay(options).catch(() => {}) || Promise.resolve(),
+    getReplayId: (onlyIfSampled) => coordinator?.getReplayId(onlyIfSampled),
+    getRecordingMode: () => coordinator?.getRecordingMode(),
     cleanup() {
       coordinator?.destroy();
       coordinator = undefined;
@@ -88,6 +120,7 @@ export function taroReplayIntegration(
       coordinatorSubscriptions.clear();
       coordinator = new ReplayCoordinator({
         ...withNetworkOptionsSnapshot(options, networkOptions),
+        privacy,
         client: client as SentryReplayClient,
         ...(sessionRate === undefined ? {} : { replaysSessionSampleRate: sessionRate }),
         ...(errorRate === undefined ? {} : { replaysOnErrorSampleRate: errorRate }),

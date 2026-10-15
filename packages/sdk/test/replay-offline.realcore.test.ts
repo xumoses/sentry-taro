@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, expect, test, vi } from 'vite-plus/test';
 import { MiniappClient } from '../src/client';
 import type { Envelope } from '@sentry/core';
 import { resetPlatformCache } from '../src/crossPlatform';
@@ -54,26 +55,26 @@ beforeEach(() => {
   sent = [];
   clients = [];
   g.wx = {
-    request: jest.fn((options) => {
+    request: vi.fn((options) => {
       sent.push(String(options.data));
       options.success({ statusCode: 200 });
     }),
-    setStorageSync: jest.fn((key: string, value: string) => {
+    setStorageSync: vi.fn((key: string, value: string) => {
       if (Buffer.byteLength(value) > 1024 * 1024) throw new Error('storage limit');
       storage[key] = value;
     }),
-    getStorageSync: jest.fn((key: string) => storage[key]),
-    removeStorageSync: jest.fn((key: string) => {
+    getStorageSync: vi.fn((key: string) => storage[key]),
+    removeStorageSync: vi.fn((key: string) => {
       delete storage[key];
     }),
   };
   resetPlatformCache();
   _resetAppLifecycle();
-  jest.useFakeTimers();
+  vi.useFakeTimers();
 });
 afterEach(async () => {
-  jest.clearAllTimers();
-  jest.useRealTimers();
+  vi.clearAllTimers();
+  vi.useRealTimers();
   for (const client of clients) await client.close(0);
   resetPlatformCache();
   _resetAppLifecycle();
@@ -83,7 +84,7 @@ test('default offline transport preserves both 490KB Replay segments sent before
   const client = initialize();
   await client.getTransport()!.send(replay(0));
   await client.getTransport()!.send(replay(1));
-  await jest.advanceTimersByTimeAsync(500);
+  await vi.advanceTimersByTimeAsync(500);
   const segments = sent
     .filter((body) => body.includes('replay_recording'))
     .map((body) => JSON.parse(body.split('\n')[2]!).segment_id);
@@ -124,7 +125,7 @@ test('concurrent large Replay sends wait for native ACK and flush waits for both
   expect(segments()).toEqual([0]);
   expect(saved()).toEqual([]);
   const flush = transport.flush(20);
-  await jest.advanceTimersByTimeAsync(20);
+  await vi.advanceTimersByTimeAsync(20);
   expect(await flush).toBe(false);
   pending.shift().success({ statusCode: 200 });
   await first;
@@ -212,9 +213,9 @@ test('close retains fresh in-flight work and prevents old owner from sending the
   const closing = client.close(0);
   await tick();
   pending.shift().success({ statusCode: 200 });
-  await jest.advanceTimersByTimeAsync(20);
+  await vi.advanceTimersByTimeAsync(20);
   await Promise.all([first, second, closing]);
-  await jest.advanceTimersByTimeAsync(10000);
+  await vi.advanceTimersByTimeAsync(10000);
   expect(segments()).toEqual([0]);
   expect(saved()).toHaveLength(2);
   g.wx.request.mockImplementation((options: any) => {
@@ -235,9 +236,9 @@ test('429 Retry-After remains authoritative during explicit flush and preserves 
   await transport.send(replay(1, 500));
   expect(await transport.flush(100)).toBe(false);
   expect(segments()).toEqual([0]);
-  await jest.advanceTimersByTimeAsync(1999);
+  await vi.advanceTimersByTimeAsync(1999);
   expect(segments()).toEqual([0]);
-  await jest.advanceTimersByTimeAsync(1);
+  await vi.advanceTimersByTimeAsync(1);
   expect(segments()).toEqual([0, 0, 1]);
   expect(saved()).toEqual([]);
 });
@@ -270,7 +271,7 @@ test('storage failure is explicit and never permits an orphan, even when core sw
   const client = initialize();
   await client.sendEnvelope(replay(0, 500));
   await client.sendEnvelope(replay(1, 500));
-  await jest.advanceTimersByTimeAsync(10000);
+  await vi.advanceTimersByTimeAsync(10000);
   expect(segments()).toEqual([0]);
 });
 
@@ -321,7 +322,7 @@ test('expired store is cleared, client reports are not retried, and pending memo
     [[{ type: 'client_report' }, { timestamp: 1, discarded_events: [] }]],
   ];
   await expect(transport.send(report)).rejects.toThrow();
-  await jest.advanceTimersByTimeAsync(10000);
+  await vi.advanceTimersByTimeAsync(10000);
   expect(sent).toHaveLength(1);
   expect(saved()).toEqual([]);
 });
@@ -344,12 +345,12 @@ test('failure to remove an acknowledged backlog entry backs off instead of busy-
   const queued = Promise.resolve(transport.send(replay(1, 100))).catch(() => undefined);
   await tick();
   expect(segments()).toEqual([0]);
-  await jest.advanceTimersByTimeAsync(4999);
+  await vi.advanceTimersByTimeAsync(4999);
   expect(segments()).toEqual([0]);
   g.wx.setStorageSync.mockImplementation((key: string, value: string) => {
     storage[key] = value;
   });
-  await jest.advanceTimersByTimeAsync(1);
+  await vi.advanceTimersByTimeAsync(1);
   await queued;
   expect(segments()).toEqual([0, 0, 1]);
   expect(saved()).toEqual([]);

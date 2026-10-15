@@ -6,27 +6,17 @@
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
-    "build": "vp build && node scripts/build-worker.cjs && node scripts/verify-worker.cjs",
-    "build:types": "tsc -p tsconfig.build.json",
-    "check": "vp check",
-    "check:fix": "vp check --fix",
-    "test": "vp test run",
+    "test": "vp test run --config vitest.config.ts",
     "verify:worker": "node scripts/verify-worker.cjs",
     "verify:assets": "node scripts/verify-assets.cjs"
   },
-  "engines": {
-    "node": ">=24.11.0"
+  "dependencies": {
+    "fflate": "0.8.2"
   },
   "devDependencies": {
-    "@sentry/core": "10.66.0",
+    "@sentry/core": "10.76.2",
     "@tarojs/runtime": "4.2.0",
     "@tarojs/taro": "4.2.0",
-    "@types/node": "^20.19.11",
-    "@types/react": "^18.3.12",
-    "fflate": "0.8.2",
-    "react": "18.3.1",
-    "typescript": "^7.0.2",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.6",
-    "vite-plus": "0.2.6"
+    "react": "18.3.1"
   }
 }

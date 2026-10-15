@@ -82,6 +82,7 @@ describe('workspace SDK and adapter local contract', () => {
     vi.useFakeTimers();
     const f = await candidate();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -106,6 +107,7 @@ describe('workspace SDK and adapter local contract', () => {
     vi.useFakeTimers();
     const f = await candidate();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -131,6 +133,7 @@ describe('workspace SDK and adapter local contract', () => {
     vi.useFakeTimers();
     const f = await candidate();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -153,13 +156,15 @@ describe('workspace SDK and adapter local contract', () => {
     c.destroy();
   });
 
-  test('captures mutations after the old five-minute buffer deadline', async () => {
+  test('captures mutations after a configured five-minute buffer deadline', async () => {
     vi.useFakeTimers();
     const f = await candidate();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
+      limits: { maxDurationMs: 5 * 60_000 },
     });
     c.attachRoot(f.runtime);
     await vi.advanceTimersByTimeAsync(360_000);
@@ -177,6 +182,7 @@ describe('workspace SDK and adapter local contract', () => {
     vi.useFakeTimers();
     const f = await candidate();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -203,10 +209,12 @@ describe('workspace SDK and adapter local contract', () => {
     vi.useFakeTimers();
     const f = await candidate();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
       flushIntervalMs: 600_000,
+      limits: { maxDurationMs: 5 * 60_000 },
     });
     c.attachRoot(f.runtime);
     f.emitBeforeSend(error());
@@ -234,6 +242,7 @@ describe('workspace SDK and adapter local contract', () => {
     vi.useFakeTimers();
     const f = await candidate();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -263,6 +272,7 @@ describe('workspace SDK and adapter local contract', () => {
       vi.useFakeTimers();
       const f = await candidate();
       const c = new ReplayCoordinator({
+        minReplayDuration: 0,
         sdk: f.sdk,
         client: f.sdk.getClient()!,
         ...(mode === 'session' ? { replaysSessionSampleRate: 1 } : { replaysOnErrorSampleRate: 1 }),
@@ -287,6 +297,7 @@ describe('workspace SDK and adapter local contract', () => {
     vi.useFakeTimers();
     const f = await candidate();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,

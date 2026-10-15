@@ -1,16 +1,32 @@
-import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-const mockAddBreadcrumb = jest.fn();
-const mockSetContext = jest.fn();
-const mockSpanEnd = jest.fn((..._args: any[]) => {});
-const mockSpanSetAttributes = jest.fn((..._args: any[]) => {});
-const mockStartInactiveSpan = jest.fn((..._args: any[]) => ({
-  setAttributes: mockSpanSetAttributes,
-  end: mockSpanEnd,
-}));
-const mockSetMeasurement = jest.fn((..._args: any[]) => {});
+const {
+  mockAddBreadcrumb,
+  mockSetContext,
+  mockSpanEnd,
+  mockStartInactiveSpan,
+  mockSetMeasurement,
+} = vi.hoisted(() => {
+  const mockAddBreadcrumb = vi.fn();
+  const mockSetContext = vi.fn();
+  const mockSpanEnd = vi.fn((..._args: any[]) => {});
+  const mockSpanSetAttributes = vi.fn((..._args: any[]) => {});
+  const mockStartInactiveSpan = vi.fn((..._args: any[]) => ({
+    setAttributes: mockSpanSetAttributes,
+    end: mockSpanEnd,
+  }));
+  const mockSetMeasurement = vi.fn((..._args: any[]) => {});
+  return {
+    mockAddBreadcrumb,
+    mockSetContext,
+    mockSpanEnd,
+    mockSpanSetAttributes,
+    mockStartInactiveSpan,
+    mockSetMeasurement,
+  };
+});
 
-jest.mock('@sentry/core', () => ({
+vi.mock('@sentry/core', () => ({
   addBreadcrumb: mockAddBreadcrumb,
   setContext: mockSetContext,
   startInactiveSpan: mockStartInactiveSpan,
@@ -29,36 +45,36 @@ describe('MinigameIntegration', () => {
   let savedRaf: any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     rafCallback = null;
     showCb = null;
     hideCb = null;
     clock = 1000;
 
     savedRaf = g.requestAnimationFrame;
-    g.requestAnimationFrame = jest.fn((cb: () => void) => {
+    g.requestAnimationFrame = vi.fn((cb: () => void) => {
       rafCallback = cb;
       return 1;
     });
 
-    jest.spyOn(crossPlatform, 'now').mockImplementation(() => clock);
-    jest.spyOn(crossPlatform, 'sdk').mockReturnValue({
-      request: jest.fn(),
+    vi.spyOn(crossPlatform, 'now').mockImplementation(() => clock);
+    vi.spyOn(crossPlatform, 'sdk').mockReturnValue({
+      request: vi.fn(),
       getLaunchOptionsSync: () => ({ scene: 1001, path: 'game.js', query: { a: '1' } }),
-      onShow: jest.fn((cb: any) => {
+      onShow: vi.fn((cb: any) => {
         showCb = cb;
       }),
-      onHide: jest.fn((cb: any) => {
+      onHide: vi.fn((cb: any) => {
         hideCb = cb;
       }),
-      offShow: jest.fn(),
-      offHide: jest.fn(),
+      offShow: vi.fn(),
+      offHide: vi.fn(),
     } as any);
   });
 
   afterEach(() => {
     g.requestAnimationFrame = savedRaf;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('记录启动场景上下文与冷启动面包屑', () => {
@@ -136,7 +152,12 @@ describe('MinigameIntegration', () => {
     const startTimeArg = (mockStartInactiveSpan.mock.calls[0]![0] as any).startTime;
     expect(startTimeArg).toBeGreaterThan(1e9);
 
-    expect(mockSetMeasurement).toHaveBeenCalledWith('cold_start', 150, 'millisecond', expect.anything());
+    expect(mockSetMeasurement).toHaveBeenCalledWith(
+      'cold_start',
+      150,
+      'millisecond',
+      expect.anything(),
+    );
     expect(mockSpanEnd).toHaveBeenCalledWith((EPOCH + 150) / 1000); // 时长 = 单调测得的 150ms
   });
 

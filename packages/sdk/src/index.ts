@@ -43,6 +43,10 @@ export type {
 // Export core functions from @sentry/core
 export {
   Scope,
+  setCurrentClient,
+  createTransport,
+  parameterize,
+  dedupeIntegration,
   getGlobalScope,
   withIsolationScope,
   isInitialized,

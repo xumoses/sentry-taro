@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "react"],
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": [
+    "src",
+    "config",
+    "vite.config.ts",
+    "packages/*/src",
+    "packages/*/test",
+    "packages/*/vitest.config.ts"
+  ],
+  "exclude": ["node_modules", "**/dist"]
+}

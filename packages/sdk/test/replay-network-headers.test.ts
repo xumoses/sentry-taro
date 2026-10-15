@@ -1,3 +1,4 @@
+import { expect, test, vi } from 'vite-plus/test';
 import { startTaroDomReplayPoc } from '../src/replay-poc';
 import type { NetworkDetailOptions } from '../src/network-details';
 
@@ -61,7 +62,7 @@ test('allowed network spans re-filter headers but never bodies, and do not claim
 });
 
 test('deny rules and throwing header field accessors cannot leak or interrupt recording', () => {
-  const getter = jest.fn(() => {
+  const getter = vi.fn(() => {
     throw new Error('getter');
   });
   const headers = Object.defineProperty({ url: data.url }, 'request_headers', { get: getter });

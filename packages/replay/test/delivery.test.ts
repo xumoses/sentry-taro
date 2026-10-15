@@ -156,4 +156,44 @@ describe('Replay delivery queue', () => {
     expect(sendEnvelope).toHaveBeenCalledTimes(1);
     expect(q.getSnapshot().pendingSegments).toBe(0);
   });
+
+  test('only drops the failed replay chain while delivering a new replay checkpoint', async () => {
+    let finish!: (value: unknown) => void;
+    const sendEnvelope = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      )
+      .mockResolvedValue({ statusCode: 200 });
+    const q = new ReplayDelivery({ sendEnvelope }, { isEnabled: () => true, onChange: () => {} });
+    const first = makeCapture();
+    const next = { ...makeCapture(), replayId: 'b'.repeat(32) };
+    const results = Promise.allSettled([
+      q.enqueue(first, { segmentId: 0 }),
+      q.enqueue(next, { segmentId: 0 }),
+      q.enqueue(first, { segmentId: 1 }),
+      q.enqueue(next, { segmentId: 1 }),
+    ]);
+    finish({ statusCode: 400 });
+    expect((await results).map((result) => result.status)).toEqual([
+      'rejected',
+      'fulfilled',
+      'rejected',
+      'fulfilled',
+    ]);
+    expect(sendEnvelope.mock.calls.map((call) => call[0][1][0][1].replay_id)).toEqual([
+      first.replayId,
+      next.replayId,
+      next.replayId,
+    ]);
+    expect(q.getSnapshot()).toMatchObject({
+      pendingBytes: 0,
+      pendingSegments: 0,
+      acceptedSegments: 2,
+      droppedSegments: 2,
+    });
+  });
 });

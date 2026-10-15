@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, expect, test, vi } from 'vite-plus/test';
 import * as Sentry from '../src/index';
 import { installedIntegrations } from '@sentry/core';
 import type { Envelope } from '@sentry/core';
@@ -44,10 +45,10 @@ beforeEach(() => {
   Sentry.getIsolationScope().clear();
   Sentry.getCurrentScope().setClient(undefined);
   _resetAppLifecycle();
-  g.Page = jest.fn((config) => config);
-  g.App = jest.fn((config) => config);
+  g.Page = vi.fn((config) => config);
+  g.App = vi.fn((config) => config);
   Object.assign(g.wx, {
-    request: jest.fn(),
+    request: vi.fn(),
     setStorageSync: (key: string, value: string) => {
       storage[key] = value;
     },
@@ -59,13 +60,13 @@ beforeEach(() => {
   resetPlatformCache();
 });
 afterEach(async () => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   await Sentry.getClient()?.close(0);
   Sentry.getCurrentScope().setClient(undefined);
   delete g.Page;
   delete g.App;
   _resetAppLifecycle();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 test('initialScope, errors of every JS value, causes, attachments and client reports use real core pipeline', async () => {
@@ -136,7 +137,7 @@ test('logs and metrics flush real envelopes with scope attributes and processing
 
 test('manual feedback keeps hints, attachments, scope and beforeSendFeedback hook', async () => {
   const client = initialize();
-  const observed = jest.fn();
+  const observed = vi.fn();
   client.on('beforeSendFeedback', observed);
   Sentry.withScope((scope) => {
     scope.setTag('screen', 'help');
@@ -176,7 +177,7 @@ test('native/Taro Page lifecycle, HTTP child span and callback error share trace
     },
   });
   const page = { route: 'taroMiniapp/pages/Home/index' };
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   config.onLoad.call(page);
   config.onShow.call(page);
   const options = originalRequest.mock.calls[0][0];
@@ -184,7 +185,7 @@ test('native/Taro Page lifecycle, HTTP child span and callback error share trace
   options.success({ statusCode: 200 });
   config.onReady.call(page);
   config.onHide.call(page);
-  jest.useRealTimers();
+  vi.useRealTimers();
   await client.flush(2000);
   const transaction = items('transaction')[0];
   expect(transaction.transaction).toBe(page.route);
@@ -202,7 +203,7 @@ test('explicit [] disables propagation, preserves caller options and mixed case 
   const options = {
     url: 'https://api.example.test/a',
     header: { 'Sentry-Trace': 'existing' },
-    success: jest.fn(),
+    success: vi.fn(),
   };
   const originalCallback = options.success;
   g.wx.request(options);
@@ -228,7 +229,7 @@ test('offline store roundtrips binary, isolates projects, and bounds negative li
 });
 
 test('failed offline retries preserve the original retention deadline', async () => {
-  const dateNow = jest.mocked(Date.now);
+  const dateNow = vi.mocked(Date.now);
   const originalTime = Date.now();
   const store = createMiniappOfflineStore({
     storageKey: 'expiry',
@@ -248,8 +249,8 @@ test('failed offline retries preserve the original retention deadline', async ()
 });
 
 test('creating another client does not bypass consent and close stops queued retries', async () => {
-  jest.useFakeTimers();
-  const send = jest.fn(async () => ({ statusCode: 200 }));
+  vi.useFakeTimers();
+  const send = vi.fn(async () => ({ statusCode: 200 }));
   const options = {
     dsn: 'https://public@ingest.example.test/1',
     requireConsent: true,
@@ -266,11 +267,11 @@ test('creating another client does not bypass consent and close stops queued ret
       { event_id: 'a'.repeat(32), sent_at: new Date().toISOString() },
       [[{ type: 'event' }, { message: 'blocked' }]],
     ]);
-  await jest.advanceTimersByTimeAsync(6000);
+  await vi.advanceTimersByTimeAsync(6000);
   expect(send).not.toHaveBeenCalled();
   expect(first.getConsent()).toBe(false);
   first.setConsent(true);
-  await jest.advanceTimersByTimeAsync(120);
+  await vi.advanceTimersByTimeAsync(120);
   expect(send).toHaveBeenCalledTimes(1);
   first.setConsent(false);
   await first
@@ -280,15 +281,15 @@ test('creating another client does not bypass consent and close stops queued ret
       [[{ type: 'event' }, { message: 'preserve' }]],
     ]);
   const closing = first.close(0);
-  await jest.advanceTimersByTimeAsync(10);
+  await vi.advanceTimersByTimeAsync(10);
   await closing;
-  await jest.advanceTimersByTimeAsync(10000);
+  await vi.advanceTimersByTimeAsync(10000);
   expect(send).toHaveBeenCalledTimes(1);
   expect(Object.values(storage).join()).toContain('preserve');
 });
 
 test('transport honors custom headers, mixed case rate limits and binary ArrayBuffer body', async () => {
-  g.wx.request = jest.fn((options) =>
+  g.wx.request = vi.fn((options) =>
     options.success({ statusCode: 429, header: { 'X-Sentry-Rate-Limits': '60::organization' } }),
   );
   resetPlatformCache();
@@ -309,7 +310,7 @@ test('transport honors custom headers, mixed case rate limits and binary ArrayBu
 });
 
 test('sampling callbacks, streamed spans, and default integration filtering take effect', async () => {
-  const sampler = jest.fn(() => 1);
+  const sampler = vi.fn(() => 1);
   const client = initialize({
     tracesSampler: sampler,
     traceLifecycle: 'stream',
@@ -365,19 +366,19 @@ test('reinit keeps the new instrumentation after a delayed old close and preserv
   expect(Sentry.getClient()).toBe(nextClient);
   expect(g.Page).toBe(wrappedPage);
   const page = { route: 'home' };
-  const onLoad = jest.fn(function (this: unknown, value: unknown) {
+  const onLoad = vi.fn(function (this: unknown, value: unknown) {
     expect(this).toBe(page);
     return value;
   });
-  const onReady = jest.fn(() => {
+  const onReady = vi.fn(() => {
     throw new Error('business failure');
   });
   const config = g.Page({ onLoad, onReady });
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   expect(config.onLoad.call(page, 'result')).toBe('result');
   expect(() => config.onReady.call(page)).toThrow('business failure');
   config.onHide.call(page);
-  jest.useRealTimers();
+  vi.useRealTimers();
   Sentry.captureMessage('new client alive');
   await nextClient.flush(2000);
   expect(items('event')[0].message).toBe('new client alive');
@@ -399,7 +400,7 @@ test('system contexts distinguish OS, miniapp version and host/base-library vers
 });
 
 test('idle completion clears the page span and later hide preserves another active operation', async () => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   const client = initialize({
     integrations: [new Sentry.Integrations.PageTracing()],
     tracesSampleRate: 1,
@@ -409,13 +410,13 @@ test('idle completion clears the page span and later hide preserves another acti
   config.onLoad.call(page);
   expect(Sentry.getActiveSpan()).toBeDefined();
   config.onReady.call(page);
-  await jest.advanceTimersByTimeAsync(1100);
+  await vi.advanceTimersByTimeAsync(1100);
   expect(Sentry.getActiveSpan()).toBeUndefined();
   Sentry.startSpan({ name: 'new operation' }, (span) => {
     config.onHide.call(page);
     expect(Sentry.getActiveSpan()).toBe(span);
   });
-  jest.useRealTimers();
+  vi.useRealTimers();
   await client.flush(2000);
 });
 
@@ -428,7 +429,7 @@ test('closed Page constructors and existing callbacks cannot instrument the next
     tracesSampleRate: 1,
   });
   const savedPage = g.Page;
-  const business = jest.fn(function (this: unknown, value: string) {
+  const business = vi.fn(function (this: unknown, value: string) {
     return { receiver: this, value };
   });
   const config = savedPage({ onShow: business, onTap: business });
@@ -512,7 +513,7 @@ test('SDK init forwards header policy to Replay hints while real error envelopes
 
 test('actual init does not evaluate privacy configuration accessors and malformed deny fails closed', () => {
   const originalRequest = g.wx.request;
-  const getter = jest.fn(() => {
+  const getter = vi.fn(() => {
     throw new Error('privacy accessor');
   });
   const options: Sentry.MiniappOptions = {
@@ -525,7 +526,7 @@ test('actual init does not evaluate privacy configuration accessors and malforme
   };
   Object.defineProperty(options, 'networkDetailDenyUrls', { get: getter, enumerable: true });
   const client = Sentry.init(options)!;
-  const hints = jest.fn();
+  const hints = vi.fn();
   client.on('beforeAddBreadcrumb', hints);
   g.wx.request({ url: 'https://api.example.test/items', header: { Accept: 'never-captured' } });
   originalRequest.mock.calls[0][0].success({ statusCode: 200 });

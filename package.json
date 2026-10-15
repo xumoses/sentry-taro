@@ -4,12 +4,19 @@
   "description": "Sentry monitoring and opt-in session replay for Taro 4.2 React mini programs",
   "license": "MIT",
   "author": "xumoses",
-  "repository": { "type": "git", "url": "git+https://github.com/xumoses/sentry-taro.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xumoses/sentry-taro.git"
+  },
   "homepage": "https://github.com/xumoses/sentry-taro",
-  "bugs": { "url": "https://github.com/xumoses/sentry-taro/issues" },
+  "bugs": {
+    "url": "https://github.com/xumoses/sentry-taro/issues"
+  },
   "type": "commonjs",
-  "packageManager": "pnpm@9.15.9",
-  "engines": { "node": ">=20" },
+  "packageManager": "pnpm@12.13.0",
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.mjs",
   "types": "./dist/types/src/index.d.ts",
@@ -38,35 +45,66 @@
     "./devtools/server": "./dist/devtools/server.cjs",
     "./package.json": "./package.json"
   },
-  "bin": { "sentry-taro-viewer": "./dist/devtools/server.cjs" },
-  "files": ["dist", "README.md", "README.en.md", "LICENSE", "THIRD_PARTY_NOTICES"],
-  "publishConfig": { "access": "public", "tag": "beta", "registry": "https://registry.npmjs.org/" },
+  "bin": {
+    "sentry-taro-viewer": "./dist/devtools/server.cjs"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
-    "test": "pnpm run test:sdk && pnpm run test:replay",
-    "test:sdk": "pnpm --filter @sentry-taro/internal-sdk test",
-    "test:replay": "pnpm --filter @sentry-taro/internal-replay test",
-    "typecheck": "pnpm --filter @sentry-taro/internal-sdk typecheck && tsc --noEmit -p tsconfig.build.json",
-    "lint": "pnpm --filter @sentry-taro/internal-sdk lint && pnpm --filter @sentry-taro/internal-replay check",
+    "test": "vp test run",
+    "test:sdk": "vp test run --project sdk",
+    "test:sdk:coverage": "vp test run --project sdk --coverage",
+    "test:replay": "vp test run --project replay",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p packages/sdk/tsconfig.json",
+    "check": "vp check",
+    "lint": "vp lint",
+    "format": "vp fmt",
     "build": "node scripts/build.cjs",
-    "build:main": "vite build --mode modules && vite build --mode umd",
+    "build:main": "vp pack",
     "build:types": "tsc -p tsconfig.build.json",
     "verify:package": "node scripts/verify-package.cjs",
     "verify:consumer": "node scripts/verify-consumer.cjs",
-    "prepack": "pnpm run build && pnpm run verify:package",
-    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm test"
+    "verify:bundles": "node scripts/verify-bundles.cjs",
+    "prepack": "vp run build && vp run verify:package",
+    "prepublishOnly": "vp check && vp run typecheck && vp test run"
   },
-  "dependencies": { "@sentry/core": "10.66.0" },
-  "peerDependencies": { "@tarojs/runtime": "~4.2.0", "@tarojs/taro": "~4.2.0", "react": "^18.0.0" },
+  "dependencies": {
+    "@sentry/core": "10.76.2",
+    "fflate": "0.8.2"
+  },
+  "peerDependencies": {
+    "@tarojs/runtime": "~4.2.0",
+    "@tarojs/taro": "~4.2.0",
+    "react": "^18.0.0"
+  },
   "peerDependenciesMeta": {
-    "@tarojs/runtime": { "optional": true },
-    "@tarojs/taro": { "optional": true },
-    "react": { "optional": true }
+    "@tarojs/runtime": {
+      "optional": true
+    },
+    "@tarojs/taro": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@types/node": "^20.19.11",
-    "@types/react": "^18.3.12",
-    "acorn": "^8.15.0",
-    "typescript": "5.8.3",
-    "vite": "6.4.1"
+    "@types/node": "26.6.5",
+    "@types/react": "18.3.31",
+    "@vitest/coverage-v8": "5.0.4",
+    "acorn": "8.19.0",
+    "typescript": "7.0.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.2.0",
+    "vite-plus": "1.2.0"
   }
 }

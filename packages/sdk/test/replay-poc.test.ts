@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import {
   startTaroDomReplayPoc,
   type TaroReplayMutationObserverLike,
@@ -62,12 +62,12 @@ function element(
 function scrollHarness() {
   const listeners = new Set<(event: TaroReplayScrollEventLike) => void>();
   const node = Object.assign(element('scroll-view', 'scroll', { scrollY: true }), {
-    addEventListener: jest.fn(
+    addEventListener: vi.fn(
       (name: string, listener: (event: TaroReplayScrollEventLike) => void) => {
         if (name === 'scroll') listeners.add(listener);
       },
     ),
-    removeEventListener: jest.fn(
+    removeEventListener: vi.fn(
       (name: string, listener: (event: TaroReplayScrollEventLike) => void) => {
         if (name === 'scroll') listeners.delete(listener);
       },
@@ -110,8 +110,8 @@ function mutationData(event: TaroReplayPocEvent) {
 function observerHarness() {
   class HarnessObserver implements TaroReplayMutationObserverLike {
     static current: HarnessObserver | undefined;
-    readonly observe = jest.fn();
-    readonly disconnect = jest.fn();
+    readonly observe = vi.fn();
+    readonly disconnect = vi.fn();
 
     constructor(private readonly callback: (records: TaroReplayMutationRecordLike[]) => void) {
       HarnessObserver.current = this;
@@ -152,7 +152,7 @@ describe('Taro DOM Replay POC', () => {
     const observer = observerHarness();
     const root = element('view', 'root');
     const scroll = scrollHarness();
-    const applicationListener = jest.fn();
+    const applicationListener = vi.fn();
     scroll.listeners.add(applicationListener);
     const controller = startTaroDomReplayPoc({
       blockAllMedia: false,
@@ -205,7 +205,7 @@ describe('Taro DOM Replay POC', () => {
         addEventListener: () => {
           throw new Error('Unsupported');
         },
-        removeEventListener: jest.fn(),
+        removeEventListener: vi.fn(),
       }),
     ]);
     const controller = startTaroDomReplayPoc({
@@ -223,10 +223,10 @@ describe('Taro DOM Replay POC', () => {
     const listeners = new Set<
       (event: { detail: { scrollTop: number; scrollLeft: number } }) => void
     >();
-    const applicationListener = jest.fn();
+    const applicationListener = vi.fn();
     listeners.add(applicationListener);
     const scroll = Object.assign(element('scroll-view', 'scroll', { scrollY: true }), {
-      addEventListener: jest.fn(
+      addEventListener: vi.fn(
         (
           name: string,
           callback: (event: { detail: { scrollTop: number; scrollLeft: number } }) => void,
@@ -234,7 +234,7 @@ describe('Taro DOM Replay POC', () => {
           if (name === 'scroll') listeners.add(callback);
         },
       ),
-      removeEventListener: jest.fn(
+      removeEventListener: vi.fn(
         (
           name: string,
           callback: (event: { detail: { scrollTop: number; scrollLeft: number } }) => void,
@@ -1189,11 +1189,11 @@ describe('Taro DOM Replay POC', () => {
   });
 
   it('automatically stops when the duration expires', () => {
-    jest.useFakeTimers();
-    jest.setSystemTime(8_000);
+    vi.useFakeTimers();
+    vi.setSystemTime(8_000);
     try {
       const observer = observerHarness();
-      const onStop = jest.fn();
+      const onStop = vi.fn();
       const controller = startTaroDomReplayPoc({
         blockAllMedia: false,
         root: element('view', 'root-1'),
@@ -1203,14 +1203,14 @@ describe('Taro DOM Replay POC', () => {
       });
 
       expect(controller.getCapture().stopReason).toBeNull();
-      jest.advanceTimersByTime(25);
+      vi.advanceTimersByTime(25);
       expect(controller.getCapture()).toEqual(
         expect.objectContaining({ endedAt: 8_025, stopReason: 'duration' }),
       );
       expect(onStop).toHaveBeenCalledTimes(1);
       expect(observer.current()?.disconnect).toHaveBeenCalledTimes(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -1256,7 +1256,7 @@ describe('Taro DOM Replay POC', () => {
 
   it('does not start an observer after an initial event limit stop', () => {
     let constructorCount = 0;
-    const onStop = jest.fn();
+    const onStop = vi.fn();
 
     class CountingObserver implements TaroReplayMutationObserverLike {
       constructor(_callback: (records: TaroReplayMutationRecordLike[]) => void) {

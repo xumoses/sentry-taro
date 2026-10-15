@@ -1,4 +1,4 @@
-import type { Event, EventHint, Integration, IntegrationFn } from '@sentry/core';
+import type { Client, Event, EventHint, Integration, IntegrationFn } from '@sentry/core';
 import { applyAggregateErrorsToEvent, exceptionFromError, getCurrentScope } from '@sentry/core';
 
 const DEFAULT_KEY = 'cause';
@@ -44,21 +44,22 @@ export class LinkedErrors implements Integration {
   /**
    * @inheritDoc
    */
-  public processEvent(event: Event, hint?: EventHint): Event {
-    const client = getCurrentScope().getClient();
+  public processEvent(
+    event: Event,
+    hint?: EventHint,
+    client: Client | undefined = getCurrentScope().getClient(),
+  ): Event {
     if (!client) {
       return event;
     }
 
-    // const options = client.getOptions();
-    // Note: getCurrentScope() doesn't have getIntegration method, so we'll process directly
-    return this._handler(event, hint);
+    return this._handler(event, hint, client);
   }
 
   /**
    * @inheritDoc
    */
-  private _handler(event: Event, hint?: EventHint): Event {
+  private _handler(event: Event, hint: EventHint | undefined, client: Client): Event {
     if (
       !event.exception ||
       !event.exception.values ||
@@ -68,7 +69,7 @@ export class LinkedErrors implements Integration {
       return event;
     }
 
-    const parser = getCurrentScope().getClient()?.getOptions().stackParser;
+    const parser = client.getOptions().stackParser;
     if (typeof parser === 'function') {
       applyAggregateErrorsToEvent(exceptionFromError, parser, this._key, this._limit, event, hint);
     }

@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, expect, test, vi } from 'vite-plus/test';
 import * as Sentry from '../src/index';
 import { installedIntegrations, type Envelope } from '@sentry/core';
 import { resetPlatformCache } from '../src/crossPlatform';
@@ -38,21 +39,21 @@ function simulatedMac(
     bitness: '64',
   },
 ) {
-  g.wx.getDeviceInfo = jest.fn(() => ({
+  g.wx.getDeviceInfo = vi.fn(() => ({
     platform: 'devtools',
     system: 'iOS 10.0.1',
     brand: 'devtools',
     model: 'iPhone12/13(Pro)',
   }));
-  g.wx.getAppBaseInfo = jest.fn(() => ({
+  g.wx.getAppBaseInfo = vi.fn(() => ({
     version: '8.0.5',
     SDKVersion: '3.7.12',
     language: 'zh_CN',
   }));
-  g.wx.getAccountInfoSync = jest.fn(() => ({
+  g.wx.getAccountInfoSync = vi.fn(() => ({
     miniProgram: { appId: 'synthetic-app-id', version: '2.4.0' },
   }));
-  const getHighEntropyValues = jest.fn(() => Promise.resolve(hints));
+  const getHighEntropyValues = vi.fn(() => Promise.resolve(hints));
   Object.defineProperty(g, 'navigator', {
     configurable: true,
     value: {
@@ -75,7 +76,7 @@ beforeEach(() => {
   _resetAppLifecycle();
 });
 afterEach(async () => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   await Sentry.getClient()?.close(0);
   Sentry.getCurrentScope().setClient(undefined);
   if (navigatorDescriptor) Object.defineProperty(g, 'navigator', navigatorDescriptor);
@@ -164,22 +165,22 @@ test('Client Hints timeout is at most 200ms, cached once, and late completion ca
       }),
   );
   const client = initialize();
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   const pending = Promise.resolve(client.getRuntimeContexts());
   let settled = false;
   void pending.then(() => {
     settled = true;
   });
-  await jest.advanceTimersByTimeAsync(199);
+  await vi.advanceTimersByTimeAsync(199);
   expect(settled).toBe(false);
-  await jest.advanceTimersByTimeAsync(1);
+  await vi.advanceTimersByTimeAsync(1);
   const first = await pending;
   expect(first['os']).toEqual({ name: 'macOS' });
   resolve({ platform: 'macOS', platformVersion: '99.0.0' });
   await Promise.resolve();
   expect((await client.getRuntimeContexts())['os']).toEqual({ name: 'macOS' });
   expect(read).toHaveBeenCalledTimes(1);
-  jest.useRealTimers();
+  vi.useRealTimers();
   Sentry.captureException(new Error('synthetic after timeout'));
   await client.flush(2000);
   expect(events()).toHaveLength(1);
@@ -193,13 +194,13 @@ test.each([
 ])(
   'real $platform clients only use miniapp API data',
   async ({ platform, system, name, version }) => {
-    g.wx.getDeviceInfo = jest.fn(() => ({
+    g.wx.getDeviceInfo = vi.fn(() => ({
       platform,
       system,
       brand: 'Synthetic',
       model: 'Synthetic device',
     }));
-    const navigatorRead = jest.fn(() => {
+    const navigatorRead = vi.fn(() => {
       throw new Error('navigator must not be read');
     });
     Object.defineProperty(g, 'navigator', { configurable: true, get: navigatorRead });
@@ -223,7 +224,7 @@ test.each([
 
 test('enableSystemInfo:false skips all system/account/navigator collection', async () => {
   const hints = simulatedMac();
-  const navigatorRead = jest.fn(() => {
+  const navigatorRead = vi.fn(() => {
     throw new Error('disabled');
   });
   Object.defineProperty(g, 'navigator', { configurable: true, get: navigatorRead });
@@ -297,8 +298,8 @@ test('deprecated System integration delegates to the same defaults and cannot ov
 
 test('transient unavailable system APIs recover on the next error without poisoning the client cache', async () => {
   g.wx = {
-    request: jest.fn(),
-    getDeviceInfo: jest.fn(() => {
+    request: vi.fn(),
+    getDeviceInfo: vi.fn(() => {
       throw new Error('not ready');
     }),
   };
@@ -321,9 +322,9 @@ test('transient unavailable system APIs recover on the next error without poison
 
 test('partial base information is retained but does not permanently cache a missing device identity', async () => {
   g.wx = {
-    request: jest.fn(),
+    request: vi.fn(),
     getAppBaseInfo: () => ({ version: '8.0.5', SDKVersion: '3.7.12' }),
-    getDeviceInfo: jest.fn(() => ({})),
+    getDeviceInfo: vi.fn(() => ({})),
   };
   resetPlatformCache();
   const client = initialize();
@@ -369,7 +370,7 @@ test('DevTools omits unknown hardware identifiers instead of triggering device-c
 test.each([{}, { platform: 'ios', system: 'iOS 18.1' }])(
   'missing native hardware identifiers are omitted: %j',
   async (device) => {
-    g.wx = { request: jest.fn(), getDeviceInfo: () => device };
+    g.wx = { request: vi.fn(), getDeviceInfo: () => device };
     resetPlatformCache();
     const client = initialize();
     Sentry.captureException(new Error('synthetic missing hardware regression'));

@@ -1,3 +1,4 @@
+import { expect, test, vi } from 'vite-plus/test';
 import {
   createNetworkHeaderPolicy,
   snapshotNetworkOptions,
@@ -61,7 +62,7 @@ test.each([
 });
 
 test('deny field accessor and proxy failures fail closed without executing getters', () => {
-  const getter = jest.fn(() => {
+  const getter = vi.fn(() => {
     throw new Error('getter');
   });
   const config = Object.defineProperty({ ...options }, 'networkDetailDenyUrls', { get: getter });
@@ -128,7 +129,7 @@ test('default/custom headers are lowercase scalars and credential families can n
 });
 
 test('header inspection ignores throwing accessors/proxies and never invokes toString', () => {
-  const getter = jest.fn(() => {
+  const getter = vi.fn(() => {
     throw new Error('getter');
   });
   const headers = Object.defineProperty({ accept: '*/*' }, 'Content-Type', {
@@ -151,7 +152,7 @@ test('header inspection ignores throwing accessors/proxies and never invokes toS
       'response',
     ),
   ).toEqual({});
-  const toString = jest.fn(() => {
+  const toString = vi.fn(() => {
     throw new Error('toString');
   });
   expect(policy.filterHeaders({ accept: { toString } }, 'request')).toEqual({});

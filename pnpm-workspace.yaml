@@ -1,2 +1,33 @@
 packages:
   - packages/*
+
+# Keep the normal one-day cooldown; only the explicitly selected tool release
+# is exempt while it is fresh. New exceptions require a deliberate edit.
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+minimumReleaseAgeExclude:
+  - '@voidzero-dev/vite-plus-core@1.2.0'
+  - '@voidzero-dev/vite-plus-darwin-arm64@1.2.0'
+  - '@voidzero-dev/vite-plus-darwin-x64@1.2.0'
+  - '@voidzero-dev/vite-plus-linux-arm64-gnu@1.2.0'
+  - '@voidzero-dev/vite-plus-linux-arm64-musl@1.2.0'
+  - '@voidzero-dev/vite-plus-linux-x64-gnu@1.2.0'
+  - '@voidzero-dev/vite-plus-linux-x64-musl@1.2.0'
+  - '@voidzero-dev/vite-plus-win32-arm64-msvc@1.2.0'
+  - '@voidzero-dev/vite-plus-win32-x64-msvc@1.2.0'
+  - vite-plus@1.2.0
+
+# Taro's existing compiler dependencies validate their platform binaries.
+allowBuilds:
+  '@swc/core@1.3.96': true
+  esbuild@0.21.5: true
+
+# This alias exposes Vite 8.3.4 with the Vite Plus distribution's version.
+peerDependencyRules:
+  allowedVersions:
+    'vitest@5.0.4>vite': '1.2.0'
+    '@vitest/mocker@5.0.4>vite': '1.2.0'
+
+overrides:
+  vite: npm:@voidzero-dev/vite-plus-core@1.2.0
+  vitest: 5.0.4

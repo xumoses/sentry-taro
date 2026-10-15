@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { init, captureException, captureMessage, addBreadcrumb } from '../src/index';
 import { getClient, getCurrentScope, flush, installedIntegrations } from '@sentry/core';
 import { MiniappClient } from '../src/client';
@@ -124,7 +124,7 @@ describe('Integration（真 @sentry/core 端到端）', () => {
   });
 
   it('sampleRate=0：错误事件被采样丢弃，transport 收不到', async () => {
-    const beforeSendEvent = jest.fn();
+    const beforeSendEvent = vi.fn();
     initWithCapture({ sampleRate: 0, beforeSendEvent });
     captureException(new Error('sampled out'));
     await flush(2000);
@@ -133,7 +133,7 @@ describe('Integration（真 @sentry/core 端到端）', () => {
   });
 
   it('beforeSendEvent 只观察真正将发送的错误，并可在建 envelope 前关联 replay_id', async () => {
-    const accepted = jest.fn((event: any) => {
+    const accepted = vi.fn((event: any) => {
       event.contexts = { ...event.contexts, replay: { replay_id: 'a'.repeat(32) } };
     });
     initWithCapture({
@@ -160,13 +160,13 @@ describe('Integration（真 @sentry/core 端到端）', () => {
   });
 
   it('tracesSampler 透传到 client 选项', () => {
-    const tracesSampler = jest.fn<() => number>().mockReturnValue(0.5);
+    const tracesSampler = vi.fn<() => number>().mockReturnValue(0.5);
     const client = initWithCapture({ tracesSampler, integrations: [] });
     expect(client?.getOptions().tracesSampler).toBe(tracesSampler);
   });
 
   it('非法 DSN：不抛错但记录错误日志', () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => init({ dsn: 'invalid-dsn', debug: true } as any)).not.toThrow();
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();

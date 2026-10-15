@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it } from 'vite-plus/test';
 import { miniappStackParser } from '../src/stacktrace';
 
 describe('miniappStackParser', () => {
@@ -25,7 +25,11 @@ describe('miniappStackParser', () => {
     });
 
     it.each([
-      ['https://usr/pages/index.js?source=dev', 'at https://usr/pages/index.js?source=dev:42:13', '?'],
+      [
+        'https://usr/pages/index.js?source=dev',
+        'at https://usr/pages/index.js?source=dev:42:13',
+        '?',
+      ],
       ['app:///pages/index.js', 'at tap (app:///pages/index.js:42:13)', 'tap'],
       ['tt://pages/index.js', 'at tap (tt://pages/index.js:42:13)', 'tap'],
     ])('preserves the V8 location %s', (filename, stack, functionName) => {
@@ -54,10 +58,7 @@ describe('miniappStackParser', () => {
     });
 
     it('should parse frames without function name', () => {
-      const stack = [
-        'Error: test',
-        '    at pages/index/index.js:42:13',
-      ].join('\n');
+      const stack = ['Error: test', '    at pages/index/index.js:42:13'].join('\n');
 
       const frames = miniappStackParser(stack, 0);
       expect(frames.length).toBe(1);
@@ -87,8 +88,8 @@ describe('miniappStackParser', () => {
 
       const frames = miniappStackParser(stack, 0);
       expect(frames.length).toBe(2);
-      const sdkFrame = frames.find(f => f.filename === 'sentry-miniapp.js');
-      const userFrame = frames.find(f => f.filename === 'pages/index/index.js');
+      const sdkFrame = frames.find((f) => f.filename === 'sentry-miniapp.js');
+      const userFrame = frames.find((f) => f.filename === 'pages/index/index.js');
       expect(userFrame!.in_app).toBe(true);
       expect(sdkFrame!.in_app).toBe(false);
     });
@@ -97,24 +98,34 @@ describe('miniappStackParser', () => {
   describe('Safari/JavaScriptCore style stack traces', () => {
     it.each([
       {
-        stack: 'handleTap@http://127.0.0.1:47848/appservice/getsubpackagebundle_taroMiniapp%2Fpages%2FCatalog%2F.js?t=wechat&s=&v=fixture:6535:19',
-        filename: 'http://127.0.0.1:47848/appservice/getsubpackagebundle_taroMiniapp%2Fpages%2FCatalog%2F.js?t=wechat&s=&v=fixture',
-        functionName: 'handleTap', lineno: 6535, colno: 19,
+        stack:
+          'handleTap@http://127.0.0.1:47848/appservice/getsubpackagebundle_taroMiniapp%2Fpages%2FCatalog%2F.js?t=wechat&s=&v=fixture:6535:19',
+        filename:
+          'http://127.0.0.1:47848/appservice/getsubpackagebundle_taroMiniapp%2Fpages%2FCatalog%2F.js?t=wechat&s=&v=fixture',
+        functionName: 'handleTap',
+        lineno: 6535,
+        colno: 19,
       },
       {
         stack: '@https://usr/taroMiniapp/pages/ReplayPoc/index.js:1:3743',
         filename: 'https://usr/taroMiniapp/pages/ReplayPoc/index.js',
-        functionName: '?', lineno: 1, colno: 3743,
+        functionName: '?',
+        lineno: 1,
+        colno: 3743,
       },
       {
         stack: 'https://usr/taroMiniapp/pages/ReplayPoc/index.js:1:3743',
         filename: 'https://usr/taroMiniapp/pages/ReplayPoc/index.js',
-        functionName: '?', lineno: 1, colno: 3743,
+        functionName: '?',
+        lineno: 1,
+        colno: 3743,
       },
       {
         stack: 'onLoad@app:///pages/home/home.js:15',
         filename: 'app:///pages/home/home.js',
-        functionName: 'onLoad', lineno: 15, colno: undefined,
+        functionName: 'onLoad',
+        lineno: 15,
+        colno: undefined,
       },
     ])('retains the Safari URL $filename', ({ stack, filename, functionName, lineno, colno }) => {
       const frames = miniappStackParser(stack);
@@ -124,10 +135,7 @@ describe('miniappStackParser', () => {
     });
 
     it('should parse Safari-style frames', () => {
-      const stack = [
-        'handleTap@pages/index/index.js:42:13',
-        '@app-service.js:100:20',
-      ].join('\n');
+      const stack = ['handleTap@pages/index/index.js:42:13', '@app-service.js:100:20'].join('\n');
 
       const frames = miniappStackParser(stack, 0);
       expect(frames.length).toBe(2);
@@ -209,8 +217,8 @@ describe('miniappStackParser', () => {
       const frames = miniappStackParser(stack, 0);
       expect(frames.length).toBe(2);
       // After reverse: WAService is at index 0 (bottom), user code at index 1 (top/call site)
-      const waFrame = frames.find(f => f.filename === 'WAService.js');
-      const userFrame = frames.find(f => f.filename === 'pages/index/index.js');
+      const waFrame = frames.find((f) => f.filename === 'WAService.js');
+      const userFrame = frames.find((f) => f.filename === 'pages/index/index.js');
       expect(waFrame!.in_app).toBe(false);
       expect(userFrame!.in_app).toBe(true);
     });

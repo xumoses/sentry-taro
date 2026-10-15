@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it } from 'vite-plus/test';
 import { Event } from '@sentry/core';
 import { RewriteFrames } from '../src/integrations/rewriteframes';
 

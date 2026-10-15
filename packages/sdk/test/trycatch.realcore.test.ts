@@ -1,4 +1,4 @@
-import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { getClient, flush, captureException, installedIntegrations } from '@sentry/core';
 import { resetPlatformCache } from '../src/crossPlatform';
 import { _resetAppLifecycle } from '../src/appLifecycle';
@@ -29,10 +29,10 @@ describe('TryCatch（真 @sentry/core 集成）', () => {
     installedIntegrations.length = 0;
     realSetTimeout = g.setTimeout;
     g.wx = {
-      request: jest.fn(),
+      request: vi.fn(),
       getSystemInfoSync: () => ({ brand: 'Apple', SDKVersion: '3' }),
-      onError: jest.fn(),
-      onUnhandledRejection: jest.fn(),
+      onError: vi.fn(),
+      onUnhandledRejection: vi.fn(),
     };
   });
 

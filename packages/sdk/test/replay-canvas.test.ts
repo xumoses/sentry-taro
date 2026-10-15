@@ -1,4 +1,4 @@
-import { afterEach, expect, it, jest } from '@jest/globals';
+import { afterEach, expect, it, vi } from 'vite-plus/test';
 import { createCheckpointRebaser } from '../src/rebase';
 import {
   startTaroDomReplayPoc,
@@ -168,7 +168,7 @@ it.each(['mask', 'block', 'ignore'])(
     expect(h.controller.recordCanvas(canvas, () => PNG)).toBe(true);
     root.props[`data-sentry-${marker}`] = true;
     h.mutate([{ type: 'attributes', target: root, attributeName: `data-sentry-${marker}` }]);
-    const read = jest.fn(() => PNG);
+    const read = vi.fn(() => PNG);
     expect(h.controller.recordCanvas(canvas, read)).toBe(false);
     expect(read).not.toHaveBeenCalled();
     expect(JSON.stringify(nodes(h.controller.getCapture()))).not.toContain(PNG);
@@ -181,7 +181,7 @@ it.each(['mask', 'block', 'ignore'])(
 it('requires both explicit opt-ins, current root membership and a serialized node before reading', () => {
   const canvas = node('canvas', { 'data-sentry-canvas': true });
   const root = node('view', {}, [canvas]);
-  const read = jest.fn(() => PNG);
+  const read = vi.fn(() => PNG);
   const disabled = mount(root).controller;
   expect(disabled.recordCanvas(canvas, read)).toBe(false);
   disabled.stop();
@@ -226,11 +226,11 @@ it('limits attempted reads to one per second, rejects invalid data and preserves
   let now = 1000;
   const canvas = node('canvas', { 'data-sentry-canvas': true });
   const { controller } = mount(node('view', {}, [canvas]), { recordCanvas: true, now: () => now });
-  const failed = jest.fn(() => {
+  const failed = vi.fn(() => {
     throw new Error('read failure');
   });
   expect(controller.recordCanvas(canvas, failed)).toBe(false);
-  const read = jest.fn(() => PNG);
+  const read = vi.fn(() => PNG);
   expect(controller.recordCanvas(canvas, read)).toBe(false);
   expect(read).not.toHaveBeenCalled();
   now += 1000;
@@ -448,7 +448,7 @@ it('rejects inherited permission, unsupported containers and mismatched raster s
   const wrongKind = node('text', { 'data-sentry-canvas': true });
   const root = node('view', { 'data-sentry-canvas': true }, [ordinary, wrongKind]);
   const { controller } = mount(root, { recordCanvas: true });
-  const read = jest.fn(() => PNG);
+  const read = vi.fn(() => PNG);
   expect(controller.recordCanvas(ordinary, read)).toBe(false);
   expect(controller.recordCanvas(wrongKind, read)).toBe(false);
   expect(read).not.toHaveBeenCalled();

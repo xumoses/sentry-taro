@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { deflateSync, inflateSync } from 'node:zlib';
 import { getGlobalSingleton, getMainCarrier, parseEnvelope, SDK_VERSION } from '@sentry/core';
 import type { Envelope } from '@sentry/core';
@@ -50,7 +50,7 @@ describe('miniapp UTF-8 encoding', () => {
     expect(globalThis.TextEncoder).toBe(native);
     expect(carrier.encodePolyfill).toBeUndefined();
     removeEncoder();
-    const supplied = jest.fn(encodeUtf8);
+    const supplied = vi.fn(encodeUtf8);
     getGlobalSingleton('encodePolyfill', () => supplied);
     installPolyfills();
     expect(carrier.encodePolyfill).toBe(supplied);
@@ -98,7 +98,7 @@ describe('miniapp UTF-8 encoding', () => {
       const bodies: ArrayBuffer[] = [];
       const storage = new Map<string, string>();
       let failNext = mode === 'offline';
-      const request = jest.fn(
+      const request = vi.fn(
         (options: {
           data: ArrayBuffer;
           success(result: unknown): void;

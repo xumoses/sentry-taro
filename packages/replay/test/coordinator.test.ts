@@ -9,6 +9,7 @@ describe('ReplayCoordinator', () => {
     const fixture = makeSdk();
     const random = vi.fn(() => 0.5);
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysSessionSampleRate: 0.5,
@@ -25,6 +26,7 @@ describe('ReplayCoordinator', () => {
     const fixture = makeSdk();
     const random = vi.fn().mockReturnValueOnce(0.9).mockReturnValueOnce(0.2).mockReturnValue(0.1);
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysSessionSampleRate: 0.5,
@@ -44,6 +46,7 @@ describe('ReplayCoordinator', () => {
     const fixture = makeSdk();
     const runtime = makeRuntime();
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       enabled: false,
@@ -58,6 +61,7 @@ describe('ReplayCoordinator', () => {
   test('buffer never uploads without an accepted error', async () => {
     const fixture = makeSdk();
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -74,6 +78,7 @@ describe('ReplayCoordinator', () => {
   test('full-session root switches send ordered segments with one replay id', async () => {
     const fixture = makeSdk();
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -101,6 +106,7 @@ describe('ReplayCoordinator', () => {
   test('accepted exceptions share one replay and continue in ordered segments', async () => {
     const fixture = makeSdk();
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -120,7 +126,7 @@ describe('ReplayCoordinator', () => {
     fixture.emitBeforeSend(first);
     await vi.waitFor(() => expect(coordinator.getSnapshot().state).toBe('session'));
     expect(fixture.getStartOptions()).toMatchObject({
-      maxDurationMs: 5 * 60_000,
+      maxDurationMs: 60 * 60_000 - 2000,
       maxEvents: 500,
       maxBytes: 512 * 1024,
     });
@@ -163,6 +169,7 @@ describe('ReplayCoordinator', () => {
     const fixture = makeSdk();
     let randomCalls = 0;
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -189,6 +196,7 @@ describe('ReplayCoordinator', () => {
   test('non-error events cannot promote the buffer', () => {
     const fixture = makeSdk();
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -204,6 +212,7 @@ describe('ReplayCoordinator', () => {
   test('native-only errors remain unassociated when no Taro root was recorded', () => {
     const fixture = makeSdk();
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -224,6 +233,7 @@ describe('ReplayCoordinator', () => {
   test('errors while a Taro root is detached do not promote its retained buffer', () => {
     const fixture = makeSdk();
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -247,6 +257,7 @@ describe('ReplayCoordinator', () => {
   test('does not notify React subscribers for each recorded event', () => {
     const fixture = makeSdk();
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -269,6 +280,7 @@ describe('ReplayCoordinator', () => {
     const fixture = makeSdk();
     let enabled = true;
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: fixture.sdk,
       client: fixture.sdk.getClient()!,
       enabled: () => enabled,

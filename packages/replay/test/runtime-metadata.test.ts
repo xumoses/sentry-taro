@@ -190,6 +190,7 @@ describe('Replay runtime context parity', () => {
     const pending = deferred();
     const f = fixture(() => pending.promise);
     const coordinator = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.client,
       replaysOnErrorSampleRate: 1,

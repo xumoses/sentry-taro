@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { installPolyfills, ensurePolyfills, isURLSearchParamsSupported } from '../src/polyfills';
 
 describe('Polyfills', () => {
@@ -21,7 +21,7 @@ describe('Polyfills', () => {
       delete (window as any).URLSearchParams;
     }
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -44,7 +44,7 @@ describe('Polyfills', () => {
 
     beforeEach(async () => {
       // 重新加载模块以获取 URLSearchParamsPolyfill 类
-      jest.resetModules();
+      vi.resetModules();
       const polyfillsModule = await import('../src/polyfills');
       // 通过 installPolyfills 安装后从全局获取
       polyfillsModule.installPolyfills();
@@ -312,7 +312,7 @@ describe('Polyfills', () => {
     });
 
     it('should not override existing URLSearchParams', () => {
-      const mockURLSearchParams = jest.fn();
+      const mockURLSearchParams = vi.fn();
       (globalThis as any).URLSearchParams = mockURLSearchParams;
 
       installPolyfills();
@@ -321,10 +321,10 @@ describe('Polyfills', () => {
     });
 
     it('should handle errors gracefully', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Mock Function to throw error
-      (global as any).Function = jest.fn().mockImplementation(() => {
+      (global as any).Function = vi.fn().mockImplementation(() => {
         throw new Error('Function error');
       }) as any;
 
@@ -357,13 +357,13 @@ describe('Polyfills', () => {
       delete (globalThis as any).URLSearchParams;
 
       // Mock getGlobalObject to return object without URLSearchParams
-      (global as any).Function = jest.fn().mockReturnValue({}) as any;
+      (global as any).Function = vi.fn().mockReturnValue({}) as any;
 
       expect(isURLSearchParamsSupported()).toBe(false);
     });
 
     it('should return false when getGlobalObject throws', () => {
-      (global as any).Function = jest.fn().mockImplementation(() => {
+      (global as any).Function = vi.fn().mockImplementation(() => {
         throw new Error('Function error');
       }) as any;
 
@@ -373,8 +373,8 @@ describe('Polyfills', () => {
 
   describe('getGlobalObject detection', () => {
     it('should detect wx global object', () => {
-      const mockWx = { request: jest.fn() };
-      (global as any).Function = jest.fn().mockReturnValue({ wx: mockWx }) as any;
+      const mockWx = { request: vi.fn() };
+      (global as any).Function = vi.fn().mockReturnValue({ wx: mockWx }) as any;
 
       installPolyfills();
 
@@ -383,8 +383,8 @@ describe('Polyfills', () => {
     });
 
     it('should detect my global object', () => {
-      const mockMy = { request: jest.fn() };
-      (global as any).Function = jest.fn().mockReturnValue({ my: mockMy }) as any;
+      const mockMy = { request: vi.fn() };
+      (global as any).Function = vi.fn().mockReturnValue({ my: mockMy }) as any;
 
       installPolyfills();
 
@@ -392,8 +392,8 @@ describe('Polyfills', () => {
     });
 
     it('should detect swan global object', () => {
-      const mockSwan = { request: jest.fn() };
-      (global as any).Function = jest.fn().mockReturnValue({ swan: mockSwan }) as any;
+      const mockSwan = { request: vi.fn() };
+      (global as any).Function = vi.fn().mockReturnValue({ swan: mockSwan }) as any;
 
       installPolyfills();
 
@@ -401,8 +401,8 @@ describe('Polyfills', () => {
     });
 
     it('should detect tt global object', () => {
-      const mockTt = { request: jest.fn() };
-      (global as any).Function = jest.fn().mockReturnValue({ tt: mockTt }) as any;
+      const mockTt = { request: vi.fn() };
+      (global as any).Function = vi.fn().mockReturnValue({ tt: mockTt }) as any;
 
       installPolyfills();
 
@@ -410,8 +410,8 @@ describe('Polyfills', () => {
     });
 
     it('should detect qq global object', () => {
-      const mockQq = { request: jest.fn() };
-      (global as any).Function = jest.fn().mockReturnValue({ qq: mockQq }) as any;
+      const mockQq = { request: vi.fn() };
+      (global as any).Function = vi.fn().mockReturnValue({ qq: mockQq }) as any;
 
       installPolyfills();
 
@@ -419,8 +419,8 @@ describe('Polyfills', () => {
     });
 
     it('should handle case when no global object is detected', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      (global as any).Function = jest.fn().mockReturnValue(null) as any;
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      (global as any).Function = vi.fn().mockReturnValue(null) as any;
 
       installPolyfills();
 

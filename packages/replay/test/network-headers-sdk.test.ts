@@ -168,9 +168,11 @@ describe('workspace network header SDK and adapter contract', () => {
       networkResponseHeaders: ['X-Response-Id'],
     };
     const integration = taroReplayIntegration({
+      minReplayDuration: 0,
       sdk: f.sdk,
       ...options,
       replaysOnErrorSampleRate: 1,
+      limits: { maxDurationMs: 5 * 60_000 },
     });
     integration.setup?.(f.sdk.getClient() as never);
     integration.bridge.attachRoot(f.runtime);
@@ -215,7 +217,12 @@ describe('workspace network header SDK and adapter contract', () => {
       }),
     });
     const sdk = { ...f.sdk, getClient: () => client, addBreadcrumb };
-    const integration = taroReplayIntegration({ sdk, ...headers, replaysSessionSampleRate: 1 });
+    const integration = taroReplayIntegration({
+      minReplayDuration: 0,
+      sdk,
+      ...headers,
+      replaysSessionSampleRate: 1,
+    });
     integration.setup?.(client);
     await withIsolationScope(async () =>
       withScope(async (scope) => {

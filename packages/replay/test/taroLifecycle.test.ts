@@ -32,6 +32,32 @@ describe('installTaroReplayPageLifecycle', () => {
     nextTicks.length = 0;
   });
 
+  test('releases sampling-disabled roots without detaching a newer visible page', () => {
+    const bridge = {
+      attachRoot: vi.fn((_runtime: TaroReplayRuntime) => false),
+      detachRoot: vi.fn(),
+      flush: async () => {},
+      refreshEnabled: () => true,
+      getSnapshot: () => ({ state: 'disabled' as const, eventCount: 0, approximateBytes: 0 }),
+      subscribe: () => () => {},
+    };
+    installTaroReplayPageLifecycle({ bridge });
+    const page = { onReady: vi.fn(), onHide: vi.fn(), onUnload: vi.fn() };
+    (tap.mock.calls[0]![1] as (config: typeof page) => void)(page);
+    const first = { route: 'first' };
+    const second = { route: 'second' };
+    page.onReady.call(first);
+    nextTicks.shift()?.();
+    page.onReady.call(second);
+    nextTicks.shift()?.();
+    expect(bridge.attachRoot).toHaveBeenCalledTimes(2);
+    page.onHide.call(first);
+    expect(bridge.detachRoot).not.toHaveBeenCalled();
+    page.onHide.call(second);
+    page.onUnload.call(second);
+    expect(bridge.detachRoot).toHaveBeenCalledTimes(1);
+  });
+
   test('supplies the host style and static image getters on the attached page runtime', () => {
     const bridge = {
       attachRoot: vi.fn((_runtime: TaroReplayRuntime) => true),

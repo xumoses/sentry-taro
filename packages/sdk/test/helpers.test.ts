@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { captureException } from '@sentry/core';
 import {
   wrap,
   fill,
@@ -11,14 +12,19 @@ import {
   isPlainObject,
 } from '../src/helpers';
 
+vi.mock('@sentry/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@sentry/core')>()),
+  captureException: vi.fn(() => 'captured-error'),
+}));
+
 describe('Helpers', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('wrap', () => {
     it('should wrap function and preserve original behavior', () => {
-      const originalFn = jest.fn((a: number, b: number) => a + b);
+      const originalFn = vi.fn((a: number, b: number) => a + b);
       const wrappedFn = wrap(originalFn);
 
       const result = wrappedFn(2, 3);
@@ -28,30 +34,20 @@ describe('Helpers', () => {
     });
 
     it('should handle function that throws error', () => {
-      const mockCaptureException = jest.fn();
-      const mockGetClient = jest.fn(() => ({
-        captureException: mockCaptureException,
-      }));
-
-      // Mock getCurrentHub
-      jest.doMock('@sentry/core', () => ({
-        getCurrentHub: () => ({
-          getClient: mockGetClient,
-        }),
-      }));
-
-      const errorFn = jest.fn(() => {
-        throw new Error('Test error');
+      const error = new Error('Test error');
+      const errorFn = vi.fn(() => {
+        throw error;
       });
 
       const wrappedFn = wrap(errorFn);
 
       expect(() => wrappedFn()).toThrow('Test error');
       expect(errorFn).toHaveBeenCalled();
+      expect(captureException).toHaveBeenCalledWith(error, undefined);
     });
 
     it('should preserve function properties', () => {
-      const originalFn = jest.fn();
+      const originalFn = vi.fn();
       (originalFn as any).customProperty = 'test';
 
       const wrappedFn = wrap(originalFn);
@@ -60,7 +56,7 @@ describe('Helpers', () => {
     });
 
     it('should mark function as wrapped', () => {
-      const originalFn = jest.fn();
+      const originalFn = vi.fn();
       const wrappedFn = wrap(originalFn);
 
       expect((wrappedFn as any).__sentry__).toBe(true);
@@ -68,11 +64,31 @@ describe('Helpers', () => {
     });
 
     it('should not double-wrap already wrapped functions', () => {
-      const originalFn = jest.fn();
+      const originalFn = vi.fn();
       const wrappedFn1 = wrap(originalFn);
       const wrappedFn2 = wrap(wrappedFn1);
 
       expect(wrappedFn1).toBe(wrappedFn2);
+    });
+
+    it('ignores an inherited wrapper instead of calling another function', () => {
+      const prototype = Object.create(Function.prototype);
+      prototype.__sentry_wrapped__ = () => 'unrelated';
+      const original = Object.setPrototypeOf(() => 'expected', prototype);
+      expect(wrap(original)()).toBe('expected');
+    });
+
+    it('can wrap a frozen function without mutating it', () => {
+      const original = Object.freeze(() => 42);
+      const wrapped = wrap(original);
+      expect(wrapped()).toBe(42);
+      expect(wrap(wrapped)).toBe(wrapped);
+    });
+
+    it('returns the original function when its own wrapper marker is invalid', () => {
+      const original = () => 42;
+      Object.defineProperty(original, '__sentry_wrapped__', { value: 'invalid' });
+      expect(wrap(original)).toBe(original);
     });
 
     it('should handle non-function input', () => {
@@ -86,7 +102,7 @@ describe('Helpers', () => {
   describe('fill', () => {
     it('should replace object method with wrapped version', () => {
       const obj = {
-        method: jest.fn(() => 'original'),
+        method: vi.fn(() => 'original'),
       };
       const originalMethod = obj.method;
 
@@ -141,7 +157,7 @@ describe('Helpers', () => {
 
     it('should handle replacement function that throws', () => {
       const obj = {
-        method: jest.fn(() => 'original'),
+        method: vi.fn(() => 'original'),
       };
 
       fill(obj, 'method', () => {
@@ -155,7 +171,7 @@ describe('Helpers', () => {
 
     it('should replace method multiple times', () => {
       const obj = {
-        method: jest.fn(() => 'original'),
+        method: vi.fn(() => 'original'),
       };
       const originalMethod = obj.method;
 
@@ -189,14 +205,12 @@ describe('Helpers', () => {
       expect(shouldIgnoreOnError()).toBe(true);
     });
 
-    it('should return false after timeout', (done) => {
+    it('should return false after timeout', async () => {
       ignoreNextOnErrorCall();
       expect(shouldIgnoreOnError()).toBe(true);
 
-      setTimeout(() => {
-        expect(shouldIgnoreOnError()).toBe(false);
-        done();
-      }, 10);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(shouldIgnoreOnError()).toBe(false);
     });
 
     it('should handle multiple calls', () => {

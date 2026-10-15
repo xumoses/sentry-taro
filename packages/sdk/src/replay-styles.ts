@@ -1,5 +1,5 @@
 /** Browser equivalents for the native controls used by the Taro recorder. */
-export const TARO_REPLAY_BASE_STYLESHEET = [
+export const TARO_REPLAY_BASE_STYLESHEET = /*#__PURE__*/ [
   'html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.4}',
   '[data-taro-node="view"],[data-taro-node="root"]{display:block}',
   '[data-taro-node="button"]{position:relative;display:block;width:100%;width:-webkit-fill-available;width:stretch;margin-left:auto;margin-right:auto;padding:0 14px;box-sizing:border-box;font-family:serif;font-size:18px;text-align:center;text-decoration:none;line-height:2.55555556;border:0;border-radius:5px;overflow:hidden;color:#000;background:#f8f8f8}',

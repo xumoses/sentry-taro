@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { TryCatch } from '../src/integrations/trycatch';
 
 // Mock @sentry/core
-jest.mock('@sentry/core', () => ({
-  getActiveSpan: jest.fn(),
-  captureException: jest.fn(),
-  getCurrentScope: jest.fn(() => ({
-    addEventProcessor: jest.fn(),
+vi.mock('@sentry/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@sentry/core')>()),
+  getActiveSpan: vi.fn(),
+  captureException: vi.fn(),
+  getCurrentScope: vi.fn(() => ({
+    addEventProcessor: vi.fn(),
   })),
 }));
 
@@ -16,7 +17,7 @@ describe('TryCatch', () => {
   let originalRAF: typeof requestAnimationFrame | undefined;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     originalSetTimeout = globalThis.setTimeout;
     originalSetInterval = globalThis.setInterval;
     originalRAF = (globalThis as any).requestAnimationFrame;
@@ -52,7 +53,7 @@ describe('TryCatch', () => {
     });
 
     it('should wrap requestAnimationFrame when available', () => {
-      const mockRAF = jest.fn();
+      const mockRAF = vi.fn();
       (globalThis as any).requestAnimationFrame = mockRAF;
 
       const integration = new TryCatch();
@@ -72,7 +73,7 @@ describe('TryCatch', () => {
   describe('wrapped setTimeout', () => {
     it('should call original setTimeout with wrapped callback', () => {
       const calls: any[] = [];
-      const fakeSetTimeout = jest.fn((...args: any[]) => {
+      const fakeSetTimeout = vi.fn((...args: any[]) => {
         calls.push(args);
         return 1 as any;
       });
@@ -81,7 +82,7 @@ describe('TryCatch', () => {
       const integration = new TryCatch();
       integration.setupOnce();
 
-      const callback = jest.fn();
+      const callback = vi.fn();
       globalThis.setTimeout(callback, 100);
 
       // 原始 setTimeout 应该被调用
@@ -92,13 +93,13 @@ describe('TryCatch', () => {
     });
 
     it('should preserve non-function arguments', () => {
-      const fakeSetTimeout = jest.fn((..._args: any[]) => 1 as any);
+      const fakeSetTimeout = vi.fn((..._args: any[]) => 1 as any);
       (globalThis as any).setTimeout = fakeSetTimeout;
 
       const integration = new TryCatch();
       integration.setupOnce();
 
-      globalThis.setTimeout(jest.fn() as any, 200);
+      globalThis.setTimeout(vi.fn() as any, 200);
 
       expect(fakeSetTimeout).toHaveBeenCalled();
       // 延迟参数应保持不变
@@ -108,13 +109,13 @@ describe('TryCatch', () => {
 
   describe('wrapped setInterval', () => {
     it('should call original setInterval with wrapped callback', () => {
-      const fakeSetInterval = jest.fn((..._args: any[]) => 1 as any);
+      const fakeSetInterval = vi.fn((..._args: any[]) => 1 as any);
       (globalThis as any).setInterval = fakeSetInterval;
 
       const integration = new TryCatch();
       integration.setupOnce();
 
-      const callback = jest.fn();
+      const callback = vi.fn();
       globalThis.setInterval(callback, 1000);
 
       expect(fakeSetInterval).toHaveBeenCalled();
@@ -125,13 +126,13 @@ describe('TryCatch', () => {
 
   describe('wrapped requestAnimationFrame', () => {
     it('should call original requestAnimationFrame with wrapped callback', () => {
-      const fakeRAF = jest.fn((..._args: any[]) => 1);
+      const fakeRAF = vi.fn((..._args: any[]) => 1);
       (globalThis as any).requestAnimationFrame = fakeRAF;
 
       const integration = new TryCatch();
       integration.setupOnce();
 
-      const callback = jest.fn();
+      const callback = vi.fn();
       (globalThis as any).requestAnimationFrame(callback);
 
       expect(fakeRAF).toHaveBeenCalled();

@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, expect, it } from 'vite-plus/test';
 import { SDK_VERSION, SDK_NAME } from '../src/version';
 import pkg from '../../../package.json';
 

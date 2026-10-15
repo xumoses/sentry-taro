@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
   init,
   showReportDialog,
@@ -10,7 +10,7 @@ import {
   getConsent,
 } from '../src/sdk';
 // flush / close / lastEventId 是 SDK 从 @sentry/core 透传的公开 API（sdk.ts 不再自定义重复实现）
-import { lastEventId, flush, close } from '@sentry/core';
+import { lastEventId, flush, close, Scope } from '@sentry/core';
 import { eventFiltersIntegration, inboundFiltersIntegration } from '@sentry/core';
 import { MiniappClient } from '../src/client';
 import { MiniappOptions } from '../src/types';
@@ -18,7 +18,7 @@ import { MinigameFrameRateIntegration } from '../src/integrations/minigame-frame
 
 describe('SDK', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('init', () => {
@@ -60,8 +60,8 @@ describe('SDK', () => {
         release: '1.0.0',
         sampleRate: 0.5,
         maxBreadcrumbs: 50,
-        beforeSend: jest.fn((event: any) => event) as any,
-        beforeBreadcrumb: jest.fn((breadcrumb: any) => breadcrumb) as any,
+        beforeSend: vi.fn((event: any) => event) as any,
+        beforeBreadcrumb: vi.fn((breadcrumb: any) => breadcrumb) as any,
       };
 
       const client = init(options);
@@ -214,7 +214,9 @@ describe('SDK', () => {
       const integrations = getDefaultIntegrations();
       expect(Array.isArray(integrations)).toBe(true);
       expect(integrations).not.toBe(defaultIntegrations);
-      expect(integrations.length).toBe(defaultIntegrations.length);
+      expect(integrations.map((integration) => integration.name)).toEqual(
+        getDefaultIntegrations().map((integration) => integration.name),
+      );
     });
 
     it('每次返回全新实例，不跨调用共享单例（多 init / 多 client 不互踩补丁状态）', () => {
@@ -242,7 +244,7 @@ describe('SDK', () => {
       });
       const transport = client?.getTransport();
       expect(transport).toBeDefined();
-      const flushSpy = jest
+      const flushSpy = vi
         .spyOn(transport!, 'flush')
         .mockImplementation(() => Promise.resolve(true));
 
@@ -273,7 +275,7 @@ describe('SDK', () => {
       (global as any).wx.setStorageSync = (key: string, value: string) => {
         stored[key] = value;
       };
-      const send = jest.fn((_: any) => Promise.resolve({ statusCode: 200 }));
+      const send = vi.fn((_: any) => Promise.resolve({ statusCode: 200 }));
       const client = init({
         dsn: 'https://test@sentry.io/123',
         requireConsent: true,
@@ -299,7 +301,7 @@ describe('SDK', () => {
 
   describe('showReportDialog', () => {
     it('should log a deprecation warning', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       showReportDialog();
 
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -309,7 +311,7 @@ describe('SDK', () => {
     });
 
     it('should accept optional options', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       expect(() => showReportDialog({ eventId: '123' })).not.toThrow();
       consoleSpy.mockRestore();
     });
@@ -357,7 +359,7 @@ describe('SDK', () => {
 
     it('should call the original function', () => {
       init({ dsn: 'https://test@sentry.io/123' });
-      const fn = jest.fn(() => 'result');
+      const fn = vi.fn(() => 'result');
       const wrapped = wrap(fn as any);
       const result = wrapped();
       expect(fn).toHaveBeenCalled();
@@ -406,12 +408,10 @@ describe('SDK', () => {
       expect(typeof result === 'string').toBe(true);
     });
 
-    it('should warn and return empty string when no client', () => {
-      // 这取决于是否有前序 init 调用，主要测试函数不抛异常
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      const result = captureFeedback({ message: 'feedback' });
-      expect(typeof result === 'string').toBe(true);
-      consoleSpy.mockRestore();
+    it('should accept an explicit core scope', () => {
+      const scope = new Scope();
+      const eventId = captureFeedback({ message: 'feedback' }, {}, scope);
+      expect(eventId).toMatch(/^[a-f0-9]{32}$/);
     });
   });
 });

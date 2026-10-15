@@ -43,6 +43,7 @@ describe('network header options across adapter entry points', () => {
     const f = makeSdk();
     const options = networkOptions();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       ...options,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
@@ -60,6 +61,7 @@ describe('network header options across adapter entry points', () => {
     const f = makeSdk();
     const options = networkOptions();
     const integration = taroReplayIntegration({
+      minReplayDuration: 0,
       ...options,
       sdk: f.sdk,
       replaysOnErrorSampleRate: 1,

@@ -44,6 +44,20 @@ beforeEach(() => {
   for (const list of Object.values(callbacks)) list.length = 0;
 });
 describe('root hook page ownership', () => {
+  test('releases the visible root when automatic recording is disabled', () => {
+    const b = bridge();
+    b.attachRoot.mockReturnValue(false);
+    useTaroReplayRoot({ bridge: b });
+    useTaroReplayRoot({ bridge: b });
+    callbacks.show[0]!();
+    callbacks.show[1]!();
+    callbacks.hide[0]!();
+    expect(b.detachRoot).not.toHaveBeenCalled();
+    callbacks.hide[1]!();
+    expect(b.detachRoot).toHaveBeenCalledTimes(1);
+    callbacks.unload[1]!();
+    expect(b.detachRoot).toHaveBeenCalledTimes(1);
+  });
   test('stale cleanup and scroll cannot affect the next visible root', () => {
     const b = bridge();
     useTaroReplayRoot({ bridge: b });

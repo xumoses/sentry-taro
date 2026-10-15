@@ -1,11 +1,14 @@
-import { describe, expect, it, jest, beforeEach } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-const mockAddBreadcrumb = jest.fn();
-const mockSetContext = jest.fn();
-const mockFlush = jest.fn(() => Promise.resolve(true));
-const mockGetClient = jest.fn(() => ({ flush: mockFlush }));
+const { mockAddBreadcrumb, mockSetContext, mockFlush, mockGetClient } = vi.hoisted(() => {
+  const mockAddBreadcrumb = vi.fn();
+  const mockSetContext = vi.fn();
+  const mockFlush = vi.fn(() => Promise.resolve(true));
+  const mockGetClient = vi.fn(() => ({ flush: mockFlush }));
+  return { mockAddBreadcrumb, mockSetContext, mockFlush, mockGetClient };
+});
 
-jest.mock('@sentry/core', () => ({
+vi.mock('@sentry/core', () => ({
   addBreadcrumb: mockAddBreadcrumb,
   setContext: mockSetContext,
   getClient: mockGetClient,
@@ -18,25 +21,25 @@ describe('NetworkStatusIntegration', () => {
   let networkChangeCallback: ((res: any) => void) | null;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     networkChangeCallback = null;
 
-    jest.spyOn(crossPlatform, 'sdk').mockReturnValue({
-      request: jest.fn(),
-      getNetworkType: jest.fn((options: any) => {
+    vi.spyOn(crossPlatform, 'sdk').mockReturnValue({
+      request: vi.fn(),
+      getNetworkType: vi.fn((options: any) => {
         if (options.success) {
           options.success({ networkType: 'wifi' });
         }
       }),
-      onNetworkStatusChange: jest.fn((callback: any) => {
+      onNetworkStatusChange: vi.fn((callback: any) => {
         networkChangeCallback = callback;
       }),
-      offNetworkStatusChange: jest.fn(),
+      offNetworkStatusChange: vi.fn(),
     } as any);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should get initial network type on setup', () => {
@@ -95,7 +98,7 @@ describe('NetworkStatusIntegration', () => {
   });
 
   it('should handle missing network APIs gracefully', () => {
-    jest.spyOn(crossPlatform, 'sdk').mockReturnValue({ request: jest.fn() } as any);
+    vi.spyOn(crossPlatform, 'sdk').mockReturnValue({ request: vi.fn() } as any);
 
     const integration = new NetworkStatusIntegration();
     // Should not throw

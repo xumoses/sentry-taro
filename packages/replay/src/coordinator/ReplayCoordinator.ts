@@ -3,7 +3,6 @@ import { snapshotNetworkOptions } from '../network-details';
 import type { FeedbackEvent } from '@sentry/core';
 import { sanitizeUrl } from '../privacy';
 import { createTaroReplay } from '../createTaroReplay';
-import { utf8ByteLength } from '../envelope';
 import type {
   TaroReplayCapture,
   TaroReplayHandle,
@@ -11,23 +10,26 @@ import type {
   TaroReplayNodeLike,
   TaroReplayRuntime,
 } from '../types';
-import { boundReplayEvents } from './buffer';
+import { mergeBufferedCaptures } from './buffer';
 import { finiteInteger } from './limits';
 import { ReplayDelivery } from './delivery';
+import { ReplayInitialSendGate, type PendingReplaySegment } from './send-gate';
+import { observeRootActivity, ReplaySessionPolicy } from './session';
+import { REPLAY_BUFFER_WINDOW_MS } from '../../../sdk/src/replay-constants';
 import type {
   ReplayAwareEvent,
   ReplayCoordinatorOptions,
   ReplayCoordinatorSnapshot,
   ReplayCoordinatorState,
+  SendBufferedReplayOptions,
   TaroReplayBridge,
 } from './types';
 
 const DEFAULT_LIMITS = {
-  maxDurationMs: 5 * 60_000,
   maxEvents: 500,
   mutationLimit: 10_000,
   maxBytes: 512 * 1024,
-  rollingWindowMs: 30_000,
+  rollingWindowMs: REPLAY_BUFFER_WINDOW_MS,
 };
 const clampRate = (value: number | undefined): number =>
   Number.isFinite(value) ? Math.max(0, Math.min(1, value || 0)) : 0;
@@ -71,11 +73,12 @@ export class ReplayCoordinator implements TaroReplayBridge {
   readonly #random: () => number;
   readonly #sampledMode: 'session' | 'buffer' | 'disabled';
   readonly #delivery: ReplayDelivery;
+  readonly #sendGate: ReplayInitialSendGate;
+  readonly #session: ReplaySessionPolicy;
   #state: ReplayCoordinatorState = 'disabled';
   #replayId: string | undefined;
   #replayStartedAt: number | undefined;
-  #sessionDeadline: number | undefined;
-  #errorMode = false;
+  #bufferRecordingStopped = false;
   #handle: TaroReplayHandle | undefined;
   #rootRuntime: TaroReplayRuntime | undefined;
   #canvasRoot: TaroReplayNodeLike | undefined;
@@ -91,25 +94,61 @@ export class ReplayCoordinator implements TaroReplayBridge {
   #error: Error | undefined;
   #detachErrorHook: (() => void) | undefined;
   #detachFeedbackHook: (() => void) | undefined;
+  #detachActivity: (() => void) | undefined;
   #segmentId = 0;
   #segmentTimer: ReturnType<typeof setTimeout> | undefined;
+  #sessionTimer: ReturnType<typeof setTimeout> | undefined;
   #lastDelivery: Promise<void> = Promise.resolve();
 
   constructor(options: ReplayCoordinatorOptions) {
     this.#options = withNetworkOptionsSnapshot(options);
     this.#random = options.random || Math.random;
-    this.#sampledMode = this.#enabled()
-      ? sampled(clampRate(options.replaysSessionSampleRate), this.#random)
-        ? 'session'
-        : clampRate(options.replaysOnErrorSampleRate) > 0
-          ? 'buffer'
-          : 'disabled'
-      : 'disabled';
+    const maxDurationMs = options.maxReplayDuration ?? options.limits?.maxDurationMs;
+    this.#session = new ReplaySessionPolicy({
+      ...(maxDurationMs === undefined ? {} : { maxDurationMs }),
+      ...(options.sessionIdlePauseMs === undefined
+        ? {}
+        : { idlePauseMs: options.sessionIdlePauseMs }),
+      ...(options.sessionIdleExpireMs === undefined
+        ? {}
+        : { idleExpireMs: options.sessionIdleExpireMs }),
+    });
+    this.#sampledMode = this.#sampleMode();
     this.#delivery = new ReplayDelivery(options.client, {
       ...options.delivery,
       ...(options.compression ? { compression: options.compression } : {}),
       onChange: () => this.#notify(),
       isEnabled: () => this.refreshEnabled(),
+    });
+    this.#sendGate = new ReplayInitialSendGate({
+      ...options.delivery,
+      ...(options.minReplayDuration === undefined
+        ? {}
+        : { minReplayDuration: options.minReplayDuration }),
+      now: () => this.#now(),
+      getPending: () => this.#delivery.getSnapshot(),
+      onReady: () => {
+        if (!this.refreshEnabled() || (this.#state !== 'session' && this.#state !== 'buffer')) {
+          this.#sendGate.clear();
+          this.#notify();
+          return;
+        }
+        const replayId = this.#replayId;
+        if (!this.#checkSession() || replayId !== this.#replayId) return;
+        // Match the upstream flush guard for a configuration whose minimum
+        // exceeds its maximum, including an unsent buffer which never expires.
+        if (
+          this.#replayStartedAt !== undefined &&
+          this.#now() - this.#replayStartedAt > this.#session.maxDuration + 5000
+        ) {
+          this.#sendGate.clear();
+          this.#notify();
+          return;
+        }
+        this.#sendInitialSegments();
+        if (this.#state === 'session') this.#flushSegment();
+        this.#notify();
+      },
     });
     if (this.#sampledMode !== 'disabled') this.#newReplay(this.#sampledMode);
     if (this.#state !== 'disabled') this.#attachErrorHook();
@@ -125,6 +164,16 @@ export class ReplayCoordinator implements TaroReplayBridge {
       this.#error = errorValue(cause);
       return false;
     }
+  }
+
+  #sampleMode(): 'session' | 'buffer' | 'disabled' {
+    return this.#enabled()
+      ? sampled(clampRate(this.#options.replaysSessionSampleRate), this.#random)
+        ? 'session'
+        : clampRate(this.#options.replaysOnErrorSampleRate) > 0
+          ? 'buffer'
+          : 'disabled'
+      : 'disabled';
   }
 
   #attachErrorHook(): void {
@@ -151,12 +200,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
   #limits(): Required<TaroReplayLimitOptions> {
     const limits = this.#options.limits;
     return {
-      maxDurationMs: finiteInteger(
-        limits?.maxDurationMs,
-        DEFAULT_LIMITS.maxDurationMs,
-        1,
-        60 * 60_000,
-      ),
+      maxDurationMs: this.#session.maxDuration,
       maxEvents: finiteInteger(limits?.maxEvents, DEFAULT_LIMITS.maxEvents, 1, 100_000),
       mutationLimit: finiteInteger(limits?.mutationLimit, DEFAULT_LIMITS.mutationLimit, 1, 100_000),
       maxBytes: finiteInteger(limits?.maxBytes, DEFAULT_LIMITS.maxBytes, 1, 20 * 1024 * 1024),
@@ -173,13 +217,100 @@ export class ReplayCoordinator implements TaroReplayBridge {
     this.#segmentTimer = undefined;
   }
 
+  #clearSessionTimer(): void {
+    if (this.#sessionTimer) clearTimeout(this.#sessionTimer);
+    this.#sessionTimer = undefined;
+  }
+
+  #armSessionTimer(): void {
+    this.#clearSessionTimer();
+    if (!this.#rootRuntime || !this.#handle) return;
+    const delay = this.#session.nextCheck(this.#now());
+    if (delay === undefined) return;
+    const owner = this.#rootVersion;
+    this.#sessionTimer = setTimeout(() => {
+      this.#sessionTimer = undefined;
+      if (owner !== this.#rootVersion || !this.refreshEnabled()) return;
+      this.#checkSession();
+      this.#armSessionTimer();
+    }, delay);
+  }
+
+  #observeActivity(runtime: TaroReplayRuntime): void {
+    this.#detachActivity?.();
+    this.#detachActivity = undefined;
+    try {
+      const root = currentRoot(runtime);
+      if (root)
+        this.#detachActivity = observeRootActivity(root, () => {
+          if (this.#rootRuntime === runtime) this.#userActivity();
+        });
+    } catch (cause) {
+      this.#reportError(cause);
+    }
+  }
+
+  #userActivity(): void {
+    if (
+      !this.refreshEnabled() ||
+      !this.#rootRuntime ||
+      (this.#state !== 'session' && this.#state !== 'buffer')
+    )
+      return;
+    const wasPaused = this.#session.paused;
+    if (this.#session.isExpired(this.#now())) this.#refreshSession();
+    if (this.#state !== 'session' && this.#state !== 'buffer') return;
+    if (this.#bufferRecordingStopped) return;
+    this.#session.activity(this.#now());
+    if (!this.#handle && wasPaused) this.#startRoot(this.#rootRuntime);
+    this.#armSessionTimer();
+  }
+
+  #checkSession(): boolean {
+    if (this.#state !== 'session' && this.#state !== 'buffer') return false;
+    // Pause before checking expiry: background changes must not create a new
+    // full-session recording after the user has become inactive.
+    if (this.#session.shouldPause(this.#now())) {
+      const capture = this.#releaseRoot();
+      this.#session.paused = true;
+      if (capture) this.#enqueue({ ...capture, stopReason: 'idle-pause' });
+      this.#notify();
+      return false;
+    }
+    if (this.#session.paused) return false;
+    if (this.#session.isExpired(this.#now())) {
+      this.#refreshSession();
+      return false;
+    }
+    return true;
+  }
+
+  #refreshSession(): void {
+    this.#releaseRoot();
+    const mode = this.#sampleMode();
+    if (mode === 'disabled') {
+      this.#sendGate.clear();
+      this.#state = 'disabled';
+      this.#replayId = undefined;
+      this.#captures = [];
+      this.#detachActivity?.();
+      this.#detachActivity = undefined;
+      this.#notify();
+      return;
+    }
+    this.#newReplay(mode);
+    if (this.#rootRuntime) this.#startRoot(this.#rootRuntime);
+    this.#notify();
+  }
+
   #newReplay(mode: 'session' | 'buffer'): void {
+    this.#sendGate.clear();
     this.#replayId = replayId(this.#random);
     this.#replayStartedAt = undefined;
-    this.#sessionDeadline = undefined;
+    this.#session.reset(mode);
     this.#segmentId = 0;
     this.#state = mode;
-    this.#errorMode = mode === 'buffer';
+    this.#bufferRecordingStopped = false;
     this.#captures = [];
     this.#pendingErrorIds = [];
     this.#pendingTraceIds = [];
@@ -188,17 +319,25 @@ export class ReplayCoordinator implements TaroReplayBridge {
   }
 
   attachRoot(runtime: TaroReplayRuntime): boolean {
-    if (!this.refreshEnabled() || (this.#state !== 'session' && this.#state !== 'buffer'))
+    if (!this.#enabled()) return this.refreshEnabled();
+    if (this.#state !== 'session' && this.#state !== 'buffer') {
+      this.#rootRuntime = runtime;
       return false;
+    }
     this.detachRoot();
     this.#rootRuntime = runtime;
-    if (
-      this.#state === 'session' &&
-      this.#sessionDeadline !== undefined &&
-      this.#now() >= this.#sessionDeadline
-    ) {
-      this.#newReplay(this.#errorMode ? 'buffer' : 'session');
+    if (this.#session.isExpired(this.#now())) {
+      const mode = this.#sampleMode();
+      if (mode === 'disabled') {
+        this.#state = 'disabled';
+        this.#replayId = undefined;
+        return false;
+      }
+      this.#newReplay(mode);
     }
+    this.#observeActivity(runtime);
+    if (this.#bufferRecordingStopped) return false;
+    this.#session.activity(this.#now());
     return this.#startRoot(runtime);
   }
 
@@ -207,14 +346,15 @@ export class ReplayCoordinator implements TaroReplayBridge {
       this.#handle ||
       !this.refreshEnabled() ||
       !this.#rootRuntime ||
+      this.#session.paused ||
+      this.#bufferRecordingStopped ||
       (this.#state !== 'session' && this.#state !== 'buffer')
     )
       return false;
     const owner = ++this.#rootVersion;
     try {
       this.#canvasRoot = this.#options.recordCanvas === true ? currentRoot(runtime) : undefined;
-      if (this.#state === 'session' && this.#sessionDeadline === undefined)
-        this.#sessionDeadline = this.#now() + this.#limits().maxDurationMs;
+      this.#session.start(this.#now());
       const handle = createTaroReplay({
         sdk: this.#options.sdk,
         runtime,
@@ -234,7 +374,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
         onBufferFull: () => {
           // Drain synchronously before the pending event retries. No snapshot or
           // observer restart is needed; queued data remains bounded independently.
-          if (owner === this.#rootVersion && this.#state === 'session') this.#flushSegment();
+          if (owner === this.#rootVersion && this.#state === 'session') this.#flushSegment(true);
         },
         onError: (cause) => this.#reportError(cause),
       });
@@ -251,6 +391,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
         }
         this.#error = undefined;
         this.#armSegmentTimer();
+        this.#armSessionTimer();
       }
       this.#notify();
       return attached;
@@ -266,15 +407,13 @@ export class ReplayCoordinator implements TaroReplayBridge {
     const { rollingWindowMs: _window, ...sessionLimits } = limits;
     return {
       ...sessionLimits,
-      maxDurationMs: Math.max(
-        1,
-        (this.#sessionDeadline ?? this.#now() + limits.maxDurationMs) - this.#now(),
-      ),
+      maxDurationMs: this.#session.remainingDuration(this.#now()),
     };
   }
 
   #releaseRoot(): TaroReplayCapture | undefined {
     this.#clearTimer();
+    this.#clearSessionTimer();
     this.#rootVersion++;
     this.#canvasRoot = undefined;
     const handle = this.#handle;
@@ -286,6 +425,8 @@ export class ReplayCoordinator implements TaroReplayBridge {
   }
 
   detachRoot(): void {
+    this.#detachActivity?.();
+    this.#detachActivity = undefined;
     this.#rootRuntime = undefined;
     const capture = this.#releaseRoot();
     if (capture) {
@@ -303,13 +444,22 @@ export class ReplayCoordinator implements TaroReplayBridge {
     this.#segmentTimer = setTimeout(() => {
       this.#segmentTimer = undefined;
       if (owner !== this.#rootVersion || !this.refreshEnabled()) return;
-      this.#flushSegment();
+      if (this.#checkSession()) this.#flushSegment();
       this.#armSegmentTimer();
     }, interval);
   }
 
-  #flushSegment(): void {
+  #flushSegment(forceDrain = false): void {
     if (this.#state !== 'session' || !this.#handle) return;
+    // Upstream keeps collecting before the minimum instead of creating a new
+    // delivery segment on every scheduled flush. Resource-pressure drains stay
+    // synchronous and remain bounded by the shared delivery capacity.
+    if (
+      !forceDrain &&
+      this.#sendGate.getSnapshot().pendingSegments > 0 &&
+      !this.#sendGate.isReady(this.#replayStartedAt)
+    )
+      return;
     const controller = this.#handle.getController();
     if (controller?.takeSegment) {
       this.#enqueue(controller.takeSegment());
@@ -322,11 +472,27 @@ export class ReplayCoordinator implements TaroReplayBridge {
 
   async flush(): Promise<void> {
     if (!this.refreshEnabled() || this.#state !== 'session') return;
-    this.#flushSegment();
+    if (this.#checkSession()) this.#flushSegment();
     await this.#lastDelivery;
   }
 
-  async sendBufferedReplay(): Promise<void> {
+  /** Official integration flush; bridge.flush deliberately remains session-only. */
+  async flushReplay(options: SendBufferedReplayOptions = {}): Promise<void> {
+    if (!this.#enabled()) {
+      this.refreshEnabled();
+      return;
+    }
+    if (this.#state !== 'session' && this.#state !== 'buffer') {
+      this.start();
+      return;
+    }
+    if (this.#state === 'session') return this.flush();
+    return this.sendBufferedReplay(options);
+  }
+
+  async sendBufferedReplay({
+    continueRecording = true,
+  }: SendBufferedReplayOptions = {}): Promise<void> {
     if (!this.refreshEnabled() || this.#state !== 'buffer' || !this.#handle || !this.#rootRuntime)
       return;
     const capture = this.#mergeBufferedCaptures([
@@ -334,7 +500,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
       this.#handle.getController()!.getCapture(),
     ]);
     if (!capture) return;
-    this.#promote(capture);
+    this.#promote(capture, continueRecording);
     await this.#lastDelivery;
   }
 
@@ -349,24 +515,41 @@ export class ReplayCoordinator implements TaroReplayBridge {
     if (this.#state === 'session' || this.#state === 'buffer') return true;
     this.#newReplay(mode);
     this.#attachErrorHook();
-    if (this.#rootRuntime) this.#startRoot(this.#rootRuntime);
+    if (this.#rootRuntime) {
+      this.#observeActivity(this.#rootRuntime);
+      this.#startRoot(this.#rootRuntime);
+    }
     this.#notify();
     return true;
   }
 
-  async stop({ flush = true }: { flush?: boolean } = {}): Promise<void> {
+  async stop({ flush = this.#state === 'session' }: { flush?: boolean } = {}): Promise<void> {
+    if (this.#state !== 'session' && this.#state !== 'buffer') return;
     const generation = this.#generation;
     const stoppedReplayId = this.#replayId;
+    const mode = this.#state;
+    const buffered =
+      mode === 'buffer' && flush
+        ? this.#mergeBufferedCaptures([
+            ...this.#captures,
+            ...(this.#handle?.getController() ? [this.#handle.getController()!.getCapture()] : []),
+          ])
+        : undefined;
     const capture = this.#releaseRoot();
-    const shouldFlush = flush && this.#state === 'session' && this.#enabled();
+    const startedAt = this.#replayStartedAt ?? buffered?.startedAt ?? capture?.startedAt;
+    const shouldFlush = flush && this.#enabled() && this.#sendGate.isReady(startedAt);
+    if (shouldFlush) this.#sendInitialSegments();
+    else this.#sendGate.clear();
     this.#state = 'stopped';
     this.#captures = [];
-    if (capture && shouldFlush) this.#enqueue(capture);
+    if (shouldFlush && mode === 'buffer' && buffered) this.#enqueue(buffered, 'buffer');
+    else if (capture && shouldFlush && mode === 'session') this.#enqueue(capture);
     if (!shouldFlush) {
       this.#generation++;
       this.#delivery.cancel();
     }
-    this.#rootRuntime = undefined;
+    this.#detachActivity?.();
+    this.#detachActivity = undefined;
     this.#pendingErrorIds = [];
     this.#pendingTraceIds = [];
     this.#pendingSegmentNames = [];
@@ -386,7 +569,10 @@ export class ReplayCoordinator implements TaroReplayBridge {
 
   reset(): void {
     this.#generation++;
+    this.#sendGate.clear();
     this.#rootRuntime = undefined;
+    this.#detachActivity?.();
+    this.#detachActivity = undefined;
     this.#releaseRoot();
     this.#delivery.cancel();
     this.#captures = [];
@@ -420,7 +606,10 @@ export class ReplayCoordinator implements TaroReplayBridge {
     if (this.#enabled()) return this.#state !== 'disabled';
     if (this.#state !== 'disabled' || this.#handle) {
       this.#generation++;
+      this.#sendGate.clear();
       this.#rootRuntime = undefined;
+      this.#detachActivity?.();
+      this.#detachActivity = undefined;
       this.#releaseRoot();
       this.#captures = [];
       this.#pendingErrorIds = [];
@@ -437,10 +626,14 @@ export class ReplayCoordinator implements TaroReplayBridge {
     return false;
   }
 
-  getReplayId(): string | undefined {
+  getReplayId(_onlyIfSampled?: boolean): string | undefined {
     return this.#state === 'session' || this.#state === 'buffer' ? this.#replayId : undefined;
   }
+  getRecordingMode(): 'session' | 'buffer' | undefined {
+    return this.#state === 'session' || this.#state === 'buffer' ? this.#state : undefined;
+  }
   recordPageScroll(position: { scrollTop?: number; scrollLeft?: number }): void {
+    this.#userActivity();
     if (this.#rootRuntime && this.refreshEnabled())
       this.#handle?.getController()?.recordPageScroll?.(position);
   }
@@ -493,6 +686,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
   }
 
   #beforeSendEvent(event: ReplayAwareEvent): void {
+    if (!this.#checkSession()) return;
     if (
       !this.refreshEnabled() ||
       !this.#rootRuntime ||
@@ -569,6 +763,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
   }
 
   #beforeSendFeedback(event: FeedbackEvent, includeReplay: boolean): void {
+    if (!this.#checkSession()) return;
     if (
       !includeReplay ||
       !this.#replayId ||
@@ -595,36 +790,91 @@ export class ReplayCoordinator implements TaroReplayBridge {
     }
   }
 
-  #promote(prepared: TaroReplayCapture): void {
-    const duration = this.#limits().maxDurationMs;
+  #promote(prepared: TaroReplayCapture, continueRecording = true): void {
+    this.#session.promote(prepared.startedAt, this.#now());
+    const duration = this.#session.remainingDuration(this.#now());
+    if (!continueRecording) {
+      this.#releaseRoot();
+      this.#replayStartedAt = prepared.startedAt;
+      this.#captures = [];
+      this.#bufferRecordingStopped = true;
+      this.#enqueue({ ...prepared, endedAt: this.#now(), stopReason: 'flush' }, 'buffer');
+      this.#notify();
+      return;
+    }
     const promoted = this.#handle?.getController()?.promoteToSession?.(duration) === true;
     if (!promoted) this.#releaseRoot();
     this.#replayStartedAt = prepared.startedAt;
     this.#enqueue({ ...prepared, endedAt: this.#now(), stopReason: 'error' }, 'buffer');
+    if (this.#state === 'error') return;
     this.#captures = [];
     this.#state = 'session';
-    this.#sessionDeadline = this.#now() + duration;
-    if (promoted) this.#armSegmentTimer();
-    else if (this.#rootRuntime) this.#startRoot(this.#rootRuntime);
+    if (promoted) {
+      this.#armSegmentTimer();
+      this.#armSessionTimer();
+    } else if (this.#rootRuntime) this.#startRoot(this.#rootRuntime);
   }
 
   #enqueue(capture: TaroReplayCapture, replayType: 'session' | 'buffer' = 'session'): void {
     if (!capture.events.length || !this.#enabled()) return;
     if (this.#segmentId === 0 && !capture.events.some((event) => event.type === 2)) return;
-    const generation = this.#generation;
-    const id = this.#replayId;
     this.#replayStartedAt ??= capture.startedAt;
     const errorIds = this.#pendingErrorIds.splice(0);
     const traceIds = this.#pendingTraceIds.splice(0);
     const segmentNames = this.#pendingSegmentNames.splice(0);
-    const sent = this.#delivery.enqueue(capture, {
-      replayType,
-      segmentId: this.#segmentId++,
-      errorIds,
-      traceIds,
-      segmentNames,
-      replayStartTimestamp: this.#replayStartedAt,
-    });
+    const segment: PendingReplaySegment = {
+      capture,
+      options: {
+        replayType,
+        segmentId: this.#segmentId++,
+        errorIds,
+        traceIds,
+        segmentNames,
+        replayStartTimestamp: this.#replayStartedAt,
+      },
+    };
+    try {
+      if (this.#sendGate.defer(segment, this.#replayStartedAt)) {
+        this.#notify();
+        return;
+      }
+      this.#sendInitialSegments();
+      this.#queueDelivery(segment);
+    } catch (cause) {
+      this.#options.client.recordDroppedEvent?.('queue_overflow', 'replay');
+      this.#failRecording(cause);
+    }
+  }
+
+  #sendInitialSegments(): void {
+    const segments = this.#sendGate.take();
+    const last = segments[segments.length - 1];
+    // Official Replay timestamps a delayed flush when it runs, including while
+    // the document is hidden. Its minimum duration measures replay age.
+    if (last) last.capture = { ...last.capture, endedAt: this.#now() };
+    for (const segment of segments) this.#queueDelivery(segment);
+  }
+
+  #failRecording(cause: unknown): void {
+    this.#releaseRoot();
+    this.#sendGate.clear();
+    this.#captures = [];
+    this.#pendingErrorIds = [];
+    this.#pendingTraceIds = [];
+    this.#pendingSegmentNames = [];
+    this.#state = 'error';
+    this.#delivery.cancel();
+    this.#reportError(cause);
+  }
+
+  #queueDelivery({ capture, options }: PendingReplaySegment): void {
+    const generation = this.#generation;
+    const id = capture.replayId;
+    if (id === this.#replayId && options.segmentId === 0) {
+      this.#session.markSent();
+      this.#armSessionTimer();
+    }
+    const sent = this.#delivery.enqueue(capture, options);
     this.#lastDelivery = sent;
     void sent
       .then(() => {
@@ -635,14 +885,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
       })
       .catch((cause) => {
         if (generation !== this.#generation || id !== this.#replayId) return;
-        this.#releaseRoot();
-        this.#captures = [];
-        this.#pendingErrorIds = [];
-        this.#pendingTraceIds = [];
-        this.#pendingSegmentNames = [];
-        this.#state = 'error';
-        this.#delivery.cancel();
-        this.#reportError(cause);
+        this.#failRecording(cause);
       });
   }
 
@@ -656,8 +899,10 @@ export class ReplayCoordinator implements TaroReplayBridge {
     )
       return;
     this.#clearTimer();
+    this.#clearSessionTimer();
     this.#handle = undefined;
     if (capture.stopReason === 'buffer-drain') {
+      this.#sendGate.clear();
       this.#captures = [];
       this.#delivery.cancel();
       this.#state = 'error';
@@ -689,8 +934,22 @@ export class ReplayCoordinator implements TaroReplayBridge {
         return;
       }
       this.#enqueue(capture);
-      if (capture.stopReason === 'duration')
-        this.#newReplay(this.#errorMode ? 'buffer' : 'session');
+      if (this.#state !== 'session') return;
+      if (capture.stopReason === 'duration') {
+        if (this.#session.shouldPause(this.#now())) {
+          this.#session.paused = true;
+          this.#notify();
+          return;
+        }
+        const mode = this.#sampleMode();
+        if (mode === 'disabled') {
+          this.#state = 'disabled';
+          this.#replayId = undefined;
+          this.#notify();
+          return;
+        }
+        this.#newReplay(mode);
+      }
     } else return;
     // Defer only resource restart so synchronous SDK startup limits cannot re-enter start().
     void Promise.resolve().then(() => {
@@ -702,35 +961,17 @@ export class ReplayCoordinator implements TaroReplayBridge {
   #mergeBufferedCaptures(
     captures: readonly TaroReplayCapture[] = this.#captures,
   ): TaroReplayCapture | undefined {
-    if (!captures.length) return undefined;
-    const last = captures[captures.length - 1]!;
     const limits = this.#limits();
-    const events = boundReplayEvents(
-      captures.flatMap((capture) => capture.events),
+    return mergeBufferedCaptures(
+      captures,
       {
         now: this.#now(),
         windowMs: limits.rollingWindowMs,
         maxEvents: limits.maxEvents,
         maxBytes: limits.maxBytes,
       },
+      this.#replayId,
     );
-    if (!events.length) return undefined;
-    return {
-      ...last,
-      replayId: this.#replayId || last.replayId,
-      startedAt: events[0]?.timestamp ?? last.startedAt,
-      endedAt: this.#now(),
-      stopReason: 'error',
-      events,
-      stats: {
-        ...last.stats,
-        eventCount: events.length,
-        approximateBytes: events.reduce(
-          (sum, event) => sum + utf8ByteLength(JSON.stringify(event)),
-          0,
-        ),
-      },
-    };
   }
   #boundBufferedHistory(
     current: Pick<TaroReplayCapture['stats'], 'eventCount' | 'approximateBytes'>,
@@ -770,6 +1011,8 @@ export class ReplayCoordinator implements TaroReplayBridge {
     const captures = [...this.#captures];
     const current = this.#handle?.getController()?.getCapture();
     if (current) captures.push(current);
+    const delivery = this.#delivery.getSnapshot();
+    const deferred = this.#sendGate.getSnapshot();
     return {
       state: this.#state,
       ...(this.#replayId ? { replayId: this.#replayId } : {}),
@@ -778,7 +1021,12 @@ export class ReplayCoordinator implements TaroReplayBridge {
       eventCount: captures.reduce((sum, capture) => sum + capture.events.length, 0),
       approximateBytes: captures.reduce((sum, capture) => sum + capture.stats.approximateBytes, 0),
       recording: Boolean(this.#handle),
-      delivery: this.#delivery.getSnapshot(),
+      paused: this.#session.paused || this.#bufferRecordingStopped,
+      delivery: {
+        ...delivery,
+        pendingSegments: delivery.pendingSegments + deferred.pendingSegments,
+        pendingBytes: delivery.pendingBytes + deferred.pendingBytes,
+      },
       ...(this.#error ? { error: this.#error } : {}),
     };
   }

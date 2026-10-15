@@ -27,6 +27,7 @@ test('an opted-in bridge delegates a current-page canvas read to its recorder', 
     },
   });
   const coordinator = new ReplayCoordinator({
+    minReplayDuration: 0,
     sdk: f.sdk,
     client: f.sdk.getClient()!,
     replaysSessionSampleRate: 1,
@@ -57,6 +58,7 @@ test('pixels from a foreign, detached, or replaced page root are never read', ()
     recordCanvas: (_node, read) => Boolean(read()),
   });
   const c = new ReplayCoordinator({
+    minReplayDuration: 0,
     sdk: f.sdk,
     client: f.sdk.getClient()!,
     replaysOnErrorSampleRate: 1,
@@ -105,6 +107,7 @@ test.each([
     });
   let enabled = mode !== 'disabled';
   const c = new ReplayCoordinator({
+    minReplayDuration: 0,
     sdk: f.sdk,
     client: f.sdk.getClient()!,
     replaysOnErrorSampleRate: 1,
@@ -143,6 +146,7 @@ test('ownership is checked again when the SDK asks for pixels', () => {
     },
   });
   const c = new ReplayCoordinator({
+    minReplayDuration: 0,
     sdk: f.sdk,
     client: f.sdk.getClient()!,
     replaysOnErrorSampleRate: 1,
@@ -168,6 +172,7 @@ test('integration subscribers can capture a previously drawn canvas after each v
     recordCanvas: (_node, read) => Boolean(read()),
   });
   const integration = taroReplayIntegration({
+    minReplayDuration: 0,
     sdk: f.sdk,
     recordCanvas: true,
     replaysOnErrorSampleRate: 1,
@@ -216,6 +221,7 @@ test.each(['buffer-duration', 'error-promotion', 'segment-restart'] as const)(
       };
     };
     const integration = taroReplayIntegration({
+      minReplayDuration: 0,
       sdk: f.sdk,
       recordCanvas: true,
       replaysSessionSampleRate: mode === 'segment-restart' ? 1 : 0,

@@ -15,12 +15,13 @@ function argumentsFor(argv) {
     if (argument === '--online') offline = false;
     else if (argument === '--offline') offline = true;
     else if (!argument.startsWith('-') && !tarball) tarball = path.resolve(argument);
-    else throw new Error('Usage: node scripts/verify-consumer.cjs [package.tgz] [--offline|--online]');
+    else
+      throw new Error('Usage: node scripts/verify-consumer.cjs [package.tgz] [--offline|--online]');
   }
   return { tarball: tarball || path.join(root, '.artifacts', packedName), offline };
 }
 
-function run(command, args, cwd, label) {
+function run(command, args, cwd, label, timeout = 120_000) {
   // A caller's module search path must not make workspace peers visible to the consumer.
   const env = { ...process.env };
   delete env.NODE_PATH;
@@ -28,8 +29,11 @@ function run(command, args, cwd, label) {
     cwd,
     env,
     stdio: 'inherit',
-    timeout: 120_000,
+    timeout,
   });
+  if (result.error?.code === 'ETIMEDOUT') {
+    throw new Error(`${label} timed out after ${timeout / 1000} seconds`);
+  }
   if (result.error) throw new Error(`${label}: ${result.error.message}`);
   if (result.status !== 0) {
     throw new Error(`${label} failed (${result.signal || `exit ${result.status}`})`);
@@ -38,50 +42,95 @@ function run(command, args, cwd, label) {
 
 function main() {
   const { tarball, offline } = argumentsFor(process.argv.slice(2));
-  assert.ok(tarball.endsWith('.tgz') && fs.statSync(tarball).isFile(), 'Expected an existing npm tarball');
+  assert.ok(
+    tarball.endsWith('.tgz') && fs.statSync(tarball).isFile(),
+    'Expected an existing npm tarball',
+  );
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'sentry-taro-consumer-'));
   try {
-    fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({
-      name: 'synthetic-sentry-taro-consumer',
-      private: true,
-      dependencies: { [pkg.name]: `file:${tarball}` },
-    }, null, 2));
-    fs.writeFileSync(path.join(directory, '.npmrc'),
-      'auto-install-peers=false\nignore-scripts=true\nnode-linker=isolated\n');
-    fs.writeFileSync(path.join(directory, 'tsconfig.json'), JSON.stringify({
-      compilerOptions: {
-        strict: true,
-        skipLibCheck: false,
-        noEmit: true,
-        target: 'ES2020',
-        module: 'Node16',
-        moduleResolution: 'Node16',
-        lib: ['ES2020', 'DOM'],
-        types: [],
-      },
-      files: ['consumer.ts'],
-    }, null, 2));
+    fs.writeFileSync(
+      path.join(directory, 'package.json'),
+      JSON.stringify(
+        {
+          name: 'synthetic-sentry-taro-consumer',
+          private: true,
+          packageManager: pkg.packageManager,
+          dependencies: { [pkg.name]: `file:${tarball}` },
+        },
+        null,
+        2,
+      ),
+    );
+    fs.writeFileSync(
+      path.join(directory, 'tsconfig.json'),
+      JSON.stringify(
+        {
+          compilerOptions: {
+            strict: true,
+            skipLibCheck: false,
+            noEmit: true,
+            target: 'ES2020',
+            module: 'Node16',
+            moduleResolution: 'Node16',
+            lib: ['ES2020', 'DOM'],
+            types: [],
+          },
+          files: ['consumer.ts'],
+        },
+        null,
+        2,
+      ),
+    );
     for (const name of ['consumer.ts', 'consumer.cjs']) {
       fs.copyFileSync(path.join(__dirname, 'fixtures', name), path.join(directory, name));
     }
     const installArgs = [
-      'install', '--ignore-scripts', '--ignore-workspace', '--no-frozen-lockfile',
-      '--config.auto-install-peers=false', '--registry=https://registry.npmjs.org/',
-      '--reporter=append-only', ...(offline ? ['--offline'] : []),
+      'install',
+      '--ignore-scripts',
+      '--ignore-workspace',
+      '--no-frozen-lockfile',
+      // pnpm 12 no longer reads these non-registry settings from .npmrc.
+      '--config.auto-install-peers=false',
+      '--config.node-linker=isolated',
+      '--registry=https://registry.npmjs.org/',
+      '--reporter=append-only',
+      ...(offline ? ['--offline'] : []),
     ];
+    // An online fetch can legitimately use pnpm's request/retry budget before
+    // reporting a network error. Keep declaration/runtime checks bounded separately.
+    const installTimeout = offline ? 120_000 : 300_000;
     const pnpmCli = process.env.npm_execpath;
     if (pnpmCli && /(?:^|[\\/])pnpm\.(?:c?js)$/.test(pnpmCli)) {
-      run(process.execPath, [pnpmCli, ...installArgs], directory, 'Tarball installation');
+      run(
+        process.execPath,
+        [pnpmCli, ...installArgs],
+        directory,
+        'Tarball installation',
+        installTimeout,
+      );
     } else {
-      run('pnpm', installArgs, directory, 'Tarball installation');
+      run('pnpm', installArgs, directory, 'Tarball installation', installTimeout);
     }
     for (const peer of ['react', '@types/react', '@tarojs/runtime', '@tarojs/taro']) {
-      assert.ok(!fs.existsSync(path.join(directory, 'node_modules', peer)), `Unexpected peer installed: ${peer}`);
+      assert.ok(
+        !fs.existsSync(path.join(directory, 'node_modules', peer)),
+        `Unexpected peer installed: ${peer}`,
+      );
     }
-    run(process.execPath, [require.resolve('typescript/bin/tsc'), '-p', 'tsconfig.json'],
-      directory, 'Strict consumer declarations');
+    // TypeScript 7 exports package.json, but not its bin/tsc subpath.
+    const typescriptPackagePath = require.resolve('typescript/package.json');
+    const typescriptPackage = JSON.parse(fs.readFileSync(typescriptPackagePath, 'utf8'));
+    const tscPath = path.resolve(path.dirname(typescriptPackagePath), typescriptPackage.bin.tsc);
+    run(
+      process.execPath,
+      [tscPath, '-p', 'tsconfig.json'],
+      directory,
+      'Strict consumer declarations',
+    );
     run(process.execPath, ['consumer.cjs', pkg.version], directory, 'Consumer runtime');
-    console.log('Packed consumer passed: isolated install, strict declarations, no React/Taro peers.');
+    console.log(
+      'Packed consumer passed: isolated install, strict declarations, no React/Taro peers.',
+    );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true, maxRetries: 3 });
   }

@@ -42,6 +42,7 @@ function setup(mode: 'buffer' | 'session') {
   });
   const f = makeSdk();
   const coordinator = new ReplayCoordinator({
+    minReplayDuration: 0,
     sdk: { ...f.sdk, getClient: () => client },
     client,
     ...(mode === 'buffer' ? { replaysOnErrorSampleRate: 1 } : { replaysSessionSampleRate: 1 }),

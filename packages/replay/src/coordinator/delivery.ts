@@ -181,8 +181,14 @@ export class ReplayDelivery {
           if (item.generation === this.#generation) {
             this.#snapshot.droppedSegments++;
             this.#snapshot.lastStatus = 'rejected';
-            // Later incremental segments depend on this one. Do not send a broken chain.
-            const abandoned = this.#queue.splice(1);
+            // Only this replay's incremental segments depend on the failed one.
+            // A manually restarted replay owns a new checkpoint and can still send.
+            const abandoned = this.#queue.filter(
+              (later) => later !== item && later.capture.replayId === item.capture.replayId,
+            );
+            this.#queue = this.#queue.filter(
+              (later) => later === item || later.capture.replayId !== item.capture.replayId,
+            );
             for (const later of abandoned) {
               this.#snapshot.pendingSegments--;
               this.#snapshot.pendingBytes -= later.bytes;

@@ -1,4 +1,14 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+  type Mocked,
+  type Mock,
+} from 'vite-plus/test';
 import { addBreadcrumb, getCurrentScope, getClient } from '@sentry/core';
 import { PerformanceIntegration } from '../src/integrations/performance';
 import { getPerformanceManager, getSystemInfo, sdk } from '../src/crossPlatform';
@@ -9,48 +19,48 @@ import type {
 } from '../src/crossPlatform';
 
 // Mock Sentry core functions
-jest.mock('@sentry/core', () => ({
-  addBreadcrumb: jest.fn(),
-  getCurrentScope: jest.fn(),
-  getClient: jest.fn(),
-  startSpan: jest.fn(),
-  withScope: jest.fn(),
-  getCurrentHub: jest.fn(() => ({
-    getClient: jest.fn(() => ({
-      captureException: jest.fn(),
-      captureMessage: jest.fn(),
+vi.mock('@sentry/core', () => ({
+  addBreadcrumb: vi.fn(),
+  getCurrentScope: vi.fn(),
+  getClient: vi.fn(),
+  startSpan: vi.fn(),
+  withScope: vi.fn(),
+  getCurrentHub: vi.fn(() => ({
+    getClient: vi.fn(() => ({
+      captureException: vi.fn(),
+      captureMessage: vi.fn(),
     })),
   })),
 }));
 
 // Mock the crossPlatform module
-jest.mock('../src/crossPlatform', () => ({
-  getPerformanceManager: jest.fn(),
-  getSystemInfo: jest.fn(() => ({ platform: 'devtools' })),
-  sdk: jest.fn(() => ({
-    getPerformance: jest.fn(),
-    reportPerformance: jest.fn(),
+vi.mock('../src/crossPlatform', () => ({
+  getPerformanceManager: vi.fn(),
+  getSystemInfo: vi.fn(() => ({ platform: 'devtools' })),
+  sdk: vi.fn(() => ({
+    getPerformance: vi.fn(),
+    reportPerformance: vi.fn(),
   })),
 }));
 
 // Mock startTransaction since it's not available in v9
-const mockStartTransaction = jest.fn();
+const mockStartTransaction = vi.fn();
 
 describe('Performance Monitoring', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Transaction tracking', () => {
     it('should start transaction for page navigation', () => {
       mockStartTransaction.mockReturnValue({
-        setName: jest.fn(),
-        setTag: jest.fn(),
-        setData: jest.fn(),
-        finish: jest.fn(),
-        toTraceparent: jest.fn(),
-        toSentryTrace: jest.fn(),
-        getTraceContext: jest.fn(),
+        setName: vi.fn(),
+        setTag: vi.fn(),
+        setData: vi.fn(),
+        finish: vi.fn(),
+        toTraceparent: vi.fn(),
+        toSentryTrace: vi.fn(),
+        getTraceContext: vi.fn(),
       } as any);
 
       // Simulate page navigation
@@ -67,15 +77,15 @@ describe('Performance Monitoring', () => {
     });
 
     it('should track API request performance', () => {
-      const mockStartTransaction = jest.fn();
+      const mockStartTransaction = vi.fn();
       const mockTransaction = {
-        setName: jest.fn(),
-        setTag: jest.fn(),
-        setData: jest.fn(),
-        finish: jest.fn(),
-        toTraceparent: jest.fn(),
-        toSentryTrace: jest.fn(),
-        getTraceContext: jest.fn(),
+        setName: vi.fn(),
+        setTag: vi.fn(),
+        setData: vi.fn(),
+        finish: vi.fn(),
+        toTraceparent: vi.fn(),
+        toSentryTrace: vi.fn(),
+        getTraceContext: vi.fn(),
       };
       mockStartTransaction.mockReturnValue(mockTransaction as any);
 
@@ -99,15 +109,15 @@ describe('Performance Monitoring', () => {
     });
 
     it('should track user interaction performance', () => {
-      const mockStartTransaction = jest.fn();
+      const mockStartTransaction = vi.fn();
       const mockTransaction = {
-        setName: jest.fn(),
-        setTag: jest.fn(),
-        setData: jest.fn(),
-        finish: jest.fn(),
-        toTraceparent: jest.fn(),
-        toSentryTrace: jest.fn(),
-        getTraceContext: jest.fn(),
+        setName: vi.fn(),
+        setTag: vi.fn(),
+        setData: vi.fn(),
+        finish: vi.fn(),
+        toTraceparent: vi.fn(),
+        toSentryTrace: vi.fn(),
+        getTraceContext: vi.fn(),
       };
       mockStartTransaction.mockReturnValue(mockTransaction as any);
 
@@ -133,7 +143,7 @@ describe('Performance Monitoring', () => {
 
   describe('Breadcrumb tracking', () => {
     it('should add navigation breadcrumb', () => {
-      const mockAddBreadcrumb = addBreadcrumb as jest.MockedFunction<typeof addBreadcrumb>;
+      const mockAddBreadcrumb = addBreadcrumb as MockedFunction<typeof addBreadcrumb>;
 
       addBreadcrumb({
         category: 'navigation',
@@ -157,7 +167,7 @@ describe('Performance Monitoring', () => {
     });
 
     it('should add user action breadcrumb', () => {
-      const mockAddBreadcrumb = addBreadcrumb as jest.MockedFunction<typeof addBreadcrumb>;
+      const mockAddBreadcrumb = addBreadcrumb as MockedFunction<typeof addBreadcrumb>;
 
       addBreadcrumb({
         category: 'user',
@@ -181,7 +191,7 @@ describe('Performance Monitoring', () => {
     });
 
     it('should add HTTP request breadcrumb', () => {
-      const mockAddBreadcrumb = addBreadcrumb as jest.MockedFunction<typeof addBreadcrumb>;
+      const mockAddBreadcrumb = addBreadcrumb as MockedFunction<typeof addBreadcrumb>;
 
       addBreadcrumb({
         category: 'http',
@@ -207,7 +217,7 @@ describe('Performance Monitoring', () => {
     });
 
     it('should add console breadcrumb', () => {
-      const mockAddBreadcrumb = addBreadcrumb as jest.MockedFunction<typeof addBreadcrumb>;
+      const mockAddBreadcrumb = addBreadcrumb as MockedFunction<typeof addBreadcrumb>;
 
       addBreadcrumb({
         category: 'console',
@@ -235,7 +245,7 @@ describe('Performance Monitoring', () => {
     });
 
     it('should add error breadcrumb', () => {
-      const mockAddBreadcrumb = addBreadcrumb as jest.MockedFunction<typeof addBreadcrumb>;
+      const mockAddBreadcrumb = addBreadcrumb as MockedFunction<typeof addBreadcrumb>;
 
       addBreadcrumb({
         category: 'error',
@@ -292,40 +302,40 @@ describe('Performance Monitoring', () => {
 
 describe('PerformanceIntegration', () => {
   let integration: PerformanceIntegration;
-  let mockPerformanceManager: jest.Mocked<PerformanceManager>;
+  let mockPerformanceManager: Mocked<PerformanceManager>;
   let mockScope: any;
-  let mockObserver: jest.Mocked<PerformanceObserver>;
+  let mockObserver: Mocked<PerformanceObserver>;
 
   beforeEach(() => {
     // Reset all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Setup mock performance manager
     mockObserver = {
-      observe: jest.fn(),
-      disconnect: jest.fn(),
+      observe: vi.fn(),
+      disconnect: vi.fn(),
     };
 
     mockPerformanceManager = {
-      getEntries: jest.fn(() => []),
-      getEntriesByType: jest.fn(() => []),
-      getEntriesByName: jest.fn(() => []),
-      mark: jest.fn(),
-      measure: jest.fn(),
-      clearMarks: jest.fn(),
-      clearMeasures: jest.fn(),
-      createObserver: jest.fn(() => mockObserver),
+      getEntries: vi.fn(() => []),
+      getEntriesByType: vi.fn(() => []),
+      getEntriesByName: vi.fn(() => []),
+      mark: vi.fn(),
+      measure: vi.fn(),
+      clearMarks: vi.fn(),
+      clearMeasures: vi.fn(),
+      createObserver: vi.fn(() => mockObserver),
     };
 
     // Setup mock scope
     mockScope = {
-      setTag: jest.fn(),
-      setContext: jest.fn(),
-      addBreadcrumb: jest.fn(),
+      setTag: vi.fn(),
+      setContext: vi.fn(),
+      addBreadcrumb: vi.fn(),
     };
 
-    (getPerformanceManager as jest.Mock).mockReturnValue(mockPerformanceManager);
-    (getCurrentScope as jest.Mock).mockReturnValue(mockScope);
+    (getPerformanceManager as Mock).mockReturnValue(mockPerformanceManager);
+    (getCurrentScope as Mock).mockReturnValue(mockScope);
 
     integration = new PerformanceIntegration();
   });
@@ -386,9 +396,9 @@ describe('PerformanceIntegration', () => {
     });
 
     it('should handle missing performance API gracefully', () => {
-      (getPerformanceManager as jest.Mock).mockReturnValue(null);
+      (getPerformanceManager as Mock).mockReturnValue(null);
 
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       integration.setupOnce();
 
       expect(consoleSpy).toHaveBeenCalledWith('[sentry-miniapp] Performance API not available');
@@ -490,7 +500,7 @@ describe('PerformanceIntegration', () => {
       };
 
       // Mock Math.random to return 0.5 (should be filtered out with sampleRate 0)
-      const mathSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
+      const mathSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
 
       const observerCallback = mockPerformanceManager.createObserver.mock.calls[1]?.[0];
       if (observerCallback) {
@@ -671,9 +681,9 @@ describe('PerformanceIntegration', () => {
 
     it('should collect memory when enableMemory is true and API available', () => {
       const mockMemory = { jsHeapSizeUsed: 1024000, jsHeapSizeLimit: 10240000 };
-      (sdk as jest.Mock).mockReturnValue({
-        getPerformance: jest.fn(() => ({ memory: mockMemory })),
-        reportPerformance: jest.fn(),
+      (sdk as Mock).mockReturnValue({
+        getPerformance: vi.fn(() => ({ memory: mockMemory })),
+        reportPerformance: vi.fn(),
       });
 
       const memIntegration = new PerformanceIntegration({ enableMemory: true });
@@ -697,9 +707,9 @@ describe('PerformanceIntegration', () => {
     });
 
     it('should handle missing memory API gracefully', () => {
-      (sdk as jest.Mock).mockReturnValue({
-        getPerformance: jest.fn(() => ({})), // No memory property
-        reportPerformance: jest.fn(),
+      (sdk as Mock).mockReturnValue({
+        getPerformance: vi.fn(() => ({})), // No memory property
+        reportPerformance: vi.fn(),
       });
 
       const memIntegration = new PerformanceIntegration({ enableMemory: true });
@@ -729,7 +739,7 @@ describe('PerformanceIntegration', () => {
         throw new Error('disconnect failed');
       });
 
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       integration.setupOnce();
 
       expect(() => integration.cleanup()).not.toThrow();
@@ -859,7 +869,7 @@ describe('PerformanceIntegration', () => {
     });
 
     it('should handle unknown entry types', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       integration.setupOnce();
 
       const observerCallback = mockPerformanceManager.createObserver.mock.calls[0]?.[0];
@@ -874,13 +884,13 @@ describe('PerformanceIntegration', () => {
   });
 
   it('does not collect system info for user-timing detection when collection is disabled', () => {
-    (getClient as jest.Mock).mockReturnValueOnce({
+    (getClient as Mock).mockReturnValueOnce({
       getOptions: () => ({ enableSystemInfo: false }),
     });
-    const count = (getSystemInfo as jest.Mock).mock.calls.length;
+    const count = (getSystemInfo as Mock).mock.calls.length;
     const disabled = new PerformanceIntegration({ enableUserTiming: true });
     disabled.setupOnce();
-    expect((getSystemInfo as jest.Mock).mock.calls).toHaveLength(count);
+    expect((getSystemInfo as Mock).mock.calls).toHaveLength(count);
     disabled.cleanup();
   });
 
@@ -894,7 +904,7 @@ describe('PerformanceIntegration', () => {
         }
       });
 
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // 需要设置 PerformanceObserver.supportedEntryTypes 并避免 devtools 平台检查
       const originalPO = (global as any).PerformanceObserver;
@@ -903,7 +913,7 @@ describe('PerformanceIntegration', () => {
       };
 
       // 覆盖 getSystemInfo 返回非 devtools 平台
-      (getSystemInfo as jest.Mock).mockReturnValue({
+      (getSystemInfo as Mock).mockReturnValue({
         platform: 'ios',
         system: 'iOS 15.0',
       });
@@ -1004,9 +1014,9 @@ describe('PerformanceIntegration', () => {
 
   describe('reportToNativeAPI', () => {
     it('should report to native API when reportPerformance is available', () => {
-      const mockReportPerformance = jest.fn();
-      (sdk as jest.Mock).mockReturnValue({
-        getPerformance: jest.fn(),
+      const mockReportPerformance = vi.fn();
+      (sdk as Mock).mockReturnValue({
+        getPerformance: vi.fn(),
         reportPerformance: mockReportPerformance,
       });
 

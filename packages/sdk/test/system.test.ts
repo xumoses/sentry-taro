@@ -1,30 +1,30 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vite-plus/test';
 import { getCurrentScope, getClient } from '@sentry/core';
 import { System } from '../src/integrations/system';
 
 // Mock @sentry/core
-jest.mock('@sentry/core', () => ({
-  getCurrentScope: jest.fn(),
-  getClient: jest.fn(),
+vi.mock('@sentry/core', () => ({
+  getCurrentScope: vi.fn(),
+  getClient: vi.fn(),
 }));
 
 // Mock crossPlatform
-const mockSdk: any = {};
+const mockSdk = vi.hoisted(() => ({}) as any);
 
-jest.mock('../src/crossPlatform', () => ({
-  sdk: jest.fn(() => mockSdk),
+vi.mock('../src/crossPlatform', () => ({
+  sdk: vi.fn(() => mockSdk),
 }));
 
 describe('System', () => {
   let mockScope: any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockScope = {
-      setContext: jest.fn(),
-      setTag: jest.fn(),
+      setContext: vi.fn(),
+      setTag: vi.fn(),
     };
-    (getCurrentScope as jest.Mock).mockReturnValue(mockScope);
+    (getCurrentScope as Mock).mockReturnValue(mockScope);
 
     // 重置 mockSdk
     Object.keys(mockSdk).forEach((key) => delete mockSdk[key]);
@@ -43,7 +43,7 @@ describe('System', () => {
         os: { name: 'macOS', version: '27.0.1' },
         app: { app_version: '2.4.0' },
       };
-      const client = { getOptions: () => ({}), getRuntimeContexts: jest.fn(async () => defaults) };
+      const client = { getOptions: () => ({}), getRuntimeContexts: vi.fn(async () => defaults) };
       const event = await new System().processEvent(
         { contexts: { os: { name: 'Explicit' } }, tags: { 'app.version': 'explicit' } },
         {},
@@ -59,12 +59,12 @@ describe('System', () => {
     });
 
     it('honors disabled system collection and fails open for unavailable providers', async () => {
-      const getRuntimeContexts = jest.fn(async () => {
+      const getRuntimeContexts = vi.fn(async () => {
         throw new Error('unavailable');
       });
       const disabled = { getOptions: () => ({ enableSystemInfo: false }), getRuntimeContexts };
-      (getClient as jest.Mock).mockReturnValueOnce(disabled);
-      mockSdk.getLocation = jest.fn();
+      (getClient as Mock).mockReturnValueOnce(disabled);
+      mockSdk.getLocation = vi.fn();
       new System().setupOnce();
       expect(mockSdk.getLocation).not.toHaveBeenCalled();
       expect(await new System().processEvent({ message: 'kept' }, {}, disabled as any)).toEqual({
@@ -82,7 +82,7 @@ describe('System', () => {
 
   describe('network context', () => {
     it('should fetch network type when getNetworkType is available', () => {
-      mockSdk.getNetworkType = jest.fn();
+      mockSdk.getNetworkType = vi.fn();
 
       const integration = new System();
       integration.setupOnce();
@@ -96,7 +96,7 @@ describe('System', () => {
     });
 
     it('should set network context on success', () => {
-      mockSdk.getNetworkType = jest.fn((opts: any) => {
+      mockSdk.getNetworkType = vi.fn((opts: any) => {
         opts.success({ networkType: 'wifi', isConnected: true });
       });
 
@@ -114,7 +114,7 @@ describe('System', () => {
     });
 
     it('should handle network type failure gracefully', () => {
-      mockSdk.getNetworkType = jest.fn((opts: any) => {
+      mockSdk.getNetworkType = vi.fn((opts: any) => {
         opts.fail();
       });
 
@@ -130,7 +130,7 @@ describe('System', () => {
 
   describe('location context', () => {
     it('should fetch location when getLocation is available', () => {
-      mockSdk.getLocation = jest.fn();
+      mockSdk.getLocation = vi.fn();
 
       const integration = new System();
       integration.setupOnce();
@@ -145,7 +145,7 @@ describe('System', () => {
     });
 
     it('should set location context on success', () => {
-      mockSdk.getLocation = jest.fn((opts: any) => {
+      mockSdk.getLocation = vi.fn((opts: any) => {
         opts.success({ latitude: 39.9, longitude: 116.4, accuracy: 30 });
       });
 
@@ -163,7 +163,7 @@ describe('System', () => {
     });
 
     it('should handle location failure gracefully', () => {
-      mockSdk.getLocation = jest.fn((opts: any) => {
+      mockSdk.getLocation = vi.fn((opts: any) => {
         opts.fail();
       });
 

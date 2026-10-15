@@ -108,6 +108,7 @@ describe('Replay recording ownership and controls', () => {
     vi.useFakeTimers();
     const f = recorderHarness();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -132,6 +133,7 @@ describe('Replay recording ownership and controls', () => {
     );
     const release = vi.spyOn(ReplayDelivery.prototype, 'releaseWorker');
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -148,10 +150,83 @@ describe('Replay recording ownership and controls', () => {
     release.mockRestore();
   });
 
+  test('a rejected final segment cannot cancel a manually restarted replay', async () => {
+    vi.useFakeTimers();
+    const f = recorderHarness();
+    let finish!: (value: unknown) => void;
+    f.sendEnvelope.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const c = new ReplayCoordinator({
+      minReplayDuration: 0,
+      sdk: f.sdk,
+      client: f.sdk.getClient()!,
+      replaysSessionSampleRate: 1,
+    });
+    c.attachRoot(makeRuntime());
+    const firstId = c.getReplayId();
+    const stopped = c.stop();
+    c.start();
+    const nextId = c.getReplayId();
+    const flushed = c.flush();
+    expect(nextId).not.toBe(firstId);
+    finish({ statusCode: 400 });
+    await expect(stopped).rejects.toThrow('400');
+    await flushed;
+    await settle();
+    expect(f.sendEnvelope.mock.calls.map((call) => call[0][1][0][1].replay_id)).toEqual([
+      firstId,
+      nextId,
+    ]);
+    expect(f.sendEnvelope.mock.calls.map((call) => call[0][1][0][1].segment_id)).toEqual([0, 0]);
+    expect(c.getSnapshot()).toMatchObject({ state: 'session', recording: true });
+    expect(f.active()).toBe(1);
+    c.destroy();
+  });
+
+  test('repeating stop does not cancel an earlier stop awaiting its final segment', async () => {
+    vi.useFakeTimers();
+    const f = recorderHarness();
+    let finish!: (value: unknown) => void;
+    f.sendEnvelope.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const c = new ReplayCoordinator({
+      minReplayDuration: 0,
+      sdk: f.sdk,
+      client: f.sdk.getClient()!,
+      replaysSessionSampleRate: 1,
+    });
+    c.attachRoot(makeRuntime());
+    const first = c.flush();
+    f.controllers[0]!.addBreadcrumb({});
+    let stopFinished = false;
+    const stopped = c.stop().then(() => {
+      stopFinished = true;
+    });
+    await c.stop();
+    expect(stopFinished).toBe(false);
+    expect(c.getSnapshot().delivery?.pendingSegments).toBe(2);
+    finish({ statusCode: 200 });
+    await first;
+    await stopped;
+    expect(f.sendEnvelope.mock.calls.map((call) => call[0][1][0][1].segment_id)).toEqual([0, 1]);
+    expect(c.getSnapshot()).toMatchObject({ state: 'stopped', recording: false });
+    expect(f.active()).toBe(0);
+    c.destroy();
+  });
+
   test('promotes the same observer and sends one full snapshot followed by increments', async () => {
     vi.useFakeTimers();
     const f = recorderHarness({ promotion: true });
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -177,6 +252,7 @@ describe('Replay recording ownership and controls', () => {
     vi.useFakeTimers();
     const f = recorderHarness();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -191,13 +267,15 @@ describe('Replay recording ownership and controls', () => {
     c.destroy();
   });
 
-  test('rolls an error buffer past five minutes without sending and keeps one recorder', async () => {
+  test('rolls an error buffer past a configured five-minute recorder limit without sending', async () => {
     vi.useFakeTimers();
     const f = recorderHarness();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
+      limits: { maxDurationMs: 5 * 60_000 },
     });
     c.attachRoot(makeRuntime());
     await vi.advanceTimersByTimeAsync(6 * 60_000);
@@ -219,10 +297,12 @@ describe('Replay recording ownership and controls', () => {
       vi.useFakeTimers();
       const f = recorderHarness();
       const c = new ReplayCoordinator({
+        minReplayDuration: 0,
         sdk: f.sdk,
         client: f.sdk.getClient()!,
         replaysOnErrorSampleRate: 1,
         flushIntervalMs: 600_000,
+        limits: { maxDurationMs: 5 * 60_000 },
       });
       c.attachRoot(makeRuntime());
       f.emitBeforeSend(error());
@@ -255,6 +335,7 @@ describe('Replay recording ownership and controls', () => {
     vi.setSystemTime(100_000);
     const f = recorderHarness();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -286,6 +367,7 @@ describe('Replay recording ownership and controls', () => {
         }),
     );
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -314,6 +396,7 @@ describe('Replay recording ownership and controls', () => {
   test('missing root recovers, while stopped/destroyed never attach implicitly', async () => {
     const f = recorderHarness();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -332,6 +415,7 @@ describe('Replay recording ownership and controls', () => {
   test('an oversized initial snapshot cannot create a restart loop or invalid envelope', async () => {
     const f = recorderHarness({ initialLimit: true });
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -347,6 +431,7 @@ describe('Replay recording ownership and controls', () => {
   test('manual buffer sending is explicit and native errors never link', async () => {
     const f = recorderHarness();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -366,6 +451,7 @@ describe('Replay recording ownership and controls', () => {
   test('filters error sampling and associates trace ids without inheriting users', async () => {
     const f = recorderHarness();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 1,
@@ -386,7 +472,11 @@ describe('Replay recording ownership and controls', () => {
 
   test('integration cleanup and repeated setup release old coordinator resources', () => {
     const f = recorderHarness();
-    const integration = taroReplayIntegration({ sdk: f.sdk, replaysSessionSampleRate: 1 });
+    const integration = taroReplayIntegration({
+      minReplayDuration: 0,
+      sdk: f.sdk,
+      replaysSessionSampleRate: 1,
+    });
     const client = { ...f.sdk.getClient()!, getOptions: () => ({}) };
     integration.setup?.(client as any);
     integration.bridge.attachRoot(makeRuntime());
@@ -401,6 +491,7 @@ describe('Replay recording ownership and controls', () => {
     const f = recorderHarness();
     const random = vi.fn(() => 0.5);
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 0.1,
@@ -430,6 +521,7 @@ describe('Replay recording ownership and controls', () => {
   test('manual buffer does not auto-promote with error sampling zero but explicit sending does', async () => {
     const f = recorderHarness();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysOnErrorSampleRate: 0,
@@ -448,6 +540,7 @@ describe('Replay recording ownership and controls', () => {
     vi.useFakeTimers();
     const f = makeSdk();
     const c = new ReplayCoordinator({
+      minReplayDuration: 0,
       sdk: f.sdk,
       client: f.sdk.getClient()!,
       replaysSessionSampleRate: 1,
@@ -458,7 +551,7 @@ describe('Replay recording ownership and controls', () => {
     expect(f.getStartOptions()).toMatchObject({
       maxBytes: 512 * 1024,
       maxEvents: 500,
-      maxDurationMs: 300_000,
+      maxDurationMs: 60 * 60_000,
     });
     await vi.advanceTimersByTimeAsync(4999);
     expect(f.sendEnvelope).not.toHaveBeenCalled();

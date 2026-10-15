@@ -2,6 +2,14 @@ import type { ReplayCompressionOptions } from '../compression';
 import type { ReplayDeliveryOptions, ReplayDeliverySnapshot } from './delivery';
 import type { TaroReplayContext, TaroReplayMetadata } from '../types';
 import type { Event } from '@sentry/core';
+import type { ReplayRecordingMode } from './session';
+
+export type { ReplayRecordingMode } from './session';
+
+export interface SendBufferedReplayOptions {
+  /** Default true. In buffer mode, keep recording as a session after sending. */
+  continueRecording?: boolean;
+}
 
 import type {
   SentryMiniappReplaySdk,
@@ -31,6 +39,7 @@ export interface ReplayCoordinatorSnapshot {
   error?: Error;
   delivery?: ReplayDeliverySnapshot;
   recording?: boolean;
+  paused?: boolean;
 }
 
 export interface ReplayCoordinatorOptions extends TaroReplayNetworkOptions {
@@ -45,6 +54,14 @@ export interface ReplayCoordinatorOptions extends TaroReplayNetworkOptions {
   /** Default false. Requires the SDK's explicit per-canvas marker and pixel safeguards. */
   recordCanvas?: boolean;
   limits?: TaroReplayLimitOptions;
+  /** Official Replay option. Takes precedence over limits.maxDurationMs; capped at 60 minutes. */
+  maxReplayDuration?: number;
+  /** Minimum replay age before the first upload; default 4999 ms, at most 50 seconds. */
+  minReplayDuration?: number;
+  /** Platform extension; full-session inactivity pause, default 5 minutes. */
+  sessionIdlePauseMs?: number;
+  /** Platform extension; sent replay inactivity expiry, default 15 minutes. */
+  sessionIdleExpireMs?: number;
   /** Session segments are drained without replacing observers when supported by the SDK. */
   flushIntervalMs?: number;
   delivery?: ReplayDeliveryOptions;
@@ -65,7 +82,8 @@ export interface TaroReplayBridge {
   /** Discards the identity boundary and waits for the next visible page attach. */
   reset?(): void;
   destroy?(): void;
-  getReplayId?(): string | undefined;
+  getReplayId?(onlyIfSampled?: boolean): string | undefined;
+  getRecordingMode?(): ReplayRecordingMode | undefined;
   /** Explicit operator action; ordinary buffer flush remains a no-op. */
   sendBufferedReplay?(): Promise<void>;
   recordPageScroll?(position: { scrollTop?: number; scrollLeft?: number }): void;

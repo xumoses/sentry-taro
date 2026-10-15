@@ -22,7 +22,12 @@ import { appName } from './crossPlatform';
 import { createRuntimeContextProvider, type MiniappRuntimeContexts } from './runtime-contexts';
 import { configureConsent } from './consent';
 import { subscribeAppLifecycle } from './appLifecycle';
-import type { MiniappOptions, ReportDialogOptions, SendFeedbackParams } from './types';
+import type {
+  MiniappClientOptions,
+  MiniappOptions,
+  ReportDialogOptions,
+  SendFeedbackParams,
+} from './types';
 import { createMiniappTransport } from './transports';
 import { createMiniappOfflineTransport } from './transports/offline';
 import { SDK_NAME, SDK_VERSION } from './version';
@@ -34,8 +39,7 @@ import { miniappStackParser } from './stacktrace';
  * @see MiniappOptions for documentation on configuration options.
  * @see SentryClient for usage documentation.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class MiniappClient extends Client<any> {
+export class MiniappClient extends Client<MiniappClientOptions> {
   private _readConsent: () => boolean = () => true;
   private _writeConsent: (granted: boolean) => void = () => {};
   private _cleanupResources: () => void = () => {};
@@ -67,6 +71,9 @@ export class MiniappClient extends Client<any> {
       : 'sentry_offline_store';
     super({
       ...options,
+      // Newer core versions enable these by default. Our target service requires explicit opt-in.
+      enableLogs: options.enableLogs ?? options._experiments?.enableLogs ?? false,
+      enableMetrics: options.enableMetrics ?? options._experiments?.enableMetrics ?? false,
       integrations: getIntegrationsToSetup({
         ...options,
         defaultIntegrations: options.defaultIntegrations ?? [],
@@ -189,10 +196,11 @@ export class MiniappClient extends Client<any> {
 
   protected override _prepareEvent(
     event: Event,
-    hint?: EventHint,
-    scope?: Scope,
+    hint: EventHint = {},
+    currentScope: Scope = getCurrentScope(),
+    isolationScope: Scope = getIsolationScope(),
   ): PromiseLike<Event | null> {
-    event.platform = event.platform || this.getOptions().platform || 'javascript';
+    event.platform = event.platform || 'javascript';
 
     // Add SDK information
     event.sdk = {
@@ -213,23 +221,15 @@ export class MiniappClient extends Client<any> {
       event.contexts = {};
     }
     event.contexts['miniapp'] = {
-      platform: appName(),
+      platform: this.getOptions().platform ?? appName(),
       sdk_version: SDK_VERSION,
     };
 
-    try {
-      const currentScope = scope || getCurrentScope();
-      const isolationScope = getIsolationScope();
-      return Promise.resolve(
-        super._prepareEvent(event, hint || {}, currentScope, isolationScope),
-      ).then((prepared) => this._fillDefaultContexts(prepared));
-    } catch (error) {
-      // Fallback if scopes are not properly initialized
-      if (this.getOptions().debug) {
-        console.warn('[sentry-miniapp] _prepareEvent 兜底（scope 未就绪）:', error);
-      }
-      return Promise.resolve(this._fillDefaultContexts(event));
-    }
+    // Forward the scopes captured by core. Falling back to a global isolation scope here
+    // would lose request-local context when asynchronous event preparation finishes later.
+    return Promise.resolve(super._prepareEvent(event, hint, currentScope, isolationScope)).then(
+      (prepared) => this._fillDefaultContexts(prepared),
+    );
   }
 
   /**
@@ -295,10 +295,10 @@ export class MiniappClient extends Client<any> {
           }
         }
 
-        // 从 core 的进程级 setupOnce 门禁里移除本集成名，让后续 init() 能重新 setupOnce。
+        // 只有还原过平台补丁的集成才重置 setupOnce 门禁；core 全局集成保留其一次性安装。
         // core 用 installedIntegrations（按 name 记、从不清除）守卫 setupOnce：cleanup 还原了
         // 补丁、门禁却仍记着该名，二次 init 会跳过 setup → 全局错误处理/面包屑等静默哑火（F2）。
-        if (Array.isArray(installedIntegrations)) {
+        if (typeof cleanup === 'function' && Array.isArray(installedIntegrations)) {
           const idx = installedIntegrations.indexOf(integration.name);
           if (idx !== -1) {
             installedIntegrations.splice(idx, 1);
