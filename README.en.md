@@ -1,19 +1,87 @@
-# @xumoses/sentry-taro
+# Sentry for Taro
 
-[中文](./README.md)
+[![npm beta](https://img.shields.io/npm/v/%40xumoses%2Fsentry-taro/beta)](https://www.npmjs.com/package/@xumoses/sentry-taro)
+[![CI](https://github.com/xumoses/sentry-taro/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xumoses/sentry-taro/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-By xumoses. Error monitoring, performance monitoring and opt-in Session Replay for Taro 4.2.x + React 18 WeChat mini-programs, based on `@sentry/core@10.76.2`.
+[中文](./README.md) · [Quick start](#quick-start) · [Documentation](./docs/README.md) · [Example](./examples/taro-react/README.md) · [Report an issue](https://github.com/xumoses/sentry-taro/issues)
 
-**This package is in beta. The stage-two 10.76.2 runtime baseline has passed local checks, host tarball integration, real Sentry error ingestion, Replay association and Playback validation.** Version `0.1.0-beta.2` was published on 2026-10-15 through GitHub Actions, manual approval and npm OIDC. Public installation checks passed, and it is available through the `beta` tag; see the [release procedure](./docs/releases.md). See the [stage-two record](./docs/implementation/phase-two.md) for the exact checksum, synthetic scenarios and validation limits. These real sends used WeChat DevTools and do not replace device acceptance. Evidence for the original stage-one tarball remains in the [original acceptance record](./docs/implementation/phase-one.md). Formal dependency migration, host CI and device acceptance remain staged work. Device verification starts with iOS; Android follows later. No unverified minimum WeChat base-library version is promised. Existing platform capabilities are retained without claiming cross-platform Replay acceptance.
+`@xumoses/sentry-taro` is a community Sentry SDK for **Taro React WeChat mini-programs**. It provides error monitoring, performance monitoring and optional Session Replay to help you investigate issues with error context and user interactions.
 
-## Initialize once
+- **Error monitoring**: capture exceptions with page, network and device context, or report application errors explicitly.
+- **Performance monitoring**: sample traces for page loads, network requests and custom operations.
+- **Session Replay**: record Taro pages through session or error sampling and view associated replays in Sentry. Text and inputs are masked and media is blocked by default.
 
-Use `pnpm add @xumoses/sentry-taro@0.1.0-beta.2` to pin the current beta release or `pnpm add @xumoses/sentry-taro@beta` to follow beta releases. For local development, run `vp pm pack --pack-destination .artifacts` in this repository and install the resulting tarball with `pnpm add /path/to/candidate.tgz`. This entry snippet targets a standalone Taro application. Replace the DSN with your project configuration. Error monitoring also works independently: omit the Replay integration and page lifecycle setup.
+## Compatibility
+
+| Environment  | Current integration scope                                                                |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| Framework    | Taro 4.2.x and React 18                                                                  |
+| Platform     | WeChat mini-programs; Replay support does not include H5 or other mini-program platforms |
+| Installation | Node.js ≥ 20 and an existing Taro React project                                          |
+
+**Currently in beta.** Error ingestion and Replay playback have been verified in WeChat DevTools; device validation is pending.
+
+Verify your service and target devices before adopting. No minimum WeChat base-library version is promised yet.
+
+## Quick start
+
+### 1. Install
+
+```sh
+npm install @xumoses/sentry-taro@beta
+```
+
+For pnpm, use `pnpm add @xumoses/sentry-taro@beta`. Replace `beta` with an explicit version to pin a release.
+
+### 2. Initialize error monitoring
+
+Get a DSN from your Sentry project and create this module. Initialize the SDK once per application.
 
 ```ts
 // src/sentry.ts
 import * as Sentry from '@xumoses/sentry-taro';
+
+Sentry.init({
+  dsn: 'https://PUBLIC_KEY@YOUR_SENTRY_HOST/PROJECT_ID',
+  environment: 'production',
+  sendDefaultPii: false,
+  traceNetworkBody: false,
+});
+
+export { Sentry };
+```
+
+Import it at the top of your existing application entry, keeping your styles and startup logic:
+
+```ts
+// src/app.tsx
+import './sentry';
+```
+
+### 3. Capture your first error
+
+Call this from a button handler on a test page:
+
+```ts
+import { Sentry } from '../../sentry';
+
+Sentry.captureException(new Error('My first Sentry error'));
+```
+
+Look for the error in your Sentry project's Issues. If it is missing, check the DSN, environment filter and mini-program network requests.
+
+See [API and configuration](./docs/guides/api.md) for performance sampling and other options.
+
+## Enable Session Replay
+
+Replay is opt-in. Replace the `src/sentry.ts` above with:
+
+```ts
+import * as Sentry from '@xumoses/sentry-taro';
+
 export const replay = Sentry.replayIntegration();
+
 Sentry.init({
   dsn: 'https://PUBLIC_KEY@YOUR_SENTRY_HOST/PROJECT_ID',
   environment: 'production',
@@ -23,102 +91,47 @@ Sentry.init({
   replaysOnErrorSampleRate: 1,
   integrations: [replay],
 });
+
 export { Sentry };
 ```
 
-`replayIntegration()` uses the SDK from the same package. Text and inputs are masked and media is blocked by default. Adjust sampling for your production traffic.
-
-## Attach Taro pages
-
-Install the lifecycle adapter once, before pages are created:
-
-```tsx
-// src/app.tsx
-import type { PropsWithChildren } from 'react';
-import { installTaroReplayPageLifecycle } from '@xumoses/sentry-taro/taro/lifecycle';
-import { replay } from './sentry';
-installTaroReplayPageLifecycle({ bridge: replay.bridge });
-export default function App({ children }: PropsWithChildren) {
-  return children;
-}
-```
-
-```tsx
-// A page subscribes without owning the root lifecycle.
-import { Button, Text, View } from '@tarojs/components';
-import { useTaroReplaySnapshot } from '@xumoses/sentry-taro/react/root';
-import { replay, Sentry } from '../../sentry';
-export default function ExamplePage() {
-  const snapshot = useTaroReplaySnapshot({ bridge: replay.bridge });
-  return (
-    <View>
-      <Text>{snapshot.state}</Text>
-      <Button onClick={() => Sentry.captureException(new Error('synthetic example error'))}>
-        Capture synthetic error
-      </Button>
-    </View>
-  );
-}
-```
-
-Alternatively use `useTaroReplayRoot({ bridge })` on individual pages. Do not combine it with the global lifecycle adapter on the same page. The low-level `/react` `useTaroReplay` hook records once and does not automatically resume after hide/unload.
-
-In native-host/Taro hybrid applications, keep one SDK/client/coordinator in the native entry. Pass `replay.bridge` through your application's bridge and import only lightweight `/taro/lifecycle` and `/react/root` entries in Taro. Host-generated styles and images can be supplied through `getReplayStyles` and `getReplayImageSources`; the package does not automatically read application CSS or bundle business assets.
-
-## Optional Worker compression
-
-Copy the standalone asset during the host build with a CommonJS script:
-
-```js
-const { copyFileSync, mkdirSync } = require('node:fs');
-mkdirSync('workers', { recursive: true });
-copyFileSync(require.resolve('@xumoses/sentry-taro/worker'), 'workers/sentry-replay.js');
-```
-
-Add `"workers": "workers"` to WeChat `app.json`, then initialize the integration with:
+Install the lifecycle adapter once in your application entry, before pages are created. Add these statements to your existing entry and keep your App component:
 
 ```ts
-const replay = Sentry.replayIntegration({
-  compression: { workerPath: 'workers/sentry-replay.js' },
-});
+// src/app.tsx
+import { installTaroReplayPageLifecycle } from '@xumoses/sentry-taro/taro/lifecycle';
+import { replay } from './sentry';
+
+installTaroReplayPageLifecycle({ bridge: replay.bridge });
 ```
 
-Worker creation, compression or communication failure falls back to raw recordings. Recording and delivery limits still apply. Retain the standalone script's license notices when distributing it.
+This example buffers interactions locally and attempts to upload on captured exceptions with 100% error sampling. Adjust sampling for your traffic.
 
-## Migration and API semantics
+Recordings must last about 5 seconds before delivery, so interact with the page before triggering an error.
 
-Replace both `@xumoses/sentry-miniapp` and `@xumoses/sentry-miniapp-replay-taro` imports with `@xumoses/sentry-taro`. Replay subpaths `/react`, `/react/root`, `/taro/lifecycle`, `/worker` and `/devtools/server` keep their names under the new package. Update manifests, locks, Worker copy scripts and host npm build rules, and remove stale runtime artifacts.
+Default masking protects page content. Review exception messages and context you attach yourself. Your application supplies replay styles and images.
 
-`taroReplayIntegration` remains a compatibility entry with an optional `sdk` argument. Low-level recorder/React APIs retain their existing options; automatic SDK injection is not promised for every entry.
+See the [Replay guide](./docs/guides/replay.md) for setup, privacy and troubleshooting.
 
-`Sentry.getReplay()` returns the current client's Replay integration, exposing `start()`, `startBuffering()`, `flush()`, `stop()`, `getReplayId()` and `getRecordingMode()`. `replay.flush()` sends the error buffer and continues session recording by default. `stop()` flushes the remaining session by default and discards an unsent buffer. Manual recording also works on an attached visible page when automatic sampling is zero.
+## Documentation
 
-The `bridge` remains the Taro page/viewport adapter. Its compatibility `flush()` only drains session segments; `bridge.sendBufferedReplay()` remains available for explicit buffer delivery. `Sentry.flush(timeout)` only waits for the SDK transport. To send recordings explicitly, first `await Sentry.getReplay()?.flush()`, then `await Sentry.flush(timeout)`.
+The detailed guides and contribution instructions are currently in Chinese.
 
-The default minimum duration is 4,999 ms: an earlier `flush()` schedules delivery and resolves immediately; stopping before this threshold discards the short recording. Other defaults are a 60-second rolling buffer, a 60-minute replay limit, and full-session idle pause/expiry after 5/15 minutes. Byte and event budgets may shorten the retained window. Logs/Metrics stay disabled by default and are unsupported on the current target service. See the [runtime migration notes](./docs/migrations/phase-two-runtime.md) for platform extensions, beta behavior changes and unimplemented browser options. Full browser Replay compatibility is not claimed.
+| Task                                                                   | Guide                                                                    |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Add context, configure tracing or control Replay                       | [API and configuration](./docs/guides/api.md)                            |
+| Attach pages, configure sampling and privacy, or troubleshoot playback | [Replay](./docs/guides/replay.md)                                        |
+| Configure Worker compression                                           | [Worker](./docs/guides/worker.md)                                        |
+| Integrate a native mini-program with Taro pages                        | [Hybrid applications](./docs/guides/hybrid-apps.md)                      |
+| Migrate from the separate SDK and Replay packages                      | [Migration](./docs/migrations/legacy-packages.md)                        |
+| Explore integration code or release changes                            | [Example](./examples/taro-react/README.md) · [CHANGELOG](./CHANGELOG.md) |
 
-The included viewer displays capture summaries, events and JSON, not rendered playback. The [lightweight demo](./examples/taro-react/README.md) illustrates integration and is not a stage-one acceptance suite. Service ingestion, real Playback, CI and device behavior require separate evidence.
+## Support and contributions
 
-## Development and license
+Please [open an issue](https://github.com/xumoses/sentry-taro/issues) with versions, reproduction steps and a minimal example without sensitive data.
 
-Stage two uses Vite Plus `1.2.0` to manage Vite, Vitest, Oxlint, Oxfmt and library builds. SDK and Replay tests share Vitest. Development uses Node.js `26.12.0` from `.node-version`, pnpm `12.13.0` from root `package.json`, and TypeScript `7.0.2`. The consumer package still declares Node.js `>=20`; development tool versions do not change the mini-program output syntax target.
+Documentation fixes, reproductions and code contributions are welcome. See [CONTRIBUTING](./CONTRIBUTING.md) for the development environment and checks.
 
-After installing the global `vp` CLI, run `vp env install`, then verify the executed versions with `vp env current --json`, `vp exec node --version` and `vp exec pnpm --version`. If an existing Vite Plus installation uses `system_first`, project pins do not override system tools on PATH. See the [environment instructions](./docs/implementation/phase-two.md#开发环境复现) for a process-scoped setup that preserves global preferences.
+## License
 
-```sh
-vp install --frozen-lockfile
-vp check
-vp run typecheck
-vp test run
-vp run build
-vp run verify:package
-vp pm pack --pack-destination .artifacts
-vp run verify:bundles
-vp run verify:consumer --online
-```
-
-`vp pack` builds the library. `vp pm pack` invokes pnpm and its `prepack` hook, rebuilding and verifying the artifacts before creating a local tarball. `verify:consumer` defaults to the tarball matching the root package version under `.artifacts` and accepts another `.tgz` path as an argument. It checks strict types and real SDK behavior in a temporary consumer without React/Taro. The script defaults to offline mode; omit `--online` when the cache is complete. On a fresh machine, `--online` fetches dependencies from the public npm registry and does not publish the package.
-
-The [stage-two progress record](./docs/implementation/phase-two.md) tracks current validation; the [stage-one record](./docs/implementation/phase-one.md) preserves evidence for its original candidate. **Pause before publishing to npm and wait for user confirmation.**
-
-Released under [MIT](./LICENSE). Inherited and bundled dependencies are documented in [THIRD_PARTY_NOTICES](./THIRD_PARTY_NOTICES).
+Maintained by [xumoses](https://github.com/xumoses) under [MIT](./LICENSE). Built on Sentry core; see [THIRD_PARTY_NOTICES](./THIRD_PARTY_NOTICES) for inherited and bundled dependency notices.
