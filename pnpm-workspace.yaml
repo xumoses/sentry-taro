@@ -21,6 +21,8 @@ minimumReleaseAgeExclude:
 allowBuilds:
   '@swc/core@1.3.96': true
   esbuild@0.21.5: true
+  # The optional platform package already supplies the CLI binary; skip the CDN fallback installer.
+  '@sentry/cli@3.6.2': false
 
 # This alias exposes Vite 8.3.4 with the Vite Plus distribution's version.
 peerDependencyRules:
