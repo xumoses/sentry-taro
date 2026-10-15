@@ -1,6 +1,6 @@
 # 第二阶段实施进度
 
-更新时间：2026-10-15。状态：**`0.1.0-beta.1` 已发布 npm 并通过公开安装验证；工具链迁移和 10.76.2 运行时对齐已通过本地验证，宿主接入、受控错误、Replay 关联与 Playback 保留各自候选的验收记录；真机、远端 CI、OIDC 及上传体积待验收**。本文件记录第二阶段证据；[第一阶段记录](./phase-one.md)保留其原候选包和验收范围，不因本轮改动自动延续为新产物的通过结论。
+更新时间：2026-10-15。状态：**`0.1.0-beta.2` 已通过 GitHub Actions、人工审批及 npm OIDC 发布，公开安装验证通过；工具链迁移和 10.76.2 运行时对齐已通过本地验证，宿主接入、受控错误、Replay 关联与 Playback 保留各自候选的验收记录；真机、宿主 CI 及上传体积待验收**。本文件记录第二阶段证据；[第一阶段记录](./phase-one.md)保留其原候选包和验收范围，不因本轮改动自动延续为新产物的通过结论。
 
 ## 已确认范围
 
@@ -13,12 +13,12 @@
 
 目标组合为 Vite Plus 1.2.0、Node.js 26.12.0、pnpm 12.13.0。实际项目版本以根 `package.json`、`.node-version` 和锁文件为准；Vite、Vitest、Oxlint、Oxfmt 等跟随 Vite Plus 的整套版本。
 
-| 工作项                     | 当前状态               | 验收依据                                                          |
-| -------------------------- | ---------------------- | ----------------------------------------------------------------- |
-| 环境、依赖和锁文件统一     | 本地通过               | 实际 Node.js/pnpm 版本、冻结锁文件安装及 peer 检查                |
-| Jest/ts-jest、ESLint 迁移  | 本地通过               | 76 个测试文件、959 项测试，`vp check` 和两次严格 TypeScript 检查  |
-| `vp pack` 库构建与产物格式 | 本地通过               | ESM/CJS、独立 Worker、声明、map、通知及 tarball 隔离消费者检查    |
-| CI 入口统一                | 配置已调整，远端未执行 | `setup-vp` 读取项目固定版本，随后检查、测试、打包及隔离消费者验证 |
+| 工作项                     | 当前状态           | 验收依据                                                                          |
+| -------------------------- | ------------------ | --------------------------------------------------------------------------------- |
+| 环境、依赖和锁文件统一     | 本地通过           | 实际 Node.js/pnpm 版本、冻结锁文件安装及 peer 检查                                |
+| Jest/ts-jest、ESLint 迁移  | 本地通过           | 76 个测试文件、959 项测试，`vp check` 和两次严格 TypeScript 检查                  |
+| `vp pack` 库构建与产物格式 | 本地通过           | ESM/CJS、独立 Worker、声明、map、通知及 tarball 隔离消费者检查                    |
+| CI 入口统一                | 远端发布工作流通过 | `0.1.0-beta.2` 的准备与发布 job 成功；见[首次 OIDC 发布结果](#首次-oidc-发布结果) |
 
 CI 使用 [`voidzero-dev/setup-vp@v1.21.2`](https://github.com/voidzero-dev/setup-vp/tree/v1.21.2) 管理环境，固定 action 版本并读取项目的 Vite Plus 和 Node.js 声明。`vp pack` 构建库；`vp pm pack` 通过项目包管理器运行 `prepack` 并生成 npm tarball，两者不是同一操作。
 
@@ -217,4 +217,22 @@ npm 在首包处理期间自动生成 `0.0.0-stage`，处理完成后 `beta` 与
 
 上传被接受后曾短暂返回 404，约两分钟后目标版本可见。发布后校验已扩展为最多 41 次、30 秒间隔，只对暂未可见与暂时性请求错误重试；发布 job 超时调整为 30 分钟。确定的完整性或来源不符立即失败，不会重新发布。这些发布后工具和文档修正不属于已发布 tarball。
 
-`release.json` 保留发布前清单，同目录 `publish-attempt.json` 和 `publication.json` 分别保存上传回执及公开下载、安装核验。npm 首发已完成；GitHub 源码尚未推送、未创建或推送 tag，远端 CI 和 OIDC 尚未运行。`npm` Environment 保护已配置，`NPM_OIDC_PUBLISH_ENABLED=false`，后续候选准备好时再绑定 trusted publisher。
+`release.json` 保留发布前清单，同目录 `publish-attempt.json` 和 `publication.json` 分别保存上传回执及公开下载、安装核验。首版发布完成时，GitHub 源码尚未推送、未创建或推送 tag，远端 CI 和 OIDC 尚未运行；当时 `npm` Environment 保护已配置，`NPM_OIDC_PUBLISH_ENABLED=false`，计划在后续候选准备好时绑定 trusted publisher。后续执行结果见下一节。
+
+## 首次 OIDC 发布结果
+
+2026-10-15，`v0.1.0-beta.2` 触发 [Actions run 38690018889](https://github.com/xumoses/sentry-taro/actions/runs/38690018889)。`prepare` 完成后，`publish` 在 `npm` Environment 的 Required reviewers 规则下暂停；取得用户对确切候选的确认后批准执行。两个 job 均成功，npm trusted publisher 状态为 `Valid`，仓库变量 `NPM_OIDC_PUBLISH_ENABLED=true`。
+
+- 版本：`@xumoses/sentry-taro@0.1.0-beta.2`，public；registry 发布时间为 `2026-10-15T06:13:00.359Z`（北京时间 14:13）。
+- 源码：`d25161f54952a7a14873b54d671dc5e9851b047c`；Git tag 为 `v0.1.0-beta.2`。
+- Actions artifact：`11951034679`；文件 `xumoses-sentry-taro-0.1.0-beta.2.tgz`，1,026,737 字节。
+- SHA-256：`718c07fe40528df69b290d75ea04e0cd8992eb8ec92cbdea2838d9d6e92396ef`。
+- SHA-512（Base64）：`EwQq37v7iCo3MorjUJMHeIg9zULhD5Ej1Vqn8TvKdhKyWWKJXxJFDLRyaZynmB2J70nIaY4afXl2UHXZw8ZFtg==`。
+
+远端准备通过冻结安装、格式/lint、类型、1,019 项 SDK/Replay 测试、72 项发布工具测试、构建与产物、Worker、生产 bundle、隔离消费者及 npm dry-run。发布 job 按 artifact ID 下载同一候选，核验源码与完整性后通过 OIDC 发布，并通过 registry 元数据和公开 tarball 下载校验。
+
+npm 返回的 SLSA v1 provenance 已核对声明字段：仓库为 `https://github.com/xumoses/sentry-taro`，工作流为 `.github/workflows/publish.yml`，ref 为 `refs/tags/v0.1.0-beta.2`，resolved gitCommit 与上述源码提交一致，invocationId 指向该 run 的 `attempts/1`，subject SHA-512 与候选一致。[Sigstore 透明日志](https://search.sigstore.dev/?logIndex=3260556627)记录此次声明；本次未执行独立密码学验签。
+
+发布后使用匿名身份和全新缓存，从官方 registry 固定安装 `0.1.0-beta.2`，锁文件 integrity、严格类型、CJS/ESM、SDK/Replay 行为及 5 个子路径检查通过。`beta` 指向 `0.1.0-beta.2`；按已确认的渠道安排，`latest` 保留在 `0.1.0-beta.1`。准备清单保存在 `.artifacts/actions/38690018889/candidate/release.json`，同 run 的 `publication.json` 汇总发布证据；公开消费报告为 `.artifacts/oidc-beta2-public-consumer.json`。
+
+本次完成的是远端发包与公开包消费验收。既有真实 Sentry、Replay 关联和 Playback 证据仍对应各节记录的候选；本次未重做宿主接入、宿主 CI、体验版、iOS/Android 真机或微信上传体积验收，也未弃用旧包。发布后的文档更新不重建或替换已发布 tarball。

@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-beta.2 — 2026-10-15
 
-候选版本为 `0.1.0-beta.2`，用于首次 GitHub Actions / OIDC 发布验收；尚未发布。
+首次通过 Git tag、GitHub Actions 人工审批及 npm OIDC 发布。发布后 registry 完整性、匿名公开安装、严格类型及运行时消费验证通过；[发布记录](./docs/implementation/phase-two.md#首次-oidc-发布结果)保留确切产物和工作流证据。
 
 - 发布后校验兼容 npm 扫描延迟，暂时性错误最多重试约二十分钟；完整性和来源不符立即失败。
 - 补充首版公开发布记录和安装说明，统一版本号更新至 `0.1.0-beta.2`；监控与 Replay 行为不变。

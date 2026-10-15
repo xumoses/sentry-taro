@@ -4,11 +4,11 @@
 
 作者：xumoses。面向 Taro 4.2.x + React 18 微信小程序的错误监控、性能监控与显式开启的 Session Replay，基于 `@sentry/core@10.76.2`。
 
-**当前为 beta 阶段。第二阶段 10.76.2 运行时基线已通过本地检查、宿主 tarball 接入及真实 Sentry 错误接收、Replay 关联与 Playback 验证。** 首版 `0.1.0-beta.1` 已于 2026-10-15 发布到 npm，可通过 `beta` 标签安装，发布流程见[发包说明](./docs/releases.md)。准确校验值、合成场景与验收边界见[第二阶段记录](./docs/implementation/phase-two.md)。本次真实发送来自微信开发者工具，不能替代真机验收；第一阶段原 tarball 的证据保留在[原验收记录](./docs/implementation/phase-one.md)。正式依赖切换、发布包 CI 及设备验收继续分期推进。真机以 iOS 为准，Android 后续补充。不承诺未经验证的最低微信基础库版本。其他既有平台能力保留，但不据此宣称 Replay 已跨平台验收。
+**当前为 beta 阶段。第二阶段 10.76.2 运行时基线已通过本地检查、宿主 tarball 接入及真实 Sentry 错误接收、Replay 关联与 Playback 验证。** `0.1.0-beta.2` 已于 2026-10-15 通过 GitHub Actions、人工审批及 npm OIDC 发布，公开安装验证通过，可通过 `beta` 标签安装；发布流程见[发包说明](./docs/releases.md)。准确校验值、合成场景与验收边界见[第二阶段记录](./docs/implementation/phase-two.md)。本次真实发送来自微信开发者工具，不能替代真机验收；第一阶段原 tarball 的证据保留在[原验收记录](./docs/implementation/phase-one.md)。正式依赖切换、宿主 CI 及设备验收继续分期推进。真机以 iOS 为准，Android 后续补充。不承诺未经验证的最低微信基础库版本。其他既有平台能力保留，但不据此宣称 Replay 已跨平台验收。
 
 ## 初始化
 
-使用 `pnpm add @xumoses/sentry-taro@0.1.0-beta.1` 固定安装首版，或使用 `pnpm add @xumoses/sentry-taro@beta` 跟随测试版本。本地开发也可从仓库运行 `vp pm pack --pack-destination .artifacts` 生成 tarball，再使用 `pnpm add /path/to/candidate.tgz` 试用。下面是纯 Taro 应用的入口片段，DSN 替换为自己的项目配置；错误监控可单独使用，省略 Replay integration 和页面生命周期接入即可。
+使用 `pnpm add @xumoses/sentry-taro@0.1.0-beta.2` 固定安装当前测试版，或使用 `pnpm add @xumoses/sentry-taro@beta` 跟随测试版本。本地开发也可从仓库运行 `vp pm pack --pack-destination .artifacts` 生成 tarball，再使用 `pnpm add /path/to/candidate.tgz` 试用。下面是纯 Taro 应用的入口片段，DSN 替换为自己的项目配置；错误监控可单独使用，省略 Replay integration 和页面生命周期接入即可。
 
 ```ts
 // src/sentry.ts：整个应用仅初始化一次。
@@ -124,7 +124,7 @@ vp run verify:bundles
 vp run verify:consumer --online
 ```
 
-`vp pack` 负责库构建；`vp pm pack` 经 pnpm 运行 `prepack`，重新构建并检查产物后生成本地 tarball。`verify:consumer` 默认读取 `.artifacts/xumoses-sentry-taro-0.1.0-beta.1.tgz`，也可传入其他 `.tgz` 路径；它在不安装 React/Taro 的临时消费者中检查严格类型和真实 SDK 行为。脚本默认离线，缓存完整时可省略 `--online`；新环境使用 `--online` 从公开 npm registry 拉取依赖，不发布包。
+`vp pack` 负责库构建；`vp pm pack` 经 pnpm 运行 `prepack`，重新构建并检查产物后生成本地 tarball。`verify:consumer` 默认读取 `.artifacts` 下与根包版本对应的 tarball，也可传入其他 `.tgz` 路径；它在不安装 React/Taro 的临时消费者中检查严格类型和真实 SDK 行为。脚本默认离线，缓存完整时可省略 `--online`；新环境使用 `--online` 从公开 npm registry 拉取依赖，不发布包。
 
 [第二阶段实施进度](./docs/implementation/phase-two.md)记录本轮验证状态；[第一阶段记录](./docs/implementation/phase-one.md)保留原候选包证据。**npm 发布前暂停，等待用户确认。**
 

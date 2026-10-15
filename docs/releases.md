@@ -1,12 +1,12 @@
 # npm 发布流程
 
-常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`@xumoses/sentry-taro@0.1.0-beta.1` 已于 2026-10-15 公开发布，`beta` 与 `latest` 当前均指向该版本；推荐固定版本或显式使用 `@beta`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
+常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`@xumoses/sentry-taro@0.1.0-beta.2` 已于 2026-10-15 通过该流程公开发布；`beta` 当前指向 `0.1.0-beta.2`，`latest` 保留在 `0.1.0-beta.1`。推荐固定版本或显式使用 `@beta`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
 
-首版已通过常规 npm 认证发布，并完成 registry 完整性及公开安装验证。GitHub 审批保护已配置，发布开关仍关闭；npm trusted publisher 尚未绑定，远端 CI 与 OIDC 发布尚未实际验证。后续版本准备就绪时再建立信任关系并启用工作流，避免未验证的配置提前过期。首次发布证据见[第二阶段记录](./implementation/phase-two.md#首次-npm-发布结果)。
+首版通过常规 npm 认证发布；`0.1.0-beta.2` 已完成远端准备、Environment 审批暂停、用户批准后 OIDC 发布及 registry 完整性和公开安装验证。npm trusted publisher 状态为 `Valid`，`NPM_OIDC_PUBLISH_ENABLED=true`。证据见[首版发布记录](./implementation/phase-two.md#首次-npm-发布结果)与[首次 OIDC 发布记录](./implementation/phase-two.md#首次-oidc-发布结果)。
 
 ## CI、Git tag 与 npm 标签
 
-[CI 工作流](../.github/workflows/ci.yml) 负责日常验证；[发布工作流](../.github/workflows/publish.yml) 由推送 `v*` Git tag 触发。Git tag 用来标记源码提交，例如 `v0.1.0-beta.1`；npm 的 `beta` 是指向某个已发布版本的 dist-tag，两者独立。
+[CI 工作流](../.github/workflows/ci.yml) 负责日常验证；[发布工作流](../.github/workflows/publish.yml) 由推送 `v*` Git tag 触发。Git tag 用来标记源码提交，例如 `v0.1.0-beta.2`；npm 的 `beta` 是指向某个已发布版本的 dist-tag，两者独立。
 
 版本和安装渠道固定对应如下，发布时仍显式传入 `--tag`，不依赖版本名称自动选择渠道。参见 [npm dist-tags 文档](https://docs.npmjs.com/adding-dist-tags-to-packages/)。
 
@@ -22,12 +22,12 @@
 显式指定下一个版本，例如：
 
 ```sh
-vp run release:version 0.1.0-beta.2
+vp run release:version 0.1.0-beta.3
 ```
 
 命令同步根目录、`packages/sdk`、`packages/replay` 三个 `package.json` 的版本、SDK 的 `SDK_VERSION` 和根包 `publishConfig.tag`。支持稳定版本及 `alpha.N`、`beta.N`、`rc.N` 预发布版本。它不自动提交、不创建或推送 Git tag，也不发布包。
 
-检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前候选为 `0.1.0-beta.2`，尚未发布；已发布版本以 registry 为准。
+检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前版本为已发布的 `0.1.0-beta.2`；上面的 `beta.3` 仅为下次更新的命令示例，本次文档更新不修改版本号。
 
 ## 准备候选
 
@@ -117,6 +117,6 @@ npm 接受上传后还会进行扫描，可安装性会延迟，官方说明通�
 
 ## 验收边界
 
-新增发布工作流可以做本地检查，但远端 tag 工作流、审批暂停和 OIDC 实际发布仍需各自验证。准备配置期间不创建或推送发布 tag，不批准发布，也不将本地 dry-run 记录为远端 CI 通过。
+`0.1.0-beta.2` 的 [Actions run 38690018889](https://github.com/xumoses/sentry-taro/actions/runs/38690018889) 已验证远端 tag 工作流、审批暂停、OIDC 发布及发布后 registry 核验。该结果对应本次源码提交和确切产物；后续版本仍须完成各自检查与审批，本地 dry-run 不能代替远端执行证据。
 
 iOS/Android 真机、体验版及微信上传包体积仍待各自验收。本地检查、tarball 消费、真实 Sentry 接收、Playback、远端 CI 和设备表现是不同证据；发布 beta 不自动补齐这些结论，也不自动弃用旧包。
