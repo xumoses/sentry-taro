@@ -27,7 +27,7 @@ vp run release:version 0.1.0-beta.3
 
 命令同步根目录、`packages/sdk`、`packages/replay` 三个 `package.json` 的版本、SDK 的 `SDK_VERSION` 和根包 `publishConfig.tag`。支持稳定版本及 `alpha.N`、`beta.N`、`rc.N` 预发布版本。它不自动提交、不创建或推送 Git tag，也不发布包。
 
-检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前版本为已发布的 `0.1.0-beta.2`；上面的 `beta.3` 仅为下次更新的命令示例，本次文档更新不修改版本号。
+检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。仓库正在准备 `0.1.0-beta.3`，包含 Taro 构建插件及资源、身份、sourcemap 和 Worker 工具；该版本尚未发布，公开 `beta` 仍以 registry 实际状态为准。
 
 ## 准备候选
 

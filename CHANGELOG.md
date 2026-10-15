@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-beta.3（待发布）
 
 - 新增 `@xumoses/sentry-taro/taro-plugin` 构建入口，迁入 Replay 样式转换、按路由资源提取、压缩及预算控制。
 - 同一构建入口迁入 release/dist 身份保存与注入、Taro sourcemap 位点修复、微信最终映射上传、Worker 准备及原生 npm 排除项辅助；上传按需使用官方 CLI。

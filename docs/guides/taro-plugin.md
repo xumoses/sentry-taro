@@ -1,5 +1,7 @@
 # Taro 构建插件
 
+本入口从 `0.1.0-beta.3` 提供。请使用包含该入口的候选包或已发布版本。
+
 `@xumoses/sentry-taro/taro-plugin` 在 Node.js 构建阶段为微信小程序生成
 Replay 样式和静态图片资源，并负责构建身份、Webpack sourcemap 修复和可选 Worker
 准备。它与运行时 SDK 同版本发布，解析器只进入独立构建入口。微信最终

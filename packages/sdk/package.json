@@ -1,6 +1,6 @@
 {
   "name": "@sentry-taro/internal-sdk",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "private": true,
   "description": "Internal mini-program SDK implementation for @xumoses/sentry-taro",
   "exports": {
