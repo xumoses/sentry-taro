@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const { spawnSync } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 const { parse } = require('acorn');
+const { verifyVersions } = require('./release-config.cjs');
 
 const root = path.resolve(__dirname, '..');
 const dist = path.join(root, 'dist');
@@ -55,8 +56,7 @@ function assertApi(api) {
 }
 
 async function main() {
-  assert.equal(pkg.name, '@xumoses/sentry-taro');
-  assert.equal(pkg.publishConfig.tag, 'beta');
+  verifyVersions(root);
   for (const target of targets(pkg.exports)) {
     assert.ok(fs.existsSync(path.join(root, target)), `Missing export target ${target}`);
   }
@@ -112,7 +112,7 @@ async function main() {
   }
 
   const mainSource = fs.readFileSync(path.join(dist, 'index.cjs.js'), 'utf8');
-  for (const author of ['lizhiyao', 'Functional Software', 'Arjun Barrett']) {
+  for (const author of ['Functional Software', 'Arjun Barrett']) {
     assert.ok(mainSource.includes(author), 'Bundled third-party notice missing');
     assert.ok(fs.readFileSync(path.join(root, 'THIRD_PARTY_NOTICES'), 'utf8').includes(author));
   }

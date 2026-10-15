@@ -7,6 +7,8 @@
 - [第一阶段实施进度](./implementation/phase-one.md)：已完成的本地候选包验收、公开回归及第二阶段发布与设备验证边界。
 - [第二阶段运行时迁移](./migrations/phase-two-runtime.md)：10.76.2 API、Replay 控制和默认行为变化、功能支持边界。
 - [第二阶段实施进度](./implementation/phase-two.md)：工具链迁移、运行时对齐、发布和设备验收的独立状态。
+- [npm 发布流程](./releases.md)：统一版本命令、tag 触发 CI、人工审批、OIDC 与首发初始化边界。
+- [变更记录](../CHANGELOG.md)：版本发布前维护的公开变化说明。
 - [统一发布决策](./adr/0001-single-package-release.md)
 - [官方 API 分期对齐决策](./adr/0002-stage-official-api-alignment.md)
 - [小程序平台适配决策](./adr/0003-mini-program-platform-adaptation.md)

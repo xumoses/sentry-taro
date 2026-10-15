@@ -163,3 +163,41 @@ b201e6b2827dd4a749f0489c2026f7d7fc4e3f58a9881a449a6a36d4b3c654be
 本次仅验收受控错误与 Replay 路径；Tracing/Feedback 完整功能、新公共控制 API 的真实设备行为、长时间会话边界、iOS/Android、体验版、CI 与上传包体积仍需各自证据。宿主保留显式 `enableLogs: true` 配置，本次没有调用 Logs/Metrics，不能据此判断它们受目标服务支持。
 
 真实部署身份、应用源码、事件 ID、Replay ID、原始录制与具体构建标识仅保存到仓库外的私有证据目录。README 的验收状态在测试后更新，未重建或替换已验收 tarball；后续打包仍须重新核对产物身份。npm 发布继续暂停。
+
+## 首次 npm 发布准备
+
+2026-10-15，选择首版本地手动发布，后续再接 CI 发布。新增 `vp run release:prepare`，完成检查、打包、隔离消费及固定 `--dry-run` 演练后生成独立候选目录和 `release.json`；实际发布仍需用户确认。触发方式、认证和发布后核验见[发布流程](../releases.md)。
+
+- 发布目标：`@xumoses/sentry-taro@0.1.0-beta.1`，`public`、`beta`、官方 npm registry。
+- 候选：`.artifacts/releases/0.1.0-beta.1-geJxVt/xumoses-sentry-taro-0.1.0-beta.1.tgz`。
+- 大小：1,027,081 字节，共 98 个文件；同目录 `release.json` 保存完整文件清单及校验值。
+- SHA-512（Base64）：
+
+```text
+0G3jV4zi8Wi5mGL2XtSO2pry036btQ+UoHQjHy3lsdiNGvlBbATm3E3OSiXCp0wgEU9jLcOmzfKJ082moCb+jA==
+```
+
+实际使用 Node.js 26.12.0、pnpm 12.13.0、npm 11.20.0。冻结安装、格式/lint、两次类型检查、79 个文件的 1,019 项测试、产物与 Worker、生产 bundle 检查通过。单独的在线隔离消费通过；最终离线准备命令完整通过，包含隔离消费与 npm 发布 dry-run。最终文件与在线消费的候选逐字节相同。清单中的 registry 检查标记为离线跳过；另行匿名查询官方 registry 返回 404，说明查询时尚无该包。
+
+与上一节实际验收 tarball 比较：93 个 `dist` 文件（含运行时、Worker、声明、sourcemap）及第三方声明逐字节一致；差异仅为两份 README 和增加准备命令的 `package.json`。此前宿主与真实服务结果仍对应原始 tarball，本次通过文件对照确认运行时一致，没有重新执行宿主或真机验收。
+
+**状态：准备完成，等待用户确认；未发布 npm，未创建或推送 Git tag，未提交本轮改动。** 远端 CI、设备、体验版与上传体积的待验收状态不变。
+
+## tag 与 OIDC 发布配置
+
+同日后续将常规发布方式调整为统一版本命令、tag 触发 GitHub Actions、人工审批后 OIDC 发布。上一节保留当时本地候选记录；当前流程以[发布说明](../releases.md)为准。
+
+- `release:version <version>` 同步三个 manifest、`SDK_VERSION` 和 npm 渠道，拒绝降级和现有版本漂移；不自动提交、创建 tag、推送或发布。当前版本保持 `0.1.0-beta.1`。
+- `publish.yml` 校验 tag 与版本一致、对应提交已合入 `main`；完整验证后只打包一次，上传候选与清单。发布 job 按同一 run 的 artifact ID 下载，复核源码 commit、干净状态与双 hash，经审批后才以 OIDC 发布，随后核验 registry 和下载字节。
+- GitHub `npm` Environment 已创建并读回核验：审核人 `xumoses`，允许本人审批，禁止管理员绕过，部署策略仅允许 Tag 类型 `v*`。仓库变量 `NPM_OIDC_PUBLISH_ENABLED=false`；未启用发布。
+- npm 官方 registry 再查返回 404。包尚未创建，不能绑定 trusted publisher；首次真实版本的普通发布、随后 npm OIDC 绑定及实际发布验证均待确认，不创建占位包。
+
+本地冻结安装、格式/lint、类型、1,019 项 SDK/Replay 测试、51 项发布工具测试、产物/Worker、生产 bundle、隔离消费者、npm dry-run 与 actionlint 工作流检查通过。实际候选校验 CLI 通过，并确认错误 tag 与含未提交改动的 CI 候选会被拒绝。发布后 registry 校验逻辑使用合成响应测试，未执行真实发布。
+
+本轮本地候选为 `.artifacts/releases/0.1.0-beta.1-VUBDQO/xumoses-sentry-taro-0.1.0-beta.1.tgz`，1,027,127 字节，完整清单位于同目录 `release.json`。SHA-512（Base64）：
+
+```text
+OHXSUpTvdMkx7pRfyhxZjvC53SpeDN6KbYjni3XtbH+FYHnerLH1MYAlVWkhFYx4aw4Ygez0M89aQakvzHoU5Q==
+```
+
+本次修改尚未提交或推送，远端仍只有初始 `main`，没有发布 tag。GitHub 保护设置已生效不等于工作流已在远端运行；远端 CI、审批暂停与 OIDC 发包仍未实际验收。**保持停在真正发布之前，等待用户确认。**

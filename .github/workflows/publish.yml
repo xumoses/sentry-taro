@@ -1,0 +1,97 @@
+name: Publish npm package
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.repository == 'xumoses/sentry-taro'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      artifact-id: ${{ steps.artifact.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a release commit merged into main
+        run: git merge-base --is-ancestor HEAD origin/main
+      - uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af # v1.21.2
+        with:
+          version-file: package.json
+          node-version-file: .node-version
+          cache: false
+          run-install: false
+      - name: Pin the npm CLI used for release metadata and OIDC
+        run: npm install --global npm@11.20.0 --ignore-scripts
+      - name: Verify Git tag and all version sources
+        run: vp run release:check
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+      - run: vp install --frozen-lockfile
+      - name: Validate and pack once
+        id: candidate
+        run: vp run release:prepare
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+      - name: Retain the exact candidate for review and publication
+        id: artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: npm-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.candidate.outputs.directory }}/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  publish:
+    needs: prepare
+    # Enable only after the npm trusted publisher and environment are configured.
+    if: vars.NPM_OIDC_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@xumoses/sentry-taro
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: npm install --global npm@11.20.0 --ignore-scripts
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.prepare.outputs.artifact-id }}
+          path: .artifacts/publish
+          merge-multiple: true
+          digest-mismatch: error
+      - name: Verify approved bytes, source commit and release channel
+        id: candidate
+        run: node scripts/verify-release.cjs .artifacts/publish
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+      - name: Publish approved tarball with OIDC
+        run: npm publish "$TARBALL" --tag "$NPM_DIST_TAG" --access public --registry=https://registry.npmjs.org/ --ignore-scripts --provenance
+        env:
+          TARBALL: ${{ steps.candidate.outputs.tarball }}
+          NPM_DIST_TAG: ${{ steps.candidate.outputs.tag }}
+      - name: Verify registry version, dist-tag and tarball integrity
+        run: node scripts/verify-release.cjs .artifacts/publish --published
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}

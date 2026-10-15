@@ -2,6 +2,7 @@ name: Validate package
 
 on:
   push:
+    branches: ['**']
   pull_request:
 
 permissions:
@@ -21,6 +22,8 @@ jobs:
           cache: true
           run-install: false
       - run: vp install --frozen-lockfile
+      - run: vp run release:check
+      - run: vp run test:release
       - run: vp check
       - run: vp run typecheck
       - run: vp test run

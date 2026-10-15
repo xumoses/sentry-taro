@@ -4,11 +4,11 @@
 
 作者：xumoses。面向 Taro 4.2.x + React 18 微信小程序的错误监控、性能监控与显式开启的 Session Replay，基于 `@sentry/core@10.76.2`。
 
-**当前状态：第二阶段 10.76.2 候选已通过本地检查、宿主 tarball 接入及真实 Sentry 错误接收、Replay 关联与 Playback 验证；npm 未发布，发布前暂停等待用户确认。** 当前本地候选版本为 `0.1.0-beta.1`，准确校验值、合成场景与验收边界见[第二阶段记录](./docs/implementation/phase-two.md)。本次真实发送来自微信开发者工具，不能替代真机验收；第一阶段原 tarball 的证据保留在[原验收记录](./docs/implementation/phase-one.md)。正式依赖切换、发布包 CI 及设备验收继续分期推进，发布版本和标签另行确定。真机以 iOS 为准，Android 后续补充。不承诺未经验证的最低微信基础库版本。其他既有平台能力保留，但不据此宣称 Replay 已跨平台验收。
+**当前为 beta 阶段。第二阶段 10.76.2 运行时基线已通过本地检查、宿主 tarball 接入及真实 Sentry 错误接收、Replay 关联与 Playback 验证。** 首发目标为 `0.1.0-beta.1`、npm `beta` 标签，发布流程见[发包说明](./docs/releases.md)。准确校验值、合成场景与验收边界见[第二阶段记录](./docs/implementation/phase-two.md)。本次真实发送来自微信开发者工具，不能替代真机验收；第一阶段原 tarball 的证据保留在[原验收记录](./docs/implementation/phase-one.md)。正式依赖切换、发布包 CI 及设备验收继续分期推进。真机以 iOS 为准，Android 后续补充。不承诺未经验证的最低微信基础库版本。其他既有平台能力保留，但不据此宣称 Replay 已跨平台验收。
 
 ## 初始化
 
-从仓库运行 `vp pm pack --pack-destination .artifacts` 生成本地 tarball，再在应用中使用 `pnpm add /path/to/candidate.tgz` 试用；候选包接入不需要公网发布。后续 npm 发布版本与标签以正式发布说明为准。下面是纯 Taro 应用的入口片段，DSN 替换为自己的项目配置；错误监控可单独使用，省略 Replay integration 和页面生命周期接入即可。
+从仓库运行 `vp pm pack --pack-destination .artifacts` 生成本地 tarball，再在应用中使用 `pnpm add /path/to/candidate.tgz` 试用；候选包接入不需要公网发布。npm 发布后可使用 `pnpm add @xumoses/sentry-taro@0.1.0-beta.1` 固定版本，或使用 `@beta` 跟随测试版本；是否已发布以 npm registry 为准。下面是纯 Taro 应用的入口片段，DSN 替换为自己的项目配置；错误监控可单独使用，省略 Replay integration 和页面生命周期接入即可。
 
 ```ts
 // src/sentry.ts：整个应用仅初始化一次。
