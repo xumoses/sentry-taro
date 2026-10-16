@@ -21,7 +21,7 @@
 - **SDK 注入**：协调器默认使用本包的 core client、面包屑、SDK 标识和录制器，`replayIntegration()` 不再组装注入对象。`sdk` 选项仍可选：测试用它替换依赖，轻量的 `./react` 入口也靠它避免打包 core。删除该公共选项属于第三阶段。
 - **POC 名称**：`SentryMiniappReplaySdk` 的方法名仍是 `startTaroDomReplayPoc`，因为它是注入接口的一部分；随第三阶段删除 `sdk` 选项一并处理。录制数据中的 marker 值保持 `TARO_DOM_REPLAY_POC`。
 - **录制器主体**：原来约 1400 行的闭包里有约 25 个共享状态，其中 10 个会被重新赋值。现在全部收进显式的 `RecorderContext`（`recorder/context.ts`），闭包拆成接收它的普通函数模块：`events`（事件缓冲与分段）、`canvas` / `canvas-frames`、`serializer`、`widgets`（swiper、scroll-view、picker 监听）、`breadcrumbs`、`interactions`、`mutations` 和 `privacy-rules`。`recorder.ts` 只负责组装 context、启停、页面滚动和视口变化，从 1663 行降到 297 行。模块之间没有循环依赖。
-- **代价**：闭包变量变成对象属性后，压缩器无法缩短属性名。合成的 Replay 产物从 237,029 B 增至 240,970 B（约 +3.9 KB，gzip 后约 +1 KB）；只用错误监控的产物不变。
+- **代价**：闭包变量变成对象属性后，压缩器无法缩短属性名。合成的 Replay 产物从 237,029 B 增至 240,970 B（约 +3.9 KB，gzip 后约 +1 KB）；只用错误监控的产物不变。2026-10-16 确认接受这一增长，保留拆分后的结构。
 - **协调器**：`ReplayCoordinator` 已经把投递、首段发送门控和会话策略委托给独立对象，剩下的是一个状态机。这次抽出了三块内聚的部分：`ReplayEventLinks`（待关联的错误、trace 和事务名）、`ReplayBufferHistory`（错误缓冲中早先页面的录制）、采样和页面根节点工具函数。原来分散在五处的清空逻辑各收敛为一次调用。状态机本身没有继续拆：它的各个方法共同读写十几个私有状态，再拆只会把这些状态暴露给更多对象。文件从 1052 行降到 950 行。
 
 ## 自动化验证
