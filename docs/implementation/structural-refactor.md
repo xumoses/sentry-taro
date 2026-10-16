@@ -35,6 +35,16 @@
 - `vp run verify:bundles`：仅错误监控 156,434 B（与基线相同）；加 Replay 241,320 B（基线 237,048 B，增量来自录制器拆分，见上文）；加 Worker 241,385 + 8,709 B。
 - `vp run verify:consumer --online`：隔离安装、严格声明、CJS/ESM 与 5 个子路径通过。
 
+## 开发者工具自动化验收
+
+2026-10-16，在首个验证项目中以本地候选包（基于 `96e867e` 打包，1,970,923 B，SHA-256 `b8d809b173ddfc8821dc6cf26b13e70d56f9ff33d6f2ce9201cc01385822e990`）替换依赖，宿主构建与全部测试通过。随后用 miniprogram-automator 驱动微信开发者工具（基础库 3.7.12，develop 环境，full-session 模式）在 Replay 演示页执行交互并触发受控异常：
+
+- 录制处于 session 状态，协调器记录了该错误事件 ID。
+- 错误事件请求携带当前 replay_id；随后的 Replay 请求 `error_ids` 包含该错误事件 ID。
+- 错误、Replay 和 transaction 请求均返回 HTTP 200，Replay 分段经 Worker 压缩（6 段，645,751 B → 84,100 B）。
+
+候选包版本号与已发布的 beta.5 相同，运行时读到的 SDK 版本无法区分两者；候选身份以安装时逐文件比对的 integrity 为准。HTTP 200 只说明服务端接受了请求，Sentry 中的 Issue、双向关联展示和 Playback 尚未核验。验证项目的原始证据留在非公开环境。
+
 ## 尚未进行
 
 - 电脑微信验收：真实错误接收、Replay 关联和 Playback。
