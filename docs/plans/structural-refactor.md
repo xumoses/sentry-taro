@@ -33,14 +33,17 @@
 
 已完成的对齐不重复列为任务：默认集成支持 `integrations` 函数筛选；integration 名称为官方 `Replay`；顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia` 优先于兼容的 `privacy.*`。官方同名的 `captureConsoleIntegration` 和 `httpClientIntegration` 已在分支实现（提交 `a7bee33`），尚未合入主分支或发布。
 
-## 待确认项
+## 范围决定与待确认项
 
-以下决定影响第二、三阶段范围，实施对应阶段前需要确认：
+已确认（2026-10-16）：
 
-1. 是否放弃微信以外的小程序平台和小游戏支持。确认后删除相关代码，不保留兼容层。
-2. 非官方 API 的去留：`setConsent`/`requireConsent`、`enableOfflineCache`、`showReportDialog`、`wrap`。默认倾向是：有官方对应的改用官方方式，没有对应且没有实际使用的删除。
-3. `privacy.*` 兼容配置和 `maskInputValues` 的移除时间：在第三阶段删除，还是先标记弃用、到下一个 beta 再删除。
-4. `TARO_DOM_REPLAY_POC_MARKER` 等 POC 名称作为 beta 兼容契约的消费方。确认消费方后再决定重命名还是保留别名。
+1. **其他小程序平台和小游戏冻结保留。** 不删除相关代码，也不再开发新功能或做验收；重构期间保持其编译和现有测试通过，文档标为“保留、未验收”，以便将来恢复。
+2. **POC 名称有实际消费方，不直接删除。** 首个验证项目在测试和本地工具中使用 `startTaroDomReplayPoc` 和 `TARO_DOM_REPLAY_POC` 标记：登录密码遮罩测试直接调用低层 recorder，构建检查脚本用该标记判断入口是否包含 recorder。这些都不在运行时路径上。第一阶段改为正式名称，旧名称保留为弃用别名一个 beta，待验证项目迁移后再删除。
+
+待确认，第三阶段前决定：
+
+3. 非官方 API 的去留。首个验证项目未使用 `setConsent`/`requireConsent`、`enableOfflineCache`、`showReportDialog` 和 `wrap`。建议：`showReportDialog`（已是只打印警告的空实现）和 `wrap`（固定版 browser 已不公开导出）直接删除；离线缓存改为官方 `makeOfflineTransport`；consent 官方没有对应，需要单独决定是否保留为小程序扩展。
+4. `privacy.*` 兼容配置的移除时间。首个验证项目当前使用 `privacy.maskAllText`、`privacy.maskInputValues`、`privacy.allowUser`。前两项可直接改为官方顶层的 `maskAllText`、`maskAllInputs`；`allowUser` 随“Replay 从 scope 带用户”一并取消。需决定在第三阶段直接删除，还是先标记弃用、下一个 beta 再删除。
 
 ## 分阶段计划
 
@@ -51,19 +54,21 @@
 - 先为 `rebase.ts` 的分叉补充能暴露差异的回归测试，确定正确语义后只保留一份；合并 `network-details.ts`，在 Worker 独立打包允许的前提下合并 `utf8.ts`。
 - 把 `packages/sdk` 与 `packages/replay` 合并为按层组织的单一源码树；移除 `SentryMiniappReplaySdk` 注入参数，Replay 直接引用 recorder。
 - 拆分 `replay-poc.ts`，按序列化、变更、样式、Canvas、网络和隐私分成模块；拆分 `ReplayCoordinator.ts`。
+- POC 名称改为正式名称，旧名称保留为弃用别名，见范围决定 2。
 - 公共导出、产物路径和运行时行为保持不变；`verify:consumer` 的五个子路径和类型声明结果与基线一致。
 
 ### 第二阶段：裁剪范围
 
-依赖待确认项 1、2。
+其他平台和小游戏按范围决定 1 冻结保留，本阶段不删除。
 
-- 删除其他平台适配、小游戏集成、全局 polyfill，以及与 core 重复的自有实现（如 `Integrations.Dedupe`）。
-- 保留的平台访问统一收敛到微信与 Taro API。
+- 删除与 core 重复的自有实现，如 `Integrations.Dedupe`。
+- 评估全局 polyfill：只在不影响冻结平台的前提下，把导入时的全局改写改为按需使用。
+- 评估把冻结的平台和小游戏代码移出主入口的默认加载路径，使只用微信的使用方不承担其体积；不改变其行为。
 - 记录主入口产物和首个验证项目主包的体积变化，作为本阶段的成效证据。
 
 ### 第三阶段：API 对齐官方
 
-依赖待确认项 2、3。
+依赖待确认项 3、4。
 
 - 集成全部改为函数式 `xxxIntegration()`；`Integrations` 命名空间和 `enableXxx` 开关先标记弃用，迁移说明给出对应的 `integrations` 写法。
 - 帧路径处理改用 core 的 `rewriteFramesIntegration`，默认路径与 taro-plugin 上传的 sourcemap 一致；移除非官方的 `enableSourceMap`。Debug ID 方案单独评估，需先在电脑微信验证。
@@ -89,5 +94,5 @@
 
 - 第三阶段的破坏性调整需要使用方同步迁移，迁移说明必须覆盖每个被弃用或删除的接口。
 - 拆分 recorder 时，模块间的隐式状态可能改变事件顺序；以现有 Replay 测试和 Playback 验收共同把关。
-- 删除平台代码后无法低成本恢复；只在待确认项 1 明确后执行。
+- 冻结的平台和小游戏代码没有验收覆盖，结构调整可能使其悄然失效；以其现有测试作为最低保障。
 - 电脑微信验收不能代表手机微信；手机端在文档中保持“待验证”。
