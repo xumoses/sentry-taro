@@ -7,9 +7,9 @@ import {
   type TaroReplayScrollEventLike,
   type TaroReplayPocEvent,
   type TaroReplayPocCapture,
-} from '../../src/sdk/replay-poc';
-import { boundReplayEvents } from '../../src/sdk/replay-buffer';
-import { createCheckpointRebaser } from '../../src/sdk/rebase';
+} from '../../src/replay/recorder/recorder';
+import { boundReplayEvents } from '../../src/replay/recorder/buffer';
+import { createCheckpointRebaser } from '../../src/replay/recorder/rebase';
 
 let serial = 0;
 interface Node extends TaroReplayNodeLike {

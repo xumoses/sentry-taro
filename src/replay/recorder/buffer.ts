@@ -1,6 +1,6 @@
 import { createCheckpointRebaser } from './rebase';
-import type { TaroReplayPocEvent as TaroReplayEvent } from './replay-poc';
-import { utf8ByteLength } from './utf8';
+import type { TaroReplayEvent } from '../types';
+import { utf8ByteLength } from '../../sdk/utf8';
 
 export interface ReplayBufferBounds {
   now: number;

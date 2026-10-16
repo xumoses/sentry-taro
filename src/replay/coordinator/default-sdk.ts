@@ -1,6 +1,6 @@
 import { addBreadcrumb, getClient } from '@sentry/core';
 
-import { startTaroDomReplayPoc } from '../../sdk/replay-poc';
+import { startTaroReplayRecorder } from '../recorder/recorder';
 import { SDK_NAME, SDK_VERSION } from '../../sdk/version';
 import type { SentryMiniappReplaySdk } from '../types';
 
@@ -10,5 +10,5 @@ export const defaultReplaySdk: SentryMiniappReplaySdk = {
   SDK_VERSION,
   getClient,
   addBreadcrumb,
-  startTaroDomReplayPoc,
+  startTaroDomReplayPoc: startTaroReplayRecorder,
 };

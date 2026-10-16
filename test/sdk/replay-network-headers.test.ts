@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vite-plus/test';
-import { startTaroDomReplayPoc } from '../../src/sdk/replay-poc';
+import { startTaroDomReplayPoc } from '../../src/replay/recorder/recorder';
 import type { NetworkDetailOptions } from '../../src/sdk/network-details';
 
 class Observer {

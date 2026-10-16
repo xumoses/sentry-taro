@@ -15,7 +15,7 @@ import { finiteInteger } from './limits';
 import { ReplayDelivery } from './delivery';
 import { ReplayInitialSendGate, type PendingReplaySegment } from './send-gate';
 import { observeRootActivity, ReplaySessionPolicy } from './session';
-import { REPLAY_BUFFER_WINDOW_MS } from '../../sdk/replay-constants';
+import { REPLAY_BUFFER_WINDOW_MS } from '../recorder/constants';
 import { defaultReplaySdk } from './default-sdk';
 import type {
   ReplayAwareEvent,

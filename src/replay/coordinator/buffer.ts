@@ -1,4 +1,4 @@
-import { boundReplayEvents, type ReplayBufferBounds } from '../../sdk/replay-buffer';
+import { boundReplayEvents, type ReplayBufferBounds } from '../recorder/buffer';
 import { utf8ByteLength } from '../../sdk/utf8';
 import type { TaroReplayCapture, TaroReplayEvent } from '../types';
 

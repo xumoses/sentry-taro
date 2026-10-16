@@ -4,7 +4,7 @@ import {
   type TaroReplayNodeLike,
   type TaroReplayScrollEventLike,
   type TaroReplayMutationRecordLike,
-} from '../../src/sdk/replay-poc';
+} from '../../src/replay/recorder/recorder';
 
 interface FixtureNode extends TaroReplayNodeLike {
   props: Record<string, unknown>;

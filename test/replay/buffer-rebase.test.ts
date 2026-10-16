@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vite-plus/test';
 import { boundReplayEvents } from '../../src/replay/coordinator/buffer';
-import { createCheckpointRebaser } from '../../src/sdk/rebase';
+import { createCheckpointRebaser } from '../../src/replay/recorder/rebase';
 import { utf8ByteLength } from '../../src/sdk/utf8';
 import type { TaroReplayEvent } from '../../src/replay/types';
 

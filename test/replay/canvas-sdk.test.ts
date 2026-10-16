@@ -10,7 +10,7 @@ afterEach(() => vi.useRealTimers());
 describe('workspace Canvas SDK and public integration bridge', () => {
   test('only marked current-page pixels enter Replay while ordinary media stays private', async () => {
     vi.useFakeTimers();
-    const { startTaroDomReplayPoc } = (await import('../../src/sdk/replay-poc')) as Pick<
+    const { startTaroDomReplayPoc } = (await import('../../src/replay/recorder/recorder')) as Pick<
       SentryMiniappReplaySdk,
       'startTaroDomReplayPoc'
     >;

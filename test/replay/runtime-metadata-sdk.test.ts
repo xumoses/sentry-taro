@@ -7,7 +7,7 @@ import { makeRuntime } from './fixtures';
 afterEach(() => vi.unstubAllGlobals());
 describe('workspace SDK shared error and Replay metadata', () => {
   test('early Replay and real core error share one bounded provider and never inherit scope identity', async () => {
-    const sdk = await import('../../src/sdk/index');
+    const sdk = await import('../../src/index');
     const platform = await import('../../src/sdk/crossPlatform');
     const device = vi.fn(() => ({
       platform: 'devtools',

@@ -15,6 +15,7 @@ const requiredExports = [
   'captureException',
   'getClient',
   'getReplay',
+  'startTaroReplayRecorder',
   'startTaroDomReplayPoc',
   'replayIntegration',
   'taroReplayIntegration',
@@ -110,7 +111,8 @@ async function main() {
     if (/(?:react-root|taro-lifecycle)\./.test(path.basename(file))) {
       assert.ok(
         map.sources.every(
-          (source) => !/src\/sdk\/|@sentry\/core|coordinator\/|compression\//.test(source),
+          (source) =>
+            !/src\/sdk\/|recorder\/|@sentry\/core|coordinator\/|compression\//.test(source),
         ),
         'A lightweight entry bundled the SDK or coordinator',
       );

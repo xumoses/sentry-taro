@@ -1,28 +1,46 @@
 /**
  * Taro runtime DOM -> rrweb-compatible event recorder.
- * The historical POC names and capture marker remain beta compatibility contracts.
+ * The historical POC names remain deprecated aliases; the capture marker value is a data contract.
  * This opt-in module owns serialization, privacy and bounded recording; sampling,
  * idle policy, Replay identity and delivery belong to the Replay coordinator.
  */
 
 import { uuid4, type Breadcrumb } from '@sentry/core';
 
-import { REPLAY_BUFFER_WINDOW_MS, REPLAY_MAX_DURATION_MS } from './replay-constants';
-import {
-  normalizeReplayRpx,
-  sanitizeReplayStyle,
-  TARO_REPLAY_BASE_STYLESHEET,
-} from './replay-styles';
-import { boundReplayEvents } from './replay-buffer';
-import { utf8ByteLength } from './utf8';
+import { REPLAY_BUFFER_WINDOW_MS, REPLAY_MAX_DURATION_MS } from './constants';
+import { normalizeReplayRpx, sanitizeReplayStyle, TARO_REPLAY_BASE_STYLESHEET } from './styles';
+import { boundReplayEvents } from './buffer';
+import { utf8ByteLength } from '../../sdk/utf8';
 import { createCheckpointRebaser } from './rebase';
-import {
-  createNetworkHeaderPolicy,
-  readNetworkDataField,
-  type NetworkDetailOptions,
-} from './network-details';
+import { createNetworkHeaderPolicy, readNetworkDataField } from '../../sdk/network-details';
+import type {
+  StartTaroReplayRecorderOptions,
+  TaroReplayCapture,
+  TaroReplayEvent,
+  TaroReplayMutationObserverLike,
+  TaroReplayMutationRecordLike,
+  TaroReplayNodeLike,
+  TaroReplayRecorder,
+} from '../types';
 
-export const TARO_DOM_REPLAY_POC_MARKER = 'TARO_DOM_REPLAY_POC';
+export type {
+  StartTaroDomReplayPocOptions,
+  StartTaroReplayRecorderOptions,
+  TaroDomReplayPocController,
+  TaroReplayMutationObserverConstructor,
+  TaroReplayMutationObserverLike,
+  TaroReplayMutationRecordLike,
+  TaroReplayNodeLike,
+  TaroReplayPocCapture,
+  TaroReplayPocEvent,
+  TaroReplayPocMetadata,
+  TaroReplayRecorder,
+} from '../types';
+
+/** Capture marker. The value keeps its historical spelling because tools match it in data. */
+export const TARO_REPLAY_CAPTURE_MARKER = 'TARO_DOM_REPLAY_POC';
+/** @deprecated Use TARO_REPLAY_CAPTURE_MARKER. */
+export const TARO_DOM_REPLAY_POC_MARKER = TARO_REPLAY_CAPTURE_MARKER;
 
 const enum RrwebEventType {
   FullSnapshot = 2,
@@ -47,54 +65,11 @@ const enum RrwebIncrementalSource {
   TouchMove = 6,
 }
 
-interface TaroAttributeLike {
-  name: string;
-  value: unknown;
-}
-
 export interface TaroReplayScrollEventLike {
   detail?: { scrollTop?: unknown; scrollLeft?: unknown; value?: unknown; current?: unknown };
   target?: { nodeType?: number; sid?: string; id?: string; dataset?: { sid?: string } };
   touches?: Array<{ clientX?: number; clientY?: number; pageX?: number; pageY?: number }>;
   changedTouches?: Array<{ clientX?: number; clientY?: number; pageX?: number; pageY?: number }>;
-}
-
-export interface TaroReplayNodeLike {
-  nodeType: number;
-  nodeName?: string;
-  tagName?: string;
-  sid?: string;
-  uid?: string;
-  textContent?: string | null;
-  parentNode?: TaroReplayNodeLike | null;
-  childNodes?: TaroReplayNodeLike[];
-  attributes?: TaroAttributeLike[] | ArrayLike<TaroAttributeLike>;
-  getAttribute?: (name: string) => unknown;
-  hasAttribute?: (name: string) => boolean;
-  addEventListener?: (type: string, listener: (event: TaroReplayScrollEventLike) => void) => void;
-  removeEventListener?: (
-    type: string,
-    listener: (event: TaroReplayScrollEventLike) => void,
-  ) => void;
-}
-
-export interface TaroReplayMutationRecordLike {
-  type: 'attributes' | 'characterData' | 'childList';
-  target: TaroReplayNodeLike;
-  addedNodes?: TaroReplayNodeLike[] | ArrayLike<TaroReplayNodeLike>;
-  removedNodes?: TaroReplayNodeLike[] | ArrayLike<TaroReplayNodeLike>;
-  nextSibling?: TaroReplayNodeLike | null;
-  previousSibling?: TaroReplayNodeLike | null;
-  attributeName?: string | null;
-}
-
-export interface TaroReplayMutationObserverLike {
-  observe(target: TaroReplayNodeLike, options: Record<string, boolean>): void;
-  disconnect(): void;
-}
-
-export interface TaroReplayMutationObserverConstructor {
-  new (callback: (records: TaroReplayMutationRecordLike[]) => void): TaroReplayMutationObserverLike;
 }
 
 interface SerializedNodeBase {
@@ -120,101 +95,6 @@ interface SerializedTextNode extends SerializedNodeBase {
 }
 
 type SerializedNode = SerializedDocumentNode | SerializedElementNode | SerializedTextNode;
-
-export interface TaroReplayPocEvent {
-  type: RrwebEventType;
-  timestamp: number;
-  data: Record<string, unknown>;
-}
-
-export interface TaroReplayPocMetadata {
-  environment?: string;
-  release?: string;
-  sdk?: {
-    name: string;
-    version: string;
-  };
-  user?: Record<string, unknown>;
-  tags?: Record<string, string | number | boolean>;
-  contexts?: Record<string, Record<string, unknown>>;
-}
-
-export interface TaroReplayPocCapture {
-  marker: typeof TARO_DOM_REPLAY_POC_MARKER;
-  version: 1;
-  replayId: string;
-  href: string;
-  startedAt: number;
-  endedAt: number | null;
-  stopReason: string | null;
-  events: TaroReplayPocEvent[];
-  metadata: TaroReplayPocMetadata | undefined;
-  stats: {
-    eventCount: number;
-    mutationCount: number;
-    breadcrumbCount: number;
-    networkCount: number;
-    approximateBytes: number;
-  };
-  warnings: string[];
-}
-
-export interface StartTaroDomReplayPocOptions extends NetworkDetailOptions {
-  root: TaroReplayNodeLike;
-  MutationObserver: TaroReplayMutationObserverConstructor;
-  href?: string;
-  width?: number;
-  height?: number;
-  /** Trusted, caller-built page CSS using Replay selectors; no stylesheet is read at runtime. */
-  stylesheet?: string;
-  /** Audited build-time image sources; dynamic data URLs remain filtered. */
-  staticImageSources?: Readonly<Record<string, string>>;
-  /** Masks every Taro text node by default. Set to false only for privacy-safe content. */
-  maskAllText?: boolean;
-  /** Masks ordinary inputs by default; password and explicitly marked inputs always stay masked. */
-  maskInputValues?: boolean;
-  /** Official Replay spelling; overrides maskInputValues when provided. */
-  maskAllInputs?: boolean;
-  /** Defaults to true; audited staticImageSources are an explicit per-image permission. */
-  blockAllMedia?: boolean;
-  /** Opt in to explicitly marked Canvas image frames; pixels cannot be text-masked. */
-  recordCanvas?: boolean;
-  /** Attributes whose display text is masked; defaults to title, placeholder and aria-label. */
-  maskAttributes?: readonly string[];
-  /** Stop an excessive observer batch rather than blocking the application logic thread. */
-  mutationLimit?: number;
-  maxDurationMs?: number;
-  maxEvents?: number;
-  maxBytes?: number;
-  /** Keeps a rolling tail while retaining the initial Meta + FullSnapshot checkpoint. */
-  rollingWindowMs?: number;
-  /** Allows a process-wide coordinator to keep one id across root attachments. */
-  replayId?: string;
-  metadata?: TaroReplayPocMetadata;
-  now?: () => number;
-  onEvent?: (event: TaroReplayPocEvent) => void;
-  /** Lightweight budget notification; contains no event payload or live mutable state. */
-  onBufferChange?: (
-    stats: Pick<TaroReplayPocCapture['stats'], 'eventCount' | 'approximateBytes'>,
-  ) => void;
-  /** Drain a full session segment synchronously; rolling buffers never invoke this hook. */
-  onBufferFull?: () => void;
-  onStop?: (capture: TaroReplayPocCapture) => void;
-}
-
-export interface TaroDomReplayPocController {
-  addBreadcrumb(breadcrumb: Breadcrumb): boolean;
-  getCapture(): TaroReplayPocCapture;
-  stop(reason?: string): TaroReplayPocCapture;
-  /** Drain a session segment without detaching; rolling buffers are returned without draining. */
-  takeSegment(): TaroReplayPocCapture;
-  /** Clear an already captured error buffer and continue its mirror as a live session. */
-  promoteToSession(maxDurationMs: number): boolean;
-  recordPageScroll(position: { scrollTop?: number; scrollLeft?: number }): boolean;
-  recordViewport(size: { width: number; height: number }): boolean;
-  /** Read one explicitly marked, currently mounted Canvas/container frame. */
-  recordCanvas(node: TaroReplayNodeLike, readFrame: () => string | undefined): boolean;
-}
 
 const TAG_MAP: Record<string, string> = {
   root: 'div',
@@ -554,10 +434,10 @@ function sanitizeAttributeValue(
   return primitiveAttributeValue(safeValue);
 }
 
-function cloneCapture(capture: TaroReplayPocCapture): TaroReplayPocCapture {
+function cloneCapture(capture: TaroReplayCapture): TaroReplayCapture {
   return {
     ...capture,
-    events: JSON.parse(JSON.stringify(capture.events)) as TaroReplayPocEvent[],
+    events: JSON.parse(JSON.stringify(capture.events)) as TaroReplayEvent[],
     metadata: capture.metadata
       ? {
           ...capture.metadata,
@@ -575,13 +455,12 @@ function cloneCapture(capture: TaroReplayPocCapture): TaroReplayPocCapture {
 }
 
 /**
- * Starts the low-level Taro DOM recorder. The POC spelling is retained for beta compatibility.
- * Call this after the Taro page root is
+ * Starts the low-level Taro DOM recorder. Call this after the Taro page root is
  * mounted (for example in useReady), and call stop from useUnload.
  */
-export function startTaroDomReplayPoc(
-  options: StartTaroDomReplayPocOptions,
-): TaroDomReplayPocController {
+export function startTaroReplayRecorder(
+  options: StartTaroReplayRecorderOptions,
+): TaroReplayRecorder {
   const networkHeaderPolicy = createNetworkHeaderPolicy(options);
   if (!options.root || typeof options.root !== 'object') {
     throw new Error('[sentry-miniapp replay POC] A mounted Taro root node is required');
@@ -660,15 +539,15 @@ export function startTaroDomReplayPoc(
   let pagePosition = pageScrollPositions.get(options.root) ?? { x: 0, y: 0 };
   const rootListeners = new Map<string, (event: TaroReplayScrollEventLike) => void>();
   const lastInputValues = new WeakMap<TaroReplayNodeLike, string>();
-  const byteSizes = new WeakMap<TaroReplayPocEvent, number>();
+  const byteSizes = new WeakMap<TaroReplayEvent, number>();
   const canvasFrames = new Map<
     TaroReplayNodeLike,
     { imageId: number; frame?: string; lastReadAt: number }
   >();
   let serializedNodes = new WeakSet<TaroReplayNodeLike>();
-  let canvasCheckpoint: ReturnType<typeof createCheckpointRebaser<TaroReplayPocEvent>> | undefined;
+  let canvasCheckpoint: ReturnType<typeof createCheckpointRebaser<TaroReplayEvent>> | undefined;
   let canvasCheckpointUpperBytes = 0;
-  const eventSize = (event: TaroReplayPocEvent): number => {
+  const eventSize = (event: TaroReplayEvent): number => {
     const cached = byteSizes.get(event);
     if (cached !== undefined) return cached;
     const bytes = utf8ByteLength(JSON.stringify(event));
@@ -680,8 +559,8 @@ export function startTaroDomReplayPoc(
     observer?: TaroReplayMutationObserverLike;
   } = {};
 
-  const capture: TaroReplayPocCapture = {
-    marker: TARO_DOM_REPLAY_POC_MARKER,
+  const capture: TaroReplayCapture = {
+    marker: TARO_REPLAY_CAPTURE_MARKER,
     version: 1,
     replayId: options.replayId || uuid4(),
     href: sanitizeUrl(options.href || 'https://miniapp.local/replay-poc'),
@@ -788,7 +667,7 @@ export function startTaroDomReplayPoc(
       return false;
     }
     if (!isCanvasFrame(frame) || frame === state.frame) return false;
-    const event: TaroReplayPocEvent = {
+    const event: TaroReplayEvent = {
       type: RrwebEventType.IncrementalSnapshot,
       timestamp: nextTimestamp(),
       data: {
@@ -838,7 +717,7 @@ export function startTaroDomReplayPoc(
     return !stopped;
   }
 
-  function updateCanvasCheckpoint(event: TaroReplayPocEvent, bytes: number): void {
+  function updateCanvasCheckpoint(event: TaroReplayEvent, bytes: number): void {
     if (!options.recordCanvas) return;
     if (event.type === RrwebEventType.FullSnapshot) {
       canvasCheckpoint = createCheckpointRebaser(event);
@@ -1314,7 +1193,7 @@ export function startTaroDomReplayPoc(
     });
   }
 
-  function addEvent(event: TaroReplayPocEvent): boolean {
+  function addEvent(event: TaroReplayEvent): boolean {
     if (stopped) return false;
     const eventBytes = eventSize(event);
     if (rollingWindowMs !== undefined) {
@@ -1343,7 +1222,7 @@ export function startTaroDomReplayPoc(
           capture.stats.eventCount = capture.events.length;
           updateCanvasCheckpoint(event, eventBytes);
           notifyBufferChange();
-          options.onEvent?.(JSON.parse(JSON.stringify(event)) as TaroReplayPocEvent);
+          options.onEvent?.(JSON.parse(JSON.stringify(event)) as TaroReplayEvent);
           return true;
         }
       }
@@ -1375,7 +1254,7 @@ export function startTaroDomReplayPoc(
       capture.stats.eventCount = capture.events.length;
       updateCanvasCheckpoint(event, eventBytes);
       notifyBufferChange();
-      options.onEvent?.(JSON.parse(JSON.stringify(event)) as TaroReplayPocEvent);
+      options.onEvent?.(JSON.parse(JSON.stringify(event)) as TaroReplayEvent);
       return capture.events.includes(event);
     }
     if (!makeEventRoom(eventBytes)) {
@@ -1388,7 +1267,7 @@ export function startTaroDomReplayPoc(
     capture.stats.approximateBytes += eventBytes;
     updateCanvasCheckpoint(event, eventBytes);
     notifyBufferChange();
-    options.onEvent?.(JSON.parse(JSON.stringify(event)) as TaroReplayPocEvent);
+    options.onEvent?.(JSON.parse(JSON.stringify(event)) as TaroReplayEvent);
     return true;
   }
 
@@ -1429,7 +1308,7 @@ export function startTaroDomReplayPoc(
     const isNetwork =
       (breadcrumb.category === 'xhr' || breadcrumb.category === 'fetch') &&
       typeof data['url'] === 'string';
-    let event: TaroReplayPocEvent;
+    let event: TaroReplayEvent;
 
     if (isNetwork) {
       const allowed = networkHeaderPolicy.isAllowed(data['url']);
@@ -1535,7 +1414,7 @@ export function startTaroDomReplayPoc(
     });
   }
 
-  function takeSegment(): TaroReplayPocCapture {
+  function takeSegment(): TaroReplayCapture {
     const segment = cloneCapture(capture);
     if (stopped || rollingWindowMs !== undefined) return segment;
     segment.endedAt = Math.max(now(), lastEventTimestamp);
@@ -1965,7 +1844,7 @@ export function startTaroDomReplayPoc(
       });
   }
 
-  function stop(reason = 'manual'): TaroReplayPocCapture {
+  function stop(reason = 'manual'): TaroReplayCapture {
     if (stopped) return cloneCapture(capture);
     stopped = true;
     if (resources.timer) clearTimeout(resources.timer);
@@ -2015,7 +1894,7 @@ export function startTaroDomReplayPoc(
     return result;
   }
 
-  const controller: TaroDomReplayPocController = {
+  const controller: TaroReplayRecorder = {
     addBreadcrumb,
     getCapture: () => cloneCapture(capture),
     stop,
@@ -2062,3 +1941,6 @@ export function startTaroDomReplayPoc(
 
   return controller;
 }
+
+/** @deprecated Use startTaroReplayRecorder. */
+export const startTaroDomReplayPoc = startTaroReplayRecorder;

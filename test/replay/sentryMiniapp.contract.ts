@@ -1,4 +1,4 @@
-import type * as Sentry from '../../src/sdk/index';
+import type * as Sentry from '../../src/index';
 
 import type { SentryMiniappReplaySdk } from '../../src/replay/types';
 

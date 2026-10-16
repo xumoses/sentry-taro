@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vite-plus/test';
-import { createCheckpointRebaser } from '../../src/sdk/rebase';
+import { createCheckpointRebaser } from '../../src/replay/recorder/rebase';
 import {
   startTaroDomReplayPoc,
   type StartTaroDomReplayPocOptions,
@@ -7,7 +7,7 @@ import {
   type TaroReplayNodeLike,
   type TaroReplayPocCapture,
   type TaroReplayScrollEventLike,
-} from '../../src/sdk/replay-poc';
+} from '../../src/replay/recorder/recorder';
 
 const PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGP4DwQACfsD/fteaysAAAAASUVORK5CYII=';

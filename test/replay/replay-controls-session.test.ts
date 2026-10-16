@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test';
-import { startTaroDomReplayPoc } from '../../src/sdk/replay-poc';
+import { startTaroDomReplayPoc } from '../../src/replay/recorder/recorder';
 import {
   taroReplayIntegration,
   type TaroReplayIntegrationOptions,

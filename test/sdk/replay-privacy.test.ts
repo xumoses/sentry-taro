@@ -3,7 +3,7 @@ import {
   startTaroDomReplayPoc,
   type TaroReplayMutationRecordLike,
   type TaroReplayNodeLike,
-} from '../../src/sdk/replay-poc';
+} from '../../src/replay/recorder/recorder';
 
 interface Node extends TaroReplayNodeLike {
   props: Record<string, unknown>;

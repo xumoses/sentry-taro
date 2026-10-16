@@ -104,7 +104,7 @@ async function main() {
   const errors = await bundle(build, 'errors-only', 'bundle-errors.mjs');
   const replay = await bundle(build, 'errors-replay', 'bundle-replay.mjs');
   const replayWorker = await bundle(build, 'errors-replay-worker', 'bundle-worker.mjs');
-  const recorder = /src\/sdk\/(?:replay-[^/]+|rebase)\./;
+  const recorder = /src\/replay\/recorder\//;
   const coordinator = /src\/replay\/coordinator\//;
   const replaySource = (source) =>
     recorder.test(source) || /src\/replay\/|(?:^|\/)fflate(?:@[^/]+)?\//.test(source);

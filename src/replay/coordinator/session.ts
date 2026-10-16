@@ -2,7 +2,7 @@ import {
   REPLAY_MAX_DURATION_MS,
   REPLAY_SESSION_IDLE_EXPIRE_MS,
   REPLAY_SESSION_IDLE_PAUSE_MS,
-} from '../../sdk/replay-constants';
+} from '../recorder/constants';
 import type { TaroReplayNodeLike } from '../types';
 import { finiteInteger } from './limits';
 

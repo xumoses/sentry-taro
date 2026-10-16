@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
-import { startTaroDomReplayPoc, type TaroDomReplayPocController } from '../../src/sdk/replay-poc';
+import {
+  startTaroDomReplayPoc,
+  type TaroDomReplayPocController,
+} from '../../src/replay/recorder/recorder';
 
 const recordings: TaroDomReplayPocController[] = [];
 const root = { nodeType: 1, nodeName: 'view', childNodes: [], attributes: [] };

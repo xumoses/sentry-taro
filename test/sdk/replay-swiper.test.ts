@@ -4,7 +4,7 @@ import {
   type TaroReplayNodeLike,
   type TaroReplayMutationRecordLike,
   type TaroReplayScrollEventLike,
-} from '../../src/sdk/replay-poc';
+} from '../../src/replay/recorder/recorder';
 
 let serial = 0;
 type TestNode = TaroReplayNodeLike & {

@@ -16,7 +16,7 @@ const error = () => ({
   exception: { values: [{ type: 'Error', value: 'synthetic candidate test' }] },
 });
 async function candidate() {
-  const { startTaroDomReplayPoc } = (await import('../../src/sdk/replay-poc')) as Pick<
+  const { startTaroDomReplayPoc } = (await import('../../src/replay/recorder/recorder')) as Pick<
     SentryMiniappReplaySdk,
     'startTaroDomReplayPoc'
   >;

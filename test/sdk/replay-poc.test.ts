@@ -6,7 +6,7 @@ import {
   type TaroReplayNodeLike,
   type TaroReplayPocEvent,
   type TaroReplayScrollEventLike,
-} from '../../src/sdk/replay-poc';
+} from '../../src/replay/recorder/recorder';
 
 interface TestElement extends TaroReplayNodeLike {
   props: Record<string, unknown>;
