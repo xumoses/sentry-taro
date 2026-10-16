@@ -61,21 +61,27 @@ function harness(options: PreserveTaroSourceMapOptions = {}) {
     hooks: { thisCompilation: { tap: (_name, callback) => listeners.push(callback) } },
   };
   new PreserveTaroSourceMapOffsets(options).apply(compiler);
-  function compile(input: Record<string, string>) {
+  function compile(input: Record<string, string>, minimized = false) {
     const assets = new Map(
       Object.entries(input).map(([name, value]) => [
         name,
-        { name, source: new sources.RawSource(value) },
+        { name, source: new sources.RawSource(value), info: { minimized } },
       ]),
     );
     const stages: { stage: number; callback: () => void }[] = [];
+    const additions: ((
+      assets: Record<string, { source(): string | { toString(): string } }>,
+    ) => void)[] = [];
     const compilation: SourceMapCompilation = {
       hooks: {
+        processAdditionalAssets: { tap: (_options, callback) => additions.push(callback) },
         processAssets: { tap: ({ stage }, callback) => stages.push({ stage, callback }) },
       },
       getAssets: () => [...assets.values()],
       getAsset: (name) => assets.get(name),
-      updateAsset: vi.fn((name, source) => assets.set(name, { name, source })),
+      updateAsset: vi.fn((name, source, info) =>
+        assets.set(name, { name, source, info: info || { minimized } }),
+      ),
       deleteAsset: vi.fn((name) => assets.delete(name)),
     };
     for (const listener of listeners) listener(compilation);
@@ -86,7 +92,17 @@ function harness(options: PreserveTaroSourceMapOptions = {}) {
         for (const callback of stages.filter((item) => item.stage === stage)) callback.callback();
       },
       write: (name: string, code: string) =>
-        assets.set(name, { name, source: new sources.RawSource(code) }),
+        assets.set(name, { name, source: new sources.RawSource(code), info: { minimized: false } }),
+      copy: (from: string, to: string) => {
+        for (const suffix of ['', '.map']) {
+          const asset = assets.get(from + suffix)!;
+          assets.set(to + suffix, { ...asset, name: to + suffix, info: { minimized: false } });
+        }
+        assets.delete(from);
+        assets.delete(from + '.map');
+        for (const callback of additions) callback({ [to]: assets.get(to)!.source });
+      },
+      minimized: (name: string) => assets.get(name)?.info.minimized,
       read: (name: string) => assets.get(name)?.source.source().toString(),
       map: () =>
         JSON.parse(assets.get(`${assetName}.map`)!.source.source().toString()) as TaroSourceMap,
@@ -331,5 +347,40 @@ describe('Webpack compilation integration', () => {
     compilation.run(5000);
     expect(log).toHaveBeenCalledWith('[sentry-taro] Repaired 1 Taro source maps.');
     expect(JSON.stringify(log.mock.calls)).not.toContain(originalSource);
+  });
+});
+
+describe('Taro shared chunk copies', () => {
+  const shared = 'sub-common/shared.js';
+  const copy = 'pages/example/sub-common/shared.js';
+  test('preserves minimized identity before a copied chunk can be minified again', () => {
+    const map = JSON.stringify({ ...sourceMap(), file: shared });
+    const build = harness().compile({ [shared]: originalCode, [shared + '.map']: map }, true);
+    build.run(1000);
+    build.copy(shared, copy);
+    expect(build.minimized(copy)).toBe(true);
+    build.run(5000);
+    expect(build.read(copy)).toBe(originalCode);
+    expect(build.read(copy + '.map')).toBe(map);
+  });
+  test('does not mark an unminimized original as minimized', () => {
+    const build = harness().compile({
+      [shared]: originalCode,
+      [shared + '.map']: JSON.stringify(sourceMap()),
+    });
+    build.run(1000);
+    build.copy(shared, copy);
+    expect(build.minimized(copy)).toBe(false);
+  });
+  test.each(['code', 'map'])('does not reuse processing identity for a changed %s', (changed) => {
+    const build = harness().compile(
+      { [shared]: originalCode, [shared + '.map']: JSON.stringify(sourceMap()) },
+      true,
+    );
+    build.run(1000);
+    if (changed === 'code') build.write(shared, 'changed();');
+    else build.write(shared + '.map', JSON.stringify(sourceMap(1)));
+    build.copy(shared, copy);
+    expect(build.minimized(copy)).toBe(false);
   });
 });

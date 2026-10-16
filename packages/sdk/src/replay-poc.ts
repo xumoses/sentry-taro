@@ -52,7 +52,7 @@ interface TaroAttributeLike {
 }
 
 export interface TaroReplayScrollEventLike {
-  detail?: { scrollTop?: unknown; scrollLeft?: unknown; value?: unknown };
+  detail?: { scrollTop?: unknown; scrollLeft?: unknown; value?: unknown; current?: unknown };
   target?: { nodeType?: number; sid?: string; id?: string; dataset?: { sid?: string } };
   touches?: Array<{ clientX?: number; clientY?: number; pageX?: number; pageY?: number }>;
   changedTouches?: Array<{ clientX?: number; clientY?: number; pageX?: number; pageY?: number }>;
@@ -339,6 +339,7 @@ interface ScrollPosition {
 // creates a new recorder. Weak keys release the offset with the virtual node.
 const scrollPositions = new WeakMap<TaroReplayNodeLike, ScrollPosition>();
 const pickerValues = new WeakMap<TaroReplayNodeLike, number[]>();
+const swiperValues = new WeakMap<TaroReplayNodeLike, { value: number; propValue: unknown }>();
 const pageScrollPositions = new WeakMap<TaroReplayNodeLike, ScrollPosition>();
 const inputValues = new WeakMap<TaroReplayNodeLike, { value: unknown; propValue: unknown }>();
 // A mounted input remains sensitive across buffer promotion and page reattachment.
@@ -356,6 +357,31 @@ function portalEnabled(node: TaroReplayNodeLike): boolean {
 
 function isPickerView(node: TaroReplayNodeLike): boolean {
   return normaliseNodeName(node) === 'picker-view';
+}
+
+function isSwiper(node: TaroReplayNodeLike): boolean {
+  return normaliseNodeName(node) === 'swiper';
+}
+
+function swiperItems(node: TaroReplayNodeLike): TaroReplayNodeLike[] {
+  return toArray(node.childNodes).filter((child) => normaliseNodeName(child) === 'swiper-item');
+}
+
+function swiperIndex(node: TaroReplayNodeLike, value: unknown): number {
+  const numeric = Number(value);
+  return Math.min(
+    Math.max(0, swiperItems(node).length - 1),
+    Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0,
+  );
+}
+
+function currentSwiperIndex(node: TaroReplayNodeLike): number {
+  const propValue = rawAttributeValue(node, 'current');
+  const observed = swiperValues.get(node);
+  return swiperIndex(
+    node,
+    observed && observed.propValue === propValue ? observed.value : propValue,
+  );
 }
 
 function pickerColumns(node: TaroReplayNodeLike): TaroReplayNodeLike[] {
@@ -650,6 +676,7 @@ export function startTaroDomReplayPoc(
   const lastAttributeValues = new WeakMap<object, Map<string, string | number | true | null>>();
   const scrollListeners = new Map<TaroReplayNodeLike, (event: TaroReplayScrollEventLike) => void>();
   const pickerListeners = new Map<TaroReplayNodeLike, (event: TaroReplayScrollEventLike) => void>();
+  const swiperListeners = new Map<TaroReplayNodeLike, (event: TaroReplayScrollEventLike) => void>();
   let lastEventTimestamp = startedAt - 1;
   let nextNodeId = SYNTHETIC_NODE_MAX_ID + 1;
   let stopped = false;
@@ -863,6 +890,44 @@ export function startTaroDomReplayPoc(
   function attachScrollSubtree(node: TaroReplayNodeLike): void {
     if (stopped || isBlocked(node) || isCanvasContainer(node) || isInsideCanvas(node)) return;
     if (
+      isSwiper(node) &&
+      node.addEventListener &&
+      node.removeEventListener &&
+      !swiperListeners.has(node)
+    ) {
+      const listener = (event: TaroReplayScrollEventLike): void => {
+        if (
+          stopped ||
+          isBlocked(node) ||
+          swiperListeners.get(node) !== listener ||
+          event.detail?.current === undefined
+        )
+          return;
+        const selected = swiperIndex(node, event.detail.current);
+        if (selected === currentSwiperIndex(node)) return;
+        swiperValues.set(node, { value: selected, propValue: rawAttributeValue(node, 'current') });
+        addEvent({
+          type: RrwebEventType.IncrementalSnapshot,
+          timestamp: nextTimestamp(),
+          data: {
+            source: RrwebIncrementalSource.Mutation,
+            texts: [],
+            removes: [],
+            adds: [],
+            attributes: [
+              { id: idFor(node), attributes: { style: currentAttributeValue(node, 'style') } },
+            ],
+          },
+        });
+      };
+      try {
+        node.addEventListener('change', listener);
+        swiperListeners.set(node, listener);
+      } catch {
+        /* Optional native event surface. */
+      }
+    }
+    if (
       isScrollView(node) &&
       node.addEventListener &&
       node.removeEventListener &&
@@ -934,6 +999,15 @@ export function startTaroDomReplayPoc(
   }
 
   function detachScrollSubtree(node: TaroReplayNodeLike): void {
+    const swiperListener = swiperListeners.get(node);
+    if (swiperListener) {
+      try {
+        node.removeEventListener?.('change', swiperListener);
+      } catch {
+        /* Safe native teardown. */
+      }
+      swiperListeners.delete(node);
+    }
     canvasFrames.delete(node);
     serializedNodes.delete(node);
     const sid = node.sid || node.uid;
@@ -1018,6 +1092,13 @@ export function startTaroDomReplayPoc(
     return shouldMaskInputValues(node) ? maskValue(value) : String(value ?? '');
   }
 
+  function swiperPlaybackStyle(node: TaroReplayNodeLike, original: unknown): string {
+    const declaration = isSwiper(node)
+      ? `--taro-replay-swiper-current:${currentSwiperIndex(node)}`
+      : `--taro-replay-swiper-index:${swiperItems(node.parentNode!).indexOf(node)}`;
+    return [typeof original === 'string' ? original : '', declaration].filter(Boolean).join(';');
+  }
+
   function pickerPlaybackStyle(node: TaroReplayNodeLike, original: unknown): string {
     const declarations = [typeof original === 'string' ? original : ''];
     if (isPickerView(node)) {
@@ -1066,6 +1147,12 @@ export function startTaroDomReplayPoc(
       result['value'] = safeInputValue(node, currentInputValue(node));
       remembered.set('value', result['value']);
       lastInputValues.set(node, String(result['value']));
+    }
+    if (
+      isSwiper(node) ||
+      (normaliseNodeName(node) === 'swiper-item' && node.parentNode && isSwiper(node.parentNode))
+    ) {
+      result['style'] = swiperPlaybackStyle(node, result['style']);
     }
     if (isScrollView(node)) {
       const position = getScrollPosition(node);
@@ -1616,6 +1703,19 @@ export function startTaroDomReplayPoc(
       : rawAttributeValue(node, attributeName);
     if (
       attributeName === 'style' &&
+      (isSwiper(node) ||
+        (normaliseNodeName(node) === 'swiper-item' && node.parentNode && isSwiper(node.parentNode)))
+    ) {
+      return swiperPlaybackStyle(
+        node,
+        normalizeReplayRpx(
+          sanitizeReplayStyle(String(raw ?? ''), sanitizeUrl, shouldBlockMedia(node)),
+          viewportWidth,
+        ),
+      );
+    }
+    if (
+      attributeName === 'style' &&
       (isPickerView(node) ||
         normaliseNodeName(node) === 'picker-view-column' ||
         normaliseNodeName(node.parentNode ?? node) === 'picker-view-column')
@@ -1688,6 +1788,7 @@ export function startTaroDomReplayPoc(
                 String(rawAttributeValue(record.target, record.attributeName!) ?? '') +
                   String(lastAttributeValues.get(record.target)?.get(record.attributeName!) ?? ''),
               )) ||
+            (isSwiper(record.target) && record.attributeName?.toLowerCase() === 'current') ||
             (isPickerView(record.target) &&
               ['value', 'defaultvalue', 'indicatorstyle'].includes(
                 record.attributeName?.toLowerCase() ?? '',
@@ -1695,16 +1796,27 @@ export function startTaroDomReplayPoc(
         (record.type === 'childList' &&
           (hasNodeAncestor(record.target, isRootPortal) ||
             hasNodeAncestor(record.target, isPickerView) ||
+            isSwiper(record.target) ||
             [...toArray(record.addedNodes), ...toArray(record.removedNodes)].some(
               containsRootPortal,
             ))),
     );
     if (visualCheckpoint) {
-      for (const node of [...scrollListeners.keys(), ...pickerListeners.keys()]) {
+      for (const node of [
+        ...scrollListeners.keys(),
+        ...pickerListeners.keys(),
+        ...swiperListeners.keys(),
+      ]) {
         if (isBlocked(node) || isInsideCanvas(node)) detachScrollSubtree(node);
       }
       for (const record of records) {
         batchMutationCount++;
+        if (
+          record.type === 'attributes' &&
+          isSwiper(record.target) &&
+          record.attributeName?.toLowerCase() === 'current'
+        )
+          swiperValues.delete(record.target);
         if (record.type === 'childList') {
           for (const node of toArray(record.removedNodes)) detachScrollSubtree(node);
           for (const node of toArray(record.addedNodes)) attachScrollSubtree(node);
@@ -1895,6 +2007,14 @@ export function startTaroDomReplayPoc(
     canvasFrames.clear();
     canvasCheckpoint = undefined;
     serializedNodes = new WeakSet();
+    for (const [node, listener] of swiperListeners) {
+      try {
+        node.removeEventListener?.('change', listener);
+      } catch {
+        /* Safe native teardown. */
+      }
+    }
+    swiperListeners.clear();
     for (const [node, listener] of pickerListeners) {
       try {
         node.removeEventListener?.('change', listener);

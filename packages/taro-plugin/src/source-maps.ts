@@ -35,20 +35,27 @@ export interface WebpackMapSources<
   RawSource: new (code: string) => TRawSource;
 }
 
-interface CompilationAsset {
+interface CompilationAsset<TSource extends AssetSource = AssetSource> {
   name: string;
-  source: AssetSource;
+  info?: { minimized?: boolean };
+  source: TSource;
 }
 
 export interface SourceMapCompilation<TRawSource extends AssetSource = AssetSource> {
   hooks: {
+    processAdditionalAssets?: {
+      tap(
+        options: { name: string; before: string },
+        callback: (assets: Record<string, AssetSource>) => void,
+      ): void;
+    };
     processAssets: {
       tap(options: { name: string; stage: number }, callback: () => void): void;
     };
   };
-  getAssets(): CompilationAsset[];
-  getAsset(name: string): CompilationAsset | undefined;
-  updateAsset(name: string, source: TRawSource): void;
+  getAssets(): CompilationAsset<TRawSource>[];
+  getAsset(name: string): CompilationAsset<TRawSource> | undefined;
+  updateAsset(name: string, source: TRawSource, info?: { minimized?: boolean }): void;
   deleteAsset(name: string): void;
 }
 
@@ -164,7 +171,35 @@ export class PreserveTaroSourceMapOffsets {
     const { Compilation, sources } = compiler.webpack;
     compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation) => {
       // This state is compilation-local so watch rebuilds cannot reuse stale JavaScript or maps.
-      const snapshots = new Map<string, { code: string; map: TaroSourceMap }>();
+      const snapshots = new Map<
+        string,
+        { code: string; map: TaroSourceMap; mapText: string; minimized: boolean }
+      >();
+      // MiniSplitChunksPlugin copies sub-common assets by direct assignment. Webpack
+      // then treats them as new assets; the lost minimized flag makes Terser run
+      // again after map emission. Restore that flag only for byte-identical JS/map
+      // pairs, before the minimizer's additional-assets callback can see them.
+      compilation.hooks.processAdditionalAssets?.tap(
+        { name: PLUGIN_NAME, before: 'TerserPlugin' },
+        (assets) => {
+          for (const name of Object.keys(assets)) {
+            const start = name.lastIndexOf('/sub-common/');
+            if (start < 0 || !name.endsWith('.js')) continue;
+            const snapshot = snapshots.get(name.slice(start + 1));
+            if (!snapshot?.minimized) continue;
+            const script = compilation.getAsset(name);
+            const map = compilation.getAsset(`${name}.map`);
+            if (
+              !script ||
+              !map ||
+              script.source.source().toString() !== snapshot.code ||
+              map.source.source().toString() !== snapshot.mapText
+            )
+              continue;
+            compilation.updateAsset(name, script.source, { minimized: true });
+          }
+        },
+      );
       compilation.hooks.processAssets.tap(
         { name: PLUGIN_NAME, stage: Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE },
         () => {
@@ -176,6 +211,8 @@ export class PreserveTaroSourceMapOffsets {
               snapshots.set(name, {
                 code: source.source().toString(),
                 map: parseSourceMap(map.source.source().toString()),
+                mapText: map.source.source().toString(),
+                minimized: compilation.getAsset(name)?.info?.minimized === true,
               });
             } catch (cause) {
               this.handleFailure(compilation, name, cause);
