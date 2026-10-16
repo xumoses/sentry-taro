@@ -5,6 +5,10 @@
 - 新增与官方 10.76.2 同名的 `captureConsoleIntegration`（core 重导出）和 `httpClientIntegration`，均默认不启用；宿主可替代自行包装的 `console.error` 与 HTTP 5xx 上报。
 - `httpClientIntegration` 复用 `NetworkBreadcrumbs` 对平台请求 API 的包装，事件结构与官方一致；URL 去除账号密码、query 和 fragment，请求头与 cookie 仅在 `sendDefaultPii` / `dataCollection` 允许时附带。差异见 [API 指南](./docs/guides/api.md#错误采集集成)。
 - 离线缓存写入失败的提示改为绕过 console 包装输出，避免被 `captureConsoleIntegration` 再次上报。
+- 低层录制器改用正式名称：`startTaroReplayRecorder`、`TARO_REPLAY_CAPTURE_MARKER`、`TaroReplayRecorder`，类型统一为 `StartTaroReplayRecorderOptions`、`TaroReplayCapture`、`TaroReplayEvent`、`TaroReplayMetadata`。`startTaroDomReplayPoc`、`TARO_DOM_REPLAY_POC_MARKER` 及 `TaroReplayPoc*`、`StartTaroDomReplayPocOptions`、`TaroDomReplayPocController` 保留为弃用别名，下一个 beta 移除；录制数据中的 marker 值不变。
+- 修复 Replay 缓冲在嵌套文档节点上折叠滚动位置的问题，与录制器的检查点处理保持一致。
+- `replayIntegration()` 不再在内部组装 SDK 对象注入协调器；`sdk` 选项仍可选，行为不变。
+- 内部结构调整：源码合并为 `src/{sdk,replay,taro-plugin}` 单一目录树，移除内部工作区包；公共入口和产物路径不变。
 
 ## 0.1.0-beta.5 — 2026-10-16
 
