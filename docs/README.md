@@ -26,6 +26,7 @@
 
 ## 架构与设计决策
 
+- [Agent 工作约定](../AGENTS.md)：长期约束摘要及修改流程，由 `test/invariants/` 固定为可执行检查。
 - [领域术语](../CONTEXT.md)
 - [设计原则](./design-principles.md)：Sentry 语义、平台边界、默认策略、产物格式及工具链政策。
 - [统一发布决策](./adr/0001-single-package-release.md)

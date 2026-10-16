@@ -52,7 +52,7 @@ vp install --frozen-lockfile
 
 ## 检查改动
 
-日常开发可以按改动范围运行 `vp run test:sdk` 或 `vp run test:replay`；发布脚本的测试使用 `vp run test:release`。`vp run format` 会格式化文件，提交前请检查 diff，避免带入无关格式改动。
+日常开发可以按改动范围运行 `vp run test:sdk` 或 `vp run test:replay`；`vp run test:invariants` 检查 [AGENTS.md](./AGENTS.md) 列出的长期约束，失败时应先修订对应 ADR，而不是改断言；发布脚本的测试使用 `vp run test:release`。`vp run format` 会格式化文件，提交前请检查 diff，避免带入无关格式改动。
 
 下面的命令与 [CI 工作流](./.github/workflows/ci.yml) 的检查项一致：
 

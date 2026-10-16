@@ -20,6 +20,7 @@ export default defineConfig({
       'test/sdk/vitest.config.ts',
       'test/replay/vitest.config.ts',
       'test/taro-plugin/vitest.config.ts',
+      'test/invariants/vitest.config.ts',
     ],
     coverage: {
       provider: 'v8',

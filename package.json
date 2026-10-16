@@ -86,7 +86,8 @@
     "release:check": "node scripts/release-check.cjs",
     "prepack": "vp run build && vp run verify:package",
     "prepublishOnly": "vp check && vp run typecheck && vp test run && vp run test:release && vp run release:check",
-    "test:taro-plugin": "vp test run --project taro-plugin"
+    "test:taro-plugin": "vp test run --project taro-plugin",
+    "test:invariants": "vp test run --project invariants"
   },
   "dependencies": {
     "@sentry/core": "10.76.2",
