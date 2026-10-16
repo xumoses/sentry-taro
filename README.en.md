@@ -115,6 +115,16 @@ Use the optional [`taro-plugin`](./docs/guides/taro-plugin.md) build entry for R
 
 See the [Replay guide](./docs/guides/replay.md) for setup, privacy and troubleshooting.
 
+## AI-assisted setup
+
+This repository ships an agent skill for Claude Code, Cursor and other skill-aware tools. It covers new installs, Replay, the build plugin, and migration from `@xumoses/sentry-miniapp` / `@xumoses/sentry-miniapp-replay-taro`:
+
+```sh
+npx skills add https://github.com/xumoses/sentry-taro --skill sentry-taro
+```
+
+Then ask your agent to "set up Sentry for this Taro app" or "migrate from sentry-miniapp". The skill source is in [`skills/sentry-taro`](./skills/sentry-taro/SKILL.md).
+
 ## Documentation
 
 The detailed guides and contribution instructions are currently in Chinese.

@@ -105,6 +105,16 @@ installTaroReplayPageLifecycle({ bridge: replay.bridge });
 
 默认遮罩用于保护页面内容；你主动附加的异常文本和上下文仍需自行检查。回放的样式和图片可由 [Taro 构建插件](./docs/guides/taro-plugin.md) 自动准备，完整配置、隐私选项及排查方法见 [Replay 指南](./docs/guides/replay.md)。
 
+## AI 辅助接入
+
+仓库提供适用于 Claude Code、Cursor 等工具的 Agent Skill（英文），覆盖新项目接入、Replay、构建插件，以及从 `@xumoses/sentry-miniapp` / `@xumoses/sentry-miniapp-replay-taro` 迁移：
+
+```sh
+npx skills add https://github.com/xumoses/sentry-taro --skill sentry-taro
+```
+
+安装后让 Agent“为这个 Taro 应用接入 Sentry”或“从 sentry-miniapp 迁移”即可。Skill 源文件见 [`skills/sentry-taro`](./skills/sentry-taro/SKILL.md)。
+
 ## 使用文档
 
 | 你想做什么                            | 文档                                                                  |
