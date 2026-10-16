@@ -67,7 +67,7 @@ vp run verify:bundles
 vp run verify:consumer --online
 ```
 
-`vp check` 执行格式和 lint 检查，类型检查单独运行。纯文档修改可以聚焦格式、链接和示例准确性；涉及代码、依赖或发布产物的改动应通过完整检查。
+`vp check` 执行格式和 lint 检查，类型检查单独运行。项目网站位于 [`website/`](./website/)，使用 `vp run website:dev` 本地预览，`vp run website:build` 构建。纯文档修改可以聚焦格式、链接和示例准确性；涉及代码、依赖或发布产物的改动应通过完整检查。
 
 ### 构建与 tarball 验证
 

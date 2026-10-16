@@ -10,6 +10,7 @@ export default defineConfig({
       '**/dist/**',
       '**/node_modules/**',
       '.artifacts/**',
+      'website/.vitepress/cache/**',
       'pnpm-lock.yaml',
       'THIRD_PARTY_NOTICES',
     ],
