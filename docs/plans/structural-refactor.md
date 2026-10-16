@@ -40,7 +40,7 @@
 1. **其他小程序平台和小游戏冻结保留。** 不删除相关代码，也不再开发新功能或做验收；重构期间保持其编译和现有测试通过，文档标为“保留、未验收”，以便将来恢复。
 2. **POC 名称有实际消费方，不直接删除。** 首个验证项目在测试和本地工具中使用 `startTaroDomReplayPoc` 和 `TARO_DOM_REPLAY_POC` 标记：登录密码遮罩测试直接调用低层 recorder，构建检查脚本用该标记判断入口是否包含 recorder。这些都不在运行时路径上。第一阶段改为正式名称，旧名称保留为弃用别名一个 beta，待验证项目迁移后再删除。
 3. **非官方 API 按官方对应处理。** 首个验证项目未使用 `setConsent`/`requireConsent`、`enableOfflineCache`、`showReportDialog` 和 `wrap`。`showReportDialog`（已是只打印警告的空实现）和 `wrap`（固定版 browser 已不公开导出）在第三阶段删除；离线缓存改为通过 `transport` 选项使用官方 `makeOfflineTransport`，`enableOfflineCache` 等开关删除。consent 官方没有对应，保留为文档标明的小程序扩展，行为不变，可用于在用户同意隐私协议前暂缓上报。
-4. **`privacy.*` 兼容配置先弃用、再删除。** 首个验证项目当前使用 `privacy.maskAllText`、`privacy.maskInputValues`、`privacy.allowUser`。第三阶段将 `privacy.*` 和 `maskInputValues` 标记为弃用并在运行时提示一次，迁移说明给出顶层 `maskAllText`、`maskAllInputs` 写法；`allowUser` 随“Replay 从 scope 带用户”一并弃用。下一个 beta 删除。与 POC 名称的别名策略一致。
+4. **`privacy.*` 兼容配置直接删除。** 首个验证项目当前使用 `privacy.maskAllText`、`privacy.maskInputValues`、`privacy.allowUser`。第三阶段删除 `privacy.*` 和 `maskInputValues`，不经弃用期；迁移说明给出顶层 `maskAllText`、`maskAllInputs` 写法，`allowUser` 随“Replay 从 scope 带用户”一并删除。验证项目在升级到该 beta 时同步修改配置。
 
 ## 分阶段计划
 
@@ -70,7 +70,7 @@
 - 集成全部改为函数式 `xxxIntegration()`；`Integrations` 命名空间和 `enableXxx` 开关先标记弃用，迁移说明给出对应的 `integrations` 写法。
 - 帧路径处理改用 core 的 `rewriteFramesIntegration`，默认路径与 taro-plugin 上传的 sourcemap 一致；移除非官方的 `enableSourceMap`。Debug ID 方案单独评估，需先在电脑微信验证。
 - Replay 事件按官方方式从 scope 带用户信息，弃用 `getMetadata` 和 `privacy.allowUser`；对照官方 `stop()`/`start()` 核对 bridge 的 `reset` 语义。
-- 离线缓存改为通过 `transport` 选项使用官方 `makeOfflineTransport`；删除 `showReportDialog` 和 `wrap`；`privacy.*`、`maskInputValues` 标记弃用。见范围决定 3、4。
+- 离线缓存改为通过 `transport` 选项使用官方 `makeOfflineTransport`；删除 `showReportDialog` 和 `wrap`；删除 `privacy.*`、`maskInputValues`。见范围决定 3、4。
 - 随本阶段 beta 发布 `captureConsoleIntegration` 和 `httpClientIntegration`，并在电脑微信验收。
 - 每项对齐都以 10.76.2 官方源码为依据，在[运行时迁移说明](../migrations/phase-two-runtime.md)或新的迁移文档中写明差异和替代写法。
 
