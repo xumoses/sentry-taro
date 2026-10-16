@@ -44,8 +44,11 @@ vp install --frozen-lockfile
 | [`scripts/`](./scripts/)                         | 产物校验、隔离消费、版本管理与发布脚本       |
 | [`examples/taro-react/`](./examples/taro-react/) | 可合入现有 Taro 工程的接入片段               |
 | [`docs/`](./docs/)                               | 用户指南、设计决策和实施记录                 |
+| [`skills/sentry-taro/`](./skills/sentry-taro/)   | 面向使用者的英文 Agent Skill，不随 npm 发布  |
 
 仓库只发布根包 `@xumoses/sentry-taro`，源码集中在 `src/`，没有内部工作区包。修改公共入口或打包配置时，需要同时验证声明文件、ESM/CJS 入口和独立 Worker。
+
+`skills/sentry-taro/` 中的 Agent Skill 与 README、`docs/guides/` 描述同一套公共行为。修改导入入口、配置项、默认值、Replay 控制语义、构建插件选项或迁移步骤时，同步更新 Skill 对应的 `references/*.md`，保持英文，并确认示例与源码一致。
 
 ## 检查改动
 

@@ -10,10 +10,11 @@
 - [原生与 Taro 混合应用](./guides/hybrid-apps.md)：复用宿主 SDK，通过 bridge 接入 Taro 页面。
 - [API 与运行行为](./guides/api.md)：公共入口、Replay 控制、发送时机与功能边界。
 - [Taro React 示例](../examples/taro-react/README.md)：使用合成数据和内存 transport 的接入片段。
+- [Agent Skill](../skills/sentry-taro/SKILL.md)（英文）：供 Claude Code、Cursor 等工具自动完成接入、Replay、构建插件配置和旧包迁移。
 
 ## 升级与迁移
 
-- [旧包迁移](./migrations/legacy-packages.md)：从独立 SDK 和 Replay 包迁移到统一包。
+- [旧包迁移](./migrations/legacy-packages.md)：从独立 SDK 和 Replay 包迁移到统一包；也可使用 [Agent Skill 迁移说明](../skills/sentry-taro/references/migration.md)（英文）由 Agent 辅助完成。
 - [运行时迁移说明](./migrations/phase-two-runtime.md)：10.76.2 API、Replay 控制和默认行为变化、功能支持边界。
 - [变更记录](../CHANGELOG.md)：各版本的公开变化说明。
 

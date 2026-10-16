@@ -2,6 +2,8 @@
 
 `@xumoses/sentry-taro` 将错误监控 SDK 与 Taro Replay 放入同一个包。新项目直接从[快速开始](../../README.md#快速开始)接入；本文面向使用以下旧包的应用。
 
+使用 Claude Code、Cursor 等工具时，可以安装仓库的 [Agent Skill](../../README.md#ai-辅助接入) 并让 Agent 按[英文迁移清单](../../skills/sentry-taro/references/migration.md)完成检索、替换和检查；迁移结果仍需按本文最后一节验证。
+
 ## 替换依赖与导入
 
 | 原导入                                                | 新导入                                 |

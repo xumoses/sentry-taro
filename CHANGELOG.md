@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- 新增英文 Agent Skill [`skills/sentry-taro`](./skills/sentry-taro/SKILL.md)，覆盖新项目接入、Replay、Taro 构建插件，以及从 `@xumoses/sentry-miniapp` / `@xumoses/sentry-miniapp-replay-taro` 迁移；可通过 `npx skills add https://github.com/xumoses/sentry-taro --skill sentry-taro` 安装。Skill 不随 npm 包发布，运行时行为不变。
+
 ## 0.1.0-beta.6 — 2026-10-16
 
 - 新增与官方 10.76.2 同名的 `captureConsoleIntegration`（core 重导出）和 `httpClientIntegration`，均默认不启用；宿主可替代自行包装的 `console.error` 与 HTTP 5xx 上报。
