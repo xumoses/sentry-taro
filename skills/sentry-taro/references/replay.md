@@ -74,7 +74,7 @@ Both default to off when omitted. `beforeErrorSampling(event)` returning `false`
 
 ## 4. Privacy
 
-Defaults: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`. Top-level options override legacy `privacy.*`. Password inputs are always masked.
+Defaults: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`. Always use these top-level options; the legacy `privacy.*` object (including `privacy.maskInputValues` and `privacy.allowUser`) is scheduled for removal without a deprecation period. Password inputs are always masked.
 
 Local markers (class or `data-` attribute; they apply to descendants; mask beats unmask):
 

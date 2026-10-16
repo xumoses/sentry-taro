@@ -162,8 +162,13 @@ await uploadSourceMaps({
 缺失真实 JS 的 `app-service.js.map` 和 `workers.js.map` 会配一个仅含对应
 sourceMappingURL 的文件；已有真实 JS 保持原样。
 缺少主包、有效映射或完整 JS/map 配对会失败，不回退上传本地项目目录。
-上传固定使用 `rewrite: false`、`validate: true`、`dedupe: true`；默认 URL 前缀
-`https://usr` 与 SDK 微信栈帧规范化相匹配。完成或失败后清理临时目录，不修改输入。
+上传固定使用 `rewrite: false`、`validate: true`、`dedupe: true`，默认 URL 前缀为
+`https://usr`。完成或失败后清理临时目录，不修改输入。
+
+注意：`0.1.0-beta.6` 中 SDK 默认的栈帧改写会把路径写成 `app:///…`，与默认上传前缀
+`https://usr/…` 不一致。需要让两者一致，例如在 `init` 中设置 `enableSourceMap: false`，并加入
+`new Sentry.Integrations.RewriteFrames({ prefix: 'https://usr/' })`；修改后用真实事件确认业务帧能还原到源码。
+SDK 默认值与上传前缀的统一列在[结构重构计划](../plans/structural-refactor.md)第三阶段。
 
 ## Worker 与原生 npm 打包
 

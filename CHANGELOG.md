@@ -3,6 +3,8 @@
 ## Unreleased
 
 - 新增英文 Agent Skill [`skills/sentry-taro`](./skills/sentry-taro/SKILL.md)，覆盖新项目接入、Replay、Taro 构建插件，以及从 `@xumoses/sentry-miniapp` / `@xumoses/sentry-miniapp-replay-taro` 迁移；可通过 `npx skills add https://github.com/xumoses/sentry-taro --skill sentry-taro` 安装。Skill 不随 npm 包发布，运行时行为不变。
+- 文档更正：`0.1.0-beta.6` 中 SDK 默认栈帧路径（`app:///`）与构建插件默认上传前缀（`https://usr`）不一致，此前文档误写为相匹配；[构建插件指南](./docs/guides/taro-plugin.md)和 Skill 已给出对齐方法。
+- Skill 与指南注明 `privacy.*` 将被直接删除，并提示 npm `latest` 仍指向 `0.1.0-beta.1`，安装时需使用 `@beta` 或固定版本。
 
 ## 0.1.0-beta.6 — 2026-10-16
 

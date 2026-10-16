@@ -61,7 +61,19 @@ const { readSentryBuildMetadata, uploadSourceMaps } = require('@xumoses/sentry-t
 })();
 ```
 
-- `wechat.sourceMapPath` accepts the WeChat ZIP or an extracted directory preserving its structure. `__APP__` is flattened, `__FULL__` excluded, subpackages kept. Default URL prefix `https://usr` matches the SDK's WeChat frame normalization — don't change it unless the user changed stack normalization.
+- `wechat.sourceMapPath` accepts the WeChat ZIP or an extracted directory preserving its structure. `__APP__` is flattened, `__FULL__` excluded, subpackages kept.
+- **Frame paths must match the upload prefix.** Uploads default to the URL prefix `https://usr` (artifacts named `https://usr/app-service.js`), but in `0.1.0-beta.6` the SDK's default frame rewriting produces `app:///app-service.js`. These names differ, so tell the user to make them match, for example by normalizing frames to the upload prefix in `init`:
+
+  ```ts
+  Sentry.init({
+    // ...
+    enableSourceMap: false, // drop the default app:/// rewrite
+    integrations: [new Sentry.Integrations.RewriteFrames({ prefix: 'https://usr/' })],
+  });
+  ```
+
+  Verify on a real event that business frames resolve to source before relying on it.
+
 - Read metadata from the exact output that was uploaded to WeChat; never regenerate identity before upload.
 - Credentials must come from CI secrets. Never write the auth token into files.
 - Not implemented (unknown fields error): `rewriteSources`, `resolveSourceMap`, `filesToDeleteAfterUpload`, `setCommits`, `deploy`, `telemetry`, Debug ID upload.

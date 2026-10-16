@@ -92,7 +92,7 @@ Sentry.init({
 - Drop the `...Sentry.getDefaultIntegrations()` spread: an `integrations` **array now merges with defaults**. `getDefaultIntegrations(options)` now depends on options, so calling it without the real options can produce a different default set. Use the callback form `integrations: (defaults) => [...]` to filter.
 - If the old code passed an `integrations` array deliberately to **replace** defaults, that no longer happens — use the callback form or `defaultIntegrations: false` to keep that behavior, and confirm with the user.
 - Preserve every other existing option (DSN, release, environment, consent, offline cache, filters, network detail options, `beforeSend`, …); their names are unchanged.
-- Prefer the official top-level privacy options `maskAllText` / `maskAllInputs` / `blockAllMedia` over legacy `privacy.*` (including `privacy.maskInputValues`). The legacy form still works, but top-level values take precedence — make sure the two don't disagree.
+- Move privacy settings to the official top-level options `maskAllText` / `maskAllInputs` / `blockAllMedia` now. Legacy `privacy.*` (including `privacy.maskInputValues` and `privacy.allowUser`) still works in `0.1.0-beta.6`, with top-level values taking precedence, but it is scheduled for removal without a deprecation period.
 
 Lifecycle/page code keeps the same API: `installTaroReplayPageLifecycle({ bridge: replay.bridge, getReplayStyles, getReplayImageSources })`, `useTaroReplayRoot`, `useTaroReplaySnapshot`. Only the import path changes. Still one lifecycle owner per page.
 
