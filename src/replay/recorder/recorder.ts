@@ -12,6 +12,54 @@ import { normalizeReplayRpx, sanitizeReplayStyle, TARO_REPLAY_BASE_STYLESHEET } 
 import { boundReplayEvents } from './buffer';
 import { utf8ByteLength } from '../../sdk/utf8';
 import { createCheckpointRebaser } from './rebase';
+import {
+  TAG_MAP,
+  SELF_CLOSING_TAGS,
+  URL_ATTRIBUTE_NAMES,
+  INPUT_MASK_ATTRIBUTE_NAMES,
+  sanitizeUrl,
+  maskValue,
+  hasMaskingFlag,
+  privacyMarker,
+  sanitizeAttributeValue,
+} from './attributes';
+import {
+  MEDIA_NODE_NAMES,
+  MAX_STATIC_IMAGE_SOURCE_BYTES,
+  MAX_CANVAS_FRAME_BYTES,
+  CANVAS_FRAME_INTERVAL_MS,
+  isStaticImageDataUri,
+  isCanvasFrame,
+} from './media';
+import {
+  scrollPositions,
+  pickerValues,
+  swiperValues,
+  pageScrollPositions,
+  inputValues,
+  sensitiveInputs,
+  isRootPortal,
+  portalEnabled,
+  isPickerView,
+  isSwiper,
+  swiperItems,
+  swiperIndex,
+  currentSwiperIndex,
+  pickerColumns,
+  pickerRows,
+  normalisePickerValues,
+  getPickerValues,
+  hasNodeAncestor,
+  containsRootPortal,
+  isScrollView,
+  scrollCoordinate,
+  getScrollPosition,
+  toArray,
+  normaliseNodeName,
+  isInputNode,
+  rawAttributeValue,
+  type TaroReplayScrollEventLike,
+} from './nodes';
 import { createNetworkHeaderPolicy, readNetworkDataField } from '../../sdk/network-details';
 import type {
   StartTaroReplayRecorderOptions,
@@ -36,6 +84,7 @@ export type {
   TaroReplayPocMetadata,
   TaroReplayRecorder,
 } from '../types';
+export type { TaroReplayScrollEventLike } from './nodes';
 
 /** Capture marker. The value keeps its historical spelling because tools match it in data. */
 export const TARO_REPLAY_CAPTURE_MARKER = 'TARO_DOM_REPLAY_POC';
@@ -65,13 +114,6 @@ const enum RrwebIncrementalSource {
   TouchMove = 6,
 }
 
-export interface TaroReplayScrollEventLike {
-  detail?: { scrollTop?: unknown; scrollLeft?: unknown; value?: unknown; current?: unknown };
-  target?: { nodeType?: number; sid?: string; id?: string; dataset?: { sid?: string } };
-  touches?: Array<{ clientX?: number; clientY?: number; pageX?: number; pageY?: number }>;
-  changedTouches?: Array<{ clientX?: number; clientY?: number; pageX?: number; pageY?: number }>;
-}
-
 interface SerializedNodeBase {
   id: number;
   type: RrwebNodeType;
@@ -96,281 +138,7 @@ interface SerializedTextNode extends SerializedNodeBase {
 
 type SerializedNode = SerializedDocumentNode | SerializedElementNode | SerializedTextNode;
 
-const TAG_MAP: Record<string, string> = {
-  root: 'div',
-  view: 'div',
-  text: 'span',
-  image: 'img',
-  input: 'input',
-  textarea: 'textarea',
-  button: 'button',
-  form: 'form',
-  label: 'label',
-  scrollview: 'div',
-  'scroll-view': 'div',
-  swiper: 'div',
-  'swiper-item': 'div',
-  'root-portal': 'div',
-  'picker-view': 'div',
-  'picker-view-column': 'div',
-};
-
-const SELF_CLOSING_TAGS = new Set(['img', 'input']);
-const MEDIA_NODE_NAMES = new Set([
-  'image',
-  'img',
-  'video',
-  'audio',
-  'live-player',
-  'live-pusher',
-  'camera',
-  'canvas',
-  'web-view',
-]);
 const SYNTHETIC_NODE_MAX_ID = 9;
-const MAX_STATIC_IMAGE_SOURCE_BYTES = 128 * 1024;
-const MAX_CANVAS_FRAME_BYTES = 128 * 1024;
-const CANVAS_FRAME_INTERVAL_MS = 1000;
-const STATIC_IMAGE_DATA_URI =
-  /^data:image\/(?:png|jpeg|gif|webp|avif);base64,[A-Za-z0-9+/]+={0,2}$/;
-const STATIC_SVG_BASE64_DATA_URI =
-  /^data:image\/svg\+xml(?:;charset=utf-8)?;base64,([A-Za-z0-9+/]+={0,2})$/;
-
-const STATIC_SVG_PERCENT_DATA_URI =
-  /^data:image\/svg\+xml(?:;charset=utf-8)?,([A-Za-z0-9\-._~!$&'()*+,;=:@/?%]+)$/;
-
-// This validates encoding only. The caller must audit the static image contents.
-function isStaticImageDataUri(value: string): boolean {
-  if (STATIC_IMAGE_DATA_URI.test(value)) return true;
-  const base64Svg = STATIC_SVG_BASE64_DATA_URI.exec(value);
-  if (base64Svg) return base64Svg[1]!.length % 4 === 0;
-  const svg = STATIC_SVG_PERCENT_DATA_URI.exec(value);
-  if (!svg) return false;
-  try {
-    decodeURIComponent(svg[1]!);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Validate the encoding and raster signature without browser/Node decoding APIs. */
-function isCanvasFrame(value: unknown): value is string {
-  if (typeof value !== 'string' || value.length > MAX_CANVAS_FRAME_BYTES) return false;
-  const match = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
-  if (!match) return false;
-  const encoded = match[2]!;
-  if (encoded.length % 4) return false;
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  const padding = encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0;
-  if (
-    (padding === 2 && alphabet.indexOf(encoded[encoded.length - 3]!) % 16) ||
-    (padding === 1 && alphabet.indexOf(encoded[encoded.length - 2]!) % 4)
-  )
-    return false;
-  const length = (encoded.length / 4) * 3 - padding;
-  const byte = (index: number): number => {
-    const offset = Math.floor(index / 3) * 4;
-    const shift = index % 3;
-    const a = alphabet.indexOf(encoded[offset + shift]!);
-    const b = alphabet.indexOf(encoded[offset + shift + 1]!);
-    return shift === 0
-      ? (a << 2) | (b >> 4)
-      : shift === 1
-        ? ((a & 15) << 4) | (b >> 2)
-        : ((a & 3) << 6) | b;
-  };
-  const matches = (offset: number, bytes: number[]): boolean =>
-    bytes.every((value, index) => byte(offset + index) === value);
-  if (match[1] === 'png')
-    return (
-      length >= 45 &&
-      matches(0, [137, 80, 78, 71, 13, 10, 26, 10]) &&
-      matches(8, [0, 0, 0, 13, 73, 72, 68, 82]) &&
-      matches(length - 12, [0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130])
-    );
-  if (match[1] === 'jpeg')
-    return length >= 4 && matches(0, [255, 216, 255]) && matches(length - 2, [255, 217]);
-  return (
-    length >= 20 &&
-    matches(0, [82, 73, 70, 70]) &&
-    matches(8, [87, 69, 66, 80]) &&
-    byte(4) + byte(5) * 256 + byte(6) * 65536 + byte(7) * 16777216 + 8 === length
-  );
-}
-
-const URL_ATTRIBUTE_NAMES = new Set([
-  'action',
-  'formaction',
-  'href',
-  'poster',
-  'src',
-  'xlink:href',
-]);
-const INPUT_MASK_ATTRIBUTE_NAMES = new Set(['password', 'type', 'data-sentry-mask']);
-const SENSITIVE_ATTRIBUTE_NAME =
-  /(?:authorization|cookie|token|password|passwd|secret|api[-_]?key|open[-_]?id|union[-_]?id|phone|email|idcard|user[-_]?id|account)/i;
-
-interface ScrollPosition {
-  x: number;
-  y: number;
-}
-
-// A still-mounted page retains its native offset when the buffer promotes and
-// creates a new recorder. Weak keys release the offset with the virtual node.
-const scrollPositions = new WeakMap<TaroReplayNodeLike, ScrollPosition>();
-const pickerValues = new WeakMap<TaroReplayNodeLike, number[]>();
-const swiperValues = new WeakMap<TaroReplayNodeLike, { value: number; propValue: unknown }>();
-const pageScrollPositions = new WeakMap<TaroReplayNodeLike, ScrollPosition>();
-const inputValues = new WeakMap<TaroReplayNodeLike, { value: unknown; propValue: unknown }>();
-// A mounted input remains sensitive across buffer promotion and page reattachment.
-// Object identity avoids retaining unmounted nodes or inheriting a reused sid.
-const sensitiveInputs = new WeakSet<TaroReplayNodeLike>();
-
-function isRootPortal(node: TaroReplayNodeLike): boolean {
-  return normaliseNodeName(node) === 'root-portal';
-}
-
-function portalEnabled(node: TaroReplayNodeLike): boolean {
-  const value = rawAttributeValue(node, 'enable');
-  return isRootPortal(node) && value !== false && value !== 'false' && value !== 0;
-}
-
-function isPickerView(node: TaroReplayNodeLike): boolean {
-  return normaliseNodeName(node) === 'picker-view';
-}
-
-function isSwiper(node: TaroReplayNodeLike): boolean {
-  return normaliseNodeName(node) === 'swiper';
-}
-
-function swiperItems(node: TaroReplayNodeLike): TaroReplayNodeLike[] {
-  return toArray(node.childNodes).filter((child) => normaliseNodeName(child) === 'swiper-item');
-}
-
-function swiperIndex(node: TaroReplayNodeLike, value: unknown): number {
-  const numeric = Number(value);
-  return Math.min(
-    Math.max(0, swiperItems(node).length - 1),
-    Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0,
-  );
-}
-
-function currentSwiperIndex(node: TaroReplayNodeLike): number {
-  const propValue = rawAttributeValue(node, 'current');
-  const observed = swiperValues.get(node);
-  return swiperIndex(
-    node,
-    observed && observed.propValue === propValue ? observed.value : propValue,
-  );
-}
-
-function pickerColumns(node: TaroReplayNodeLike): TaroReplayNodeLike[] {
-  return toArray(node.childNodes).filter(
-    (child) => normaliseNodeName(child) === 'picker-view-column',
-  );
-}
-
-function pickerRows(node: TaroReplayNodeLike): TaroReplayNodeLike[] {
-  return toArray(node.childNodes).filter((child) => child.nodeType === 1);
-}
-
-function normalisePickerValues(node: TaroReplayNodeLike, value: unknown): number[] {
-  const values = Array.isArray(value) ? value : String(value ?? '').split(',');
-  return pickerColumns(node).map((column, index) => {
-    const numeric = Number(values[index]);
-    const selected = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
-    return Math.min(selected, Math.max(0, pickerRows(column).length - 1));
-  });
-}
-
-function getPickerValues(node: TaroReplayNodeLike): number[] {
-  return normalisePickerValues(
-    node,
-    pickerValues.get(node) ??
-      rawAttributeValue(node, 'value') ??
-      rawAttributeValue(node, 'defaultvalue'),
-  );
-}
-
-function hasNodeAncestor(
-  node: TaroReplayNodeLike,
-  predicate: (node: TaroReplayNodeLike) => boolean,
-): boolean {
-  for (
-    let current: TaroReplayNodeLike | null | undefined = node;
-    current;
-    current = current.parentNode
-  ) {
-    if (predicate(current)) return true;
-  }
-  return false;
-}
-
-function containsRootPortal(node: TaroReplayNodeLike): boolean {
-  return isRootPortal(node) || toArray(node.childNodes).some(containsRootPortal);
-}
-
-function isScrollView(node: TaroReplayNodeLike): boolean {
-  const name = normaliseNodeName(node);
-  return name === 'scroll-view' || name === 'scrollview';
-}
-
-function scrollCoordinate(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
-}
-
-function getScrollPosition(node: TaroReplayNodeLike): ScrollPosition {
-  const remembered = scrollPositions.get(node);
-  if (remembered) return remembered;
-  return {
-    x:
-      scrollCoordinate(rawAttributeValue(node, 'scrollLeft')) ??
-      scrollCoordinate(rawAttributeValue(node, 'scroll-left')) ??
-      0,
-    y:
-      scrollCoordinate(rawAttributeValue(node, 'scrollTop')) ??
-      scrollCoordinate(rawAttributeValue(node, 'scroll-top')) ??
-      0,
-  };
-}
-
-function sanitizeUrl(value: string): string {
-  // Browser URL parsing skips leading C0/space and removes ASCII tabs/newlines.
-  // Use that copy only to detect data URLs; exact image keys and other URLs stay unchanged.
-  let start = 0;
-  while (start < value.length && value.charCodeAt(start) <= 0x20) start++;
-  const dataUrlCandidate = value.slice(start).replace(/[\t\n\r]/g, '');
-  if (/^data:/i.test(dataUrlCandidate)) {
-    const mimeType = dataUrlCandidate.match(/^data:([^;,]+)/i)?.[1] || 'text/plain';
-    return `data:${mimeType}`;
-  }
-
-  if (/^(?:javascript|vbscript|blob):/i.test(dataUrlCandidate)) return '[Filtered]';
-  const withoutQueryOrFragment = (dataUrlCandidate.split(/[?#]/, 1)[0] || '').replace(
-    /^((?:https?|wss?|ftp):)[\\/]*/i,
-    '$1//',
-  );
-  return withoutQueryOrFragment.replace(
-    /^((?:[a-z][a-z0-9+.-]*:)?[\\/]{2})([^\\/]*@)/i,
-    '$1[filtered]:[filtered]@',
-  );
-}
-
-function toArray<T>(value: T[] | ArrayLike<T> | undefined): T[] {
-  return value ? Array.from(value) : [];
-}
-
-function normaliseNodeName(node: TaroReplayNodeLike): string {
-  return (node.nodeName || node.tagName || 'unknown').toLowerCase();
-}
-
-function primitiveAttributeValue(value: unknown): string | number | true | null {
-  if (value === null || value === undefined || value === false) return null;
-  if (value === true) return true;
-  if (typeof value === 'number') return value;
-  return String(value);
-}
 
 function boundedInteger(
   value: number | undefined,
@@ -381,57 +149,6 @@ function boundedInteger(
   return typeof value === 'number' && Number.isFinite(value)
     ? Math.max(minimum, Math.min(maximum, Math.floor(value)))
     : fallback;
-}
-
-function maskValue(value: unknown): string {
-  return String(value ?? '').replace(/\S/gu, '*');
-}
-
-function isInputNode(node: TaroReplayNodeLike): boolean {
-  const nodeName = normaliseNodeName(node);
-  return nodeName === 'input' || nodeName === 'textarea';
-}
-
-function rawAttributeValue(node: TaroReplayNodeLike, name: string): unknown {
-  const attribute = toArray(node.attributes).find(
-    (item) => item && typeof item.name === 'string' && item.name.toLowerCase() === name,
-  );
-  if (attribute) return attribute.value;
-  if (node.hasAttribute && !node.hasAttribute(name)) return undefined;
-  const value = node.getAttribute?.(name);
-  return !node.hasAttribute && value === '' ? undefined : value;
-}
-
-function hasMaskingFlag(node: TaroReplayNodeLike, name: string): boolean {
-  const value = rawAttributeValue(node, name);
-  return value === true || value === 1 || value === '' || value === 'true' || value === '1';
-}
-
-function privacyMarker(node: TaroReplayNodeLike, name: string): boolean {
-  if (hasMaskingFlag(node, `data-sentry-${name}`)) return true;
-  const className = rawAttributeValue(node, 'class') ?? rawAttributeValue(node, 'classname');
-  return typeof className === 'string' && className.split(/\s+/).includes(`sentry-${name}`);
-}
-
-function sanitizeAttributeValue(
-  node: TaroReplayNodeLike,
-  name: string,
-  value: unknown,
-  maskInputValues: boolean,
-): string | number | true | null {
-  let safeValue = value;
-  if (SENSITIVE_ATTRIBUTE_NAME.test(name)) {
-    safeValue = '[Filtered]';
-  } else if (
-    maskInputValues &&
-    isInputNode(node) &&
-    ['value', 'defaultvalue'].includes(name.toLowerCase())
-  ) {
-    safeValue = maskValue(value);
-  } else if (URL_ATTRIBUTE_NAMES.has(name.toLowerCase())) {
-    safeValue = sanitizeUrl(String(value ?? ''));
-  }
-  return primitiveAttributeValue(safeValue);
 }
 
 function cloneCapture(capture: TaroReplayCapture): TaroReplayCapture {
