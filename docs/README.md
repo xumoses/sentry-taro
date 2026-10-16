@@ -31,6 +31,7 @@
 - [官方 API 分期对齐决策](./adr/0002-stage-official-api-alignment.md)
 - [小程序平台适配决策](./adr/0003-mini-program-platform-adaptation.md)
 - [ESM、CJS 与 Worker 产物决策](./adr/0004-esm-cjs-worker-artifacts.md)
+- [分层渐进重构决策](./adr/0005-layered-structural-refactor.md)
 
 ## 实施与验证记录
 
@@ -38,5 +39,6 @@
 
 - [Taro 构建插件迁移](./plans/taro-build-plugin.md)：职责、官方选项对齐和验证范围。
 - [统一包合并方案](./plans/package-merge.md)：范围、API 与工具链分期、发布和验收顺序。
+- [结构重构计划](./plans/structural-refactor.md)：分层收敛、范围裁剪、官方 API 对齐的分期、门槛与待确认项。
 - [第一阶段记录](./implementation/phase-one.md)：原候选包的本地验收与公开回归。
 - [第二阶段记录](./implementation/phase-two.md)：工具链迁移、运行时对齐、发布和设备验证状态。
