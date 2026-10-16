@@ -18,7 +18,7 @@
 | `traceNetworkBody`         | 请求和响应正文采集，默认关闭                   |
 | `enableConsoleBreadcrumbs` | Console 面包屑，默认关闭                       |
 
-默认集成包含全局异常、未处理的 Promise rejection、页面和网络面包屑，以及会话和系统信息。Replay 需另行添加 integration。
+默认集成包含全局异常、未处理的 Promise rejection、页面和网络面包屑，以及会话和系统信息。Replay 需另行添加 integration。默认的 `rewriteFramesIntegration()` 把微信真机栈帧写成与 [taro-plugin 上传](./taro-plugin.md)相同的 `https://usr/…` 名称。
 
 以下代码可在初始化后的页面或业务模块使用：
 

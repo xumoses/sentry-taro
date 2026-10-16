@@ -145,6 +145,11 @@ export { miniappStackParser } from './stacktrace';
 
 export { pageTracingIntegration } from './integrations/pagetracing';
 export {
+  rewriteFramesIntegration,
+  miniappFrameIteratee,
+  type RewriteFramesOptions,
+} from './integrations/rewriteframes';
+export {
   httpClientIntegration,
   type HttpClientOptions,
   type HttpRequestTarget,

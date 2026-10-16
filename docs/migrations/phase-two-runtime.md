@@ -14,6 +14,28 @@
 
 官方依据：[browser SDK](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/browser/src/sdk.ts)、[公开导出](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/browser/src/exports.ts)、[core feedback](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/core/src/feedback.ts)、[core Client](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/core/src/client.ts)。
 
+## 栈帧路径
+
+默认的栈帧改写改为官方 core 的 `rewriteFramesIntegration`，名称仍为 `RewriteFrames`，并以 `Sentry.rewriteFramesIntegration`、`Sentry.Integrations.rewriteFramesIntegration` 导出。选项与官方相同（`prefix`、`root`、`iteratee`），差异只在未传 `iteratee` 时的默认处理：官方默认 iteratee 只处理浏览器 `root` 或服务端绝对路径，对小程序帧不生效，因此默认 iteratee 改为 `miniappFrameIteratee`，`prefix` 默认 `https://usr/` 而非官方的 `app:///`，以与 taro-plugin 上传的微信最终映射同名。
+
+| 栈帧                                                      | `0.1.0-beta.6` 及更早            | 现在                         |
+| --------------------------------------------------------- | -------------------------------- | ---------------------------- |
+| `https://usr/app-service.js`、`appservice/app-service.js` | `app:///app-service.js`          | `https://usr/app-service.js` |
+| `https://usr/<子包根>/app-service.js`                     | `app:///<子包根>/app-service.js` | 不变                         |
+| 开发者工具 `http://127.0.0.1:<端口>/appservice/…`         | `app:///…`                       | 不变                         |
+| `WAService.js` 等基础库帧                                 | `app:///WAService.js`            | 不变                         |
+| 冻结平台 `https://appx/…`、`tt://…`、`swan://…`           | `app:///…`                       | 不变（仍为 `app:///…`）      |
+
+迁移：
+
+- 曾用 `enableSourceMap: false` 加 `new Integrations.RewriteFrames({ prefix: 'https://usr/' })`，或在 `beforeSend` 中自行改写为 `https://usr/` 的接入，可删除这些代码。保留也不会出错：同名集成会替换默认项，`beforeSend` 收到的已是 `https://usr/…`。
+- 自定义 `wechat.urlPrefix` 时，传入 `rewriteFramesIntegration({ prefix: '<相同前缀>' })`。
+- 曾以 `app:///` 名称自行上传映射的，改用 `https://usr` 前缀上传，或传入 `rewriteFramesIntegration({ prefix: 'app:///' })` 保持旧名。
+- `Integrations.RewriteFrames` 类保留原有 `app:///` 行为并标记弃用，后续 beta 移除。
+- `enableSourceMap` 不是官方选项，标记弃用，仍可用，后续 beta 移除。关闭改写改用 `integrations: defaults => defaults.filter(i => i.name !== 'RewriteFrames')`。
+
+本地测试以上传测试夹具核对两侧命名一致；Sentry 中的实际还原仍需用真实事件确认。官方依据：[core rewriteFrames](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/core/src/integrations/rewriteframes.ts)。
+
 ## Replay 控制与平台 bridge
 
 integration 的名称改为官方 `Replay`。`getReplay()` 每次从当前 client 查找它，未注册时返回 `undefined`，没有独立全局缓存。曾通过旧 integration 名称获取实例的代码应改用 `getReplay()`。

@@ -165,10 +165,23 @@ sourceMappingURL 的文件；已有真实 JS 保持原样。
 上传固定使用 `rewrite: false`、`validate: true`、`dedupe: true`，默认 URL 前缀为
 `https://usr`。完成或失败后清理临时目录，不修改输入。
 
-注意：`0.1.0-beta.6` 中 SDK 默认的栈帧改写会把路径写成 `app:///…`，与默认上传前缀
-`https://usr/…` 不一致。需要让两者一致，例如在 `init` 中设置 `enableSourceMap: false`，并加入
-`new Sentry.Integrations.RewriteFrames({ prefix: 'https://usr/' })`；修改后用真实事件确认业务帧能还原到源码。
-SDK 默认值与上传前缀的统一列在[结构重构计划](../plans/structural-refactor.md)第三阶段。
+SDK 默认安装的 `rewriteFramesIntegration()`（官方 core 同名集成，默认 iteratee 针对小程序）
+把真机栈帧 `https://usr/<路径>` 及 `appservice/<路径>` 写成 `https://usr/<路径>`，与上传产物名一致，
+主包为 `https://usr/app-service.js`，子包为 `https://usr/<子包根>/app-service.js`。开发者工具的
+`http://127.0.0.1:<端口>/…` 帧保持原样：其包与最终上传的映射不同，不能套用。自定义
+`wechat.urlPrefix` 时，在 `init` 的 `integrations` 中传入相同前缀：
+
+```ts
+Sentry.init({
+  dsn: 'https://PUBLIC_KEY@YOUR_SENTRY_HOST/PROJECT_ID',
+  integrations: [Sentry.rewriteFramesIntegration({ prefix: 'https://runtime.example.test' })],
+});
+```
+
+`0.1.0-beta.6` 及更早版本默认写成 `app:///…`，与上传前缀不一致；仍在这些版本时，在 `init` 中设置
+`enableSourceMap: false` 并加入 `new Sentry.Integrations.RewriteFrames({ prefix: 'https://usr/' })`。
+升级后删除这两项即可，见[运行时迁移说明](../migrations/phase-two-runtime.md#栈帧路径)。本地测试覆盖两侧命名一致，
+Sentry 中的实际还原仍需用真实事件确认。
 
 ## Worker 与原生 npm 打包
 

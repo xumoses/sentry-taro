@@ -22,7 +22,6 @@ import {
   LinkedErrors,
   HttpContext,
   performanceIntegration,
-  RewriteFrames,
   NetworkBreadcrumbs,
   PageBreadcrumbs,
   PageTracing,
@@ -32,6 +31,7 @@ import {
   MinigameIntegration,
   MinigameFrameRateIntegration,
 } from './integrations/index';
+import { rewriteFramesIntegration } from './integrations/rewriteframes';
 import type { MiniappClientOptions, MiniappOptions, ReportDialogOptions } from './types';
 
 /**
@@ -61,8 +61,9 @@ export function getDefaultIntegrations(options: MiniappOptions = {}): Integratio
       reportInterval: 30000,
     }),
   ];
+  // Deprecated switch; prefer filtering the `RewriteFrames` integration out of the defaults.
   if (options.enableSourceMap !== false) {
-    integrations.push(new RewriteFrames());
+    integrations.push(rewriteFramesIntegration());
   }
 
   const networkOptions: Record<string, any> = {

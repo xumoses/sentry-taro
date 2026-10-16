@@ -62,17 +62,16 @@ const { readSentryBuildMetadata, uploadSourceMaps } = require('@xumoses/sentry-t
 ```
 
 - `wechat.sourceMapPath` accepts the WeChat ZIP or an extracted directory preserving its structure. `__APP__` is flattened, `__FULL__` excluded, subpackages kept.
-- **Frame paths must match the upload prefix.** Uploads default to the URL prefix `https://usr` (artifacts named `https://usr/app-service.js`), but in `0.1.0-beta.6` the SDK's default frame rewriting produces `app:///app-service.js`. These names differ, so tell the user to make them match, for example by normalizing frames to the upload prefix in `init`:
+- **Frame paths must match the upload prefix.** Uploads default to the URL prefix `https://usr` (artifacts named `https://usr/app-service.js`, subpackages `https://usr/<root>/app-service.js`). Versions after `0.1.0-beta.6` install `rewriteFramesIntegration()` by default, which writes device frames (`https://usr/...`, `appservice/...`) to exactly those names and leaves DevTools `http://127.0.0.1:<port>/...` frames unchanged. No extra config is needed with the default prefix. If `wechat.urlPrefix` is customized, pass the same value to the SDK:
 
   ```ts
   Sentry.init({
     // ...
-    enableSourceMap: false, // drop the default app:/// rewrite
-    integrations: [new Sentry.Integrations.RewriteFrames({ prefix: 'https://usr/' })],
+    integrations: [Sentry.rewriteFramesIntegration({ prefix: 'https://runtime.example.test' })],
   });
   ```
 
-  Verify on a real event that business frames resolve to source before relying on it.
+  On `0.1.0-beta.6` or earlier the default writes `app:///...`, which does not match. Either upgrade, or add `enableSourceMap: false` plus `new Sentry.Integrations.RewriteFrames({ prefix: 'https://usr/' })`; remove both after upgrading. When migrating a host that normalized frames itself in `beforeSend` (often with `enableSourceMap: false`), that code can be dropped. Verify on a real event that business frames resolve to source before relying on it.
 
 - Read metadata from the exact output that was uploaded to WeChat; never regenerate identity before upload.
 - Credentials must come from CI secrets. Never write the auth token into files.

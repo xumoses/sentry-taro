@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path';
 import AdmZip from 'adm-zip';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test';
 import { uploadSourceMaps, type SourceMapUploadOptions } from '../../src/taro-plugin/upload';
+import { rewriteFramesIntegration } from '../../src/sdk/integrations/rewriteframes';
 
 const mocked = vi.hoisted(() => ({
   constructor: vi.fn(),
@@ -575,5 +576,70 @@ describe('final WeChat source-map upload', () => {
     expect(mocked.upload).not.toHaveBeenCalled();
     expect(snapshot(input)).toEqual(before);
     expect(stagingDirectories()).toEqual(stagingBefore);
+  });
+});
+
+describe('SDK default frame names agree with uploaded artifact names', () => {
+  async function artifactNames(urlPrefix?: string): Promise<string[]> {
+    const { input } = fixture({
+      '__APP__/app-service.js.map': MAP,
+      '__APP__/app-service.js': REAL_JS,
+      'packageA/app-service.js.map': MAP,
+    });
+    let names: string[] = [];
+    mocked.upload.mockImplementation(async (_release, settings) => {
+      // sentry-cli joins urlPrefix and the path relative to `include` with one slash.
+      const prefix = settings.urlPrefix.replace(/\/+$/, '');
+      names = Object.keys(snapshot(settings.include[0]))
+        .filter((path) => path.endsWith('.js'))
+        .map((path) => `${prefix}/${path}`);
+      return [];
+    });
+    const settings = options(input);
+    if (urlPrefix) settings.wechat.urlPrefix = urlPrefix;
+    await uploadSourceMaps(settings);
+    return names.sort();
+  }
+
+  function frameNames(filenames: string[], prefix?: string): string[] {
+    const integration = rewriteFramesIntegration(prefix ? { prefix } : {});
+    const processed = integration.processEvent!(
+      {
+        exception: {
+          values: [{ stacktrace: { frames: filenames.map((filename) => ({ filename })) } }],
+        },
+      },
+      {},
+      undefined as never,
+    ) as { exception: { values: [{ stacktrace: { frames: { filename: string }[] } }] } };
+    return processed.exception.values[0].stacktrace.frames.map((frame) => frame.filename).sort();
+  }
+
+  test('device and appservice frames for main and subpackages hit the default upload names', async () => {
+    const uploaded = await artifactNames();
+    expect(uploaded).toEqual(['https://usr/app-service.js', 'https://usr/packageA/app-service.js']);
+    expect(
+      frameNames(['https://usr/app-service.js', 'https://usr/packageA/app-service.js']),
+    ).toEqual(uploaded);
+    expect(frameNames(['appservice/app-service.js', 'appservice/packageA/app-service.js'])).toEqual(
+      uploaded,
+    );
+  });
+
+  test('a custom urlPrefix matches when the SDK uses the same prefix', async () => {
+    const uploaded = await artifactNames('https://runtime.example.test');
+    expect(
+      frameNames(
+        ['https://usr/app-service.js', 'appservice/packageA/app-service.js'],
+        'https://runtime.example.test',
+      ),
+    ).toEqual(uploaded);
+  });
+
+  test('DevTools frames are not renamed onto final upload artifacts', async () => {
+    const uploaded = await artifactNames();
+    const devtools = 'http://127.0.0.1:47848/appservice/app-service.js';
+    expect(frameNames([devtools])).toEqual([devtools]);
+    expect(uploaded).not.toContain(devtools);
   });
 });
