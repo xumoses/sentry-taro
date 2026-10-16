@@ -1,4 +1,4 @@
-/** Pure rrweb checkpoint folding; shared algorithm in the recorder and adapter. */
+/** Pure rrweb checkpoint folding shared by the recorder and the Replay buffer. */
 interface ReplayEventLike {
   type: number;
   timestamp: number;

@@ -1,4 +1,4 @@
-import { createCheckpointRebaser } from './rebase';
+import { createCheckpointRebaser } from '../../../sdk/src/rebase';
 import type { TaroReplayCapture, TaroReplayEvent } from '../types';
 import { utf8ByteLength } from '../envelope';
 

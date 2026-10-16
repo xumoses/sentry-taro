@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vite-plus/test';
 import { boundReplayEvents } from '../src/coordinator/buffer';
+import { createCheckpointRebaser } from '../../sdk/src/rebase';
 import { utf8ByteLength } from '../src/envelope';
 import type { TaroReplayEvent } from '../src/types';
 
@@ -100,5 +101,31 @@ describe('Replay checkpoint rebasing', () => {
     ).toBeLessThanOrEqual(byteLimit);
     expect(boundReplayEvents(events, { ...bounds, maxBytes: byteLimit - 1 })).toEqual([]);
     expect(boundReplayEvents(events, { ...bounds, maxEvents: 1 })).toEqual([]);
+  });
+
+  test('folds scroll into the root offset and element attributes, never into document nodes', () => {
+    const element = node(3);
+    const nested = { id: 4, type: 0, childNodes: [] };
+    const checkpoint: TaroReplayEvent = {
+      type: 2,
+      timestamp: 1000,
+      data: { node: { id: 1, type: 0, childNodes: [element, nested] } },
+    };
+    const rebaser = createCheckpointRebaser(checkpoint);
+    const scroll = (id: number, timestamp: number): TaroReplayEvent => ({
+      type: 3,
+      timestamp,
+      data: { source: 3, id, x: 5, y: 40 },
+    });
+    rebaser.apply(scroll(1, 2000));
+    rebaser.apply(scroll(3, 3000));
+    rebaser.apply(scroll(4, 4000));
+    const result = rebaser.getSnapshot();
+    const root = result.data['node'] as { childNodes: Record<string, unknown>[] };
+    expect(result.data['initialOffset']).toEqual({ left: 5, top: 40 });
+    expect(root.childNodes[0]?.['attributes']).toEqual({ rr_scrollLeft: 5, rr_scrollTop: 40 });
+    expect(root.childNodes[1]).toEqual(nested);
+    expect(result.timestamp).toBe(3000);
+    expect(checkpoint.data['initialOffset']).toBeUndefined();
   });
 });
