@@ -3,7 +3,8 @@ import {
   type ReplayCompressionOptions,
   type ReplayCompressionSnapshot,
 } from '../compression';
-import { sendReplayCapture, utf8ByteLength, type ReplayEnvelopeOptions } from '../envelope';
+import { utf8ByteLength } from '../../../sdk/src/utf8';
+import { sendReplayCapture, type ReplayEnvelopeOptions } from '../envelope';
 import { finiteInteger } from './limits';
 import type { SentryReplayClient, TaroReplayCapture } from '../types';
 

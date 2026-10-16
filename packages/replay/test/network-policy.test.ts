@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vite-plus/test';
-import { createNetworkHeaderPolicy, snapshotNetworkOptions } from '../src/network-details';
+import { createNetworkHeaderPolicy, snapshotNetworkOptions } from '../../sdk/src/network-details';
 import { sanitizeBreadcrumb, sanitizeRecord } from '../src/privacy';
 
 const policy = (extra: Parameters<typeof createNetworkHeaderPolicy>[0] = {}) =>

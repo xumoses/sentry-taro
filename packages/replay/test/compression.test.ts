@@ -1,4 +1,4 @@
-import { encodeUtf8 } from '../src/worker/utf8';
+import { encodeUtf8 } from '../../sdk/src/utf8';
 import { inflateSync } from 'node:zlib';
 import { strToU8, zlibSync } from 'fflate';
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test';

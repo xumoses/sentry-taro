@@ -1,5 +1,5 @@
 import { withNetworkOptionsSnapshot } from '../network-config';
-import { snapshotNetworkOptions } from '../network-details';
+import { snapshotNetworkOptions } from '../../../sdk/src/network-details';
 import type { Integration } from '@sentry/core';
 
 import type { SentryMiniappReplaySdk, SentryReplayClient } from '../types';

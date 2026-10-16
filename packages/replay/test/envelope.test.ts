@@ -6,8 +6,8 @@ import {
   sendReplayCapture,
   serializeDsn,
   serializeReplayRecording,
-  utf8ByteLength,
 } from '../src/envelope';
+import { utf8ByteLength } from '../../sdk/src/utf8';
 import { makeCapture } from './fixtures';
 
 describe('Sentry Replay envelope', () => {

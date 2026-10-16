@@ -1,4 +1,5 @@
-import { utf8ByteLength, type ReplayEnvelopeOptions } from '../envelope';
+import { utf8ByteLength } from '../../../sdk/src/utf8';
+import type { ReplayEnvelopeOptions } from '../envelope';
 import type { TaroReplayCapture } from '../types';
 import type { ReplayDeliveryOptions } from './delivery';
 import { finiteInteger } from './limits';

@@ -1,4 +1,4 @@
-import type { NetworkDetailOptions } from './network-details';
+import type { NetworkDetailOptions } from '../../sdk/src/network-details';
 import type {
   Breadcrumb,
   BreadcrumbHint,

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vite-plus/test';
 import { boundReplayEvents } from '../src/coordinator/buffer';
 import { createCheckpointRebaser } from '../../sdk/src/rebase';
-import { utf8ByteLength } from '../src/envelope';
+import { utf8ByteLength } from '../../sdk/src/utf8';
 import type { TaroReplayEvent } from '../src/types';
 
 const node = (

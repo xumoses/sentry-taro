@@ -1,4 +1,4 @@
-import { snapshotNetworkOptions, type NetworkDetailOptions } from './network-details';
+import { snapshotNetworkOptions, type NetworkDetailOptions } from '../../sdk/src/network-details';
 
 /** Override network accessors without invoking them during a later options spread. */
 export function withNetworkOptionsSnapshot<T extends NetworkDetailOptions>(

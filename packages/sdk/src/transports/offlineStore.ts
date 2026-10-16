@@ -2,6 +2,7 @@ import { consoleSandbox } from '@sentry/core';
 import type { Envelope, OfflineStore, OfflineTransportOptions } from '@sentry/core';
 import { sdk } from '../crossPlatform';
 import { replayIdentity } from './replayIdentity';
+import { utf8ByteLength } from '../utf8';
 
 const DEFAULT_OFFLINE_CACHE_SIZE = 30;
 const DEFAULT_MAX_AGE = 86400000; // 24 小时
@@ -315,26 +316,6 @@ function removeStore(storageKey: string): void {
   } catch (_e) {
     // ignore
   }
-}
-
-/** 估算字符串的 UTF-8 字节数（小程序运行时不保证有 TextEncoder），用于体积上限判断。 */
-function utf8ByteLength(str: string): number {
-  let bytes = 0;
-  for (let i = 0; i < str.length; i++) {
-    const code = str.charCodeAt(i);
-    if (code < 0x80) {
-      bytes += 1;
-    } else if (code < 0x800) {
-      bytes += 2;
-    } else if (code >= 0xd800 && code <= 0xdbff) {
-      // 代理对：一个 4 字节字符，跳过低位代理
-      bytes += 4;
-      i++;
-    } else {
-      bytes += 3;
-    }
-  }
-  return bytes;
 }
 
 function boundedLimit(value: number | undefined, fallback: number): number {

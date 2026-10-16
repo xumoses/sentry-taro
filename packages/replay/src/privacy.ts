@@ -1,4 +1,4 @@
-import type { NetworkHeaderPolicy } from './network-details';
+import type { NetworkHeaderPolicy } from '../../sdk/src/network-details';
 import type { Breadcrumb } from '@sentry/core';
 
 const FILTERED = '[Filtered]';

@@ -1,4 +1,4 @@
-import { utf8ByteLength } from './envelope';
+import { utf8ByteLength } from '../../sdk/src/utf8';
 import { decodeReplayAssetData } from './replay-assets';
 
 export interface ReplayAssetProviderOptions {

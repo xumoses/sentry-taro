@@ -1,5 +1,5 @@
 import { withNetworkOptionsSnapshot } from '../network-config';
-import { snapshotNetworkOptions } from '../network-details';
+import { snapshotNetworkOptions } from '../../../sdk/src/network-details';
 import type { FeedbackEvent } from '@sentry/core';
 import { sanitizeUrl } from '../privacy';
 import { createTaroReplay } from '../createTaroReplay';

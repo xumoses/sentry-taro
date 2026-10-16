@@ -1,5 +1,5 @@
 import { zlibSync } from 'fflate';
-import { encodeUtf8 } from './utf8';
+import { encodeUtf8 } from '../../../sdk/src/utf8';
 import { encodeBase64 } from './base64';
 
 declare const worker: {

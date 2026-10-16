@@ -1,25 +1,8 @@
 import type { DsnComponents, ReplayEnvelope, ReplayEvent, SdkInfo } from '@sentry/core';
 
+import { utf8ByteLength } from '../../sdk/src/utf8';
 import { mergeReplayContexts } from './metadata';
 import type { SentryReplayClient, TaroReplayCapture } from './types';
-
-/** Counts UTF-8 bytes without TextEncoder, which is absent in some mini program runtimes. */
-export function utf8ByteLength(value: string): number {
-  let bytes = 0;
-  for (let index = 0; index < value.length; index++) {
-    const code = value.charCodeAt(index);
-    if (code < 0x80) bytes += 1;
-    else if (code < 0x800) bytes += 2;
-    else if (code >= 0xd800 && code <= 0xdbff) {
-      const next = value.charCodeAt(index + 1);
-      if (next >= 0xdc00 && next <= 0xdfff) {
-        bytes += 4;
-        index++;
-      } else bytes += 3;
-    } else bytes += 3;
-  }
-  return bytes;
-}
 
 export function serializeReplayRecording(capture: TaroReplayCapture, segmentId = 0): string {
   return `${JSON.stringify({ segment_id: segmentId })}\n${JSON.stringify(capture.events)}`;

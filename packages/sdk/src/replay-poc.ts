@@ -14,6 +14,7 @@ import {
   TARO_REPLAY_BASE_STYLESHEET,
 } from './replay-styles';
 import { boundReplayEvents } from './replay-buffer';
+import { utf8ByteLength } from './utf8';
 import { createCheckpointRebaser } from './rebase';
 import {
   createNetworkHeaderPolicy,
@@ -551,31 +552,6 @@ function sanitizeAttributeValue(
     safeValue = sanitizeUrl(String(value ?? ''));
   }
   return primitiveAttributeValue(safeValue);
-}
-
-/** Counts UTF-8 bytes without relying on TextEncoder, which is absent in some mini program runtimes. */
-function utf8ByteLength(value: string): number {
-  let bytes = 0;
-  for (let index = 0; index < value.length; index++) {
-    const code = value.charCodeAt(index);
-    if (code < 0x80) {
-      bytes += 1;
-    } else if (code < 0x800) {
-      bytes += 2;
-    } else if (code >= 0xd800 && code <= 0xdbff) {
-      const next = value.charCodeAt(index + 1);
-      /* istanbul ignore else -- JSON.stringify escapes unpaired UTF-16 surrogates. */
-      if (next >= 0xdc00 && next <= 0xdfff) {
-        bytes += 4;
-        index++;
-      } else {
-        bytes += 3;
-      }
-    } else {
-      bytes += 3;
-    }
-  }
-  return bytes;
 }
 
 function cloneCapture(capture: TaroReplayPocCapture): TaroReplayPocCapture {

@@ -30,3 +30,21 @@ export function encodeUtf8(input: string): Uint8Array {
   }
   return bytes.slice(0, offset);
 }
+
+/** Counts UTF-8 bytes without TextEncoder; unmatched UTF-16 surrogates count as U+FFFD. */
+export function utf8ByteLength(value: string): number {
+  let bytes = 0;
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        bytes += 4;
+        index++;
+      } else bytes += 3;
+    } else bytes += 3;
+  }
+  return bytes;
+}

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vite-plus/test';
 
 import { boundReplayEvents } from '../src/coordinator/buffer';
-import { utf8ByteLength } from '../src/envelope';
+import { utf8ByteLength } from '../../sdk/src/utf8';
 import type { TaroReplayEvent } from '../src/types';
 
 const event = (type: number, timestamp: number, value: string): TaroReplayEvent => ({

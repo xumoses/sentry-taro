@@ -2,7 +2,7 @@ import {
   createNetworkHeaderPolicy,
   sanitizeNetworkDetailUrl,
   snapshotNetworkOptions,
-} from './network-details';
+} from '../../sdk/src/network-details';
 import type { Breadcrumb, BreadcrumbHint } from '@sentry/core';
 
 import { sendReplayCapture } from './envelope';
