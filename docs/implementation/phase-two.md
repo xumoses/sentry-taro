@@ -1,6 +1,6 @@
 # 第二阶段实施进度
 
-更新时间：2026-10-15。状态：**`0.1.0-beta.4` 已通过 GitHub Actions、人工审批及 npm OIDC 发布，registry 完整性与公开安装验证通过，修复 Taro 构建插件的微信最终 sourcemap ZIP 兼容性；工具链迁移和 10.76.2 运行时对齐已通过本地验证，宿主接入、受控错误、Replay 关联与 Playback 保留各自候选的验收记录；真机、宿主 CI 及上传体积待验收**。本文件记录第二阶段证据；[第一阶段记录](./phase-one.md)保留其原候选包和验收范围，不因本轮改动自动延续为新产物的通过结论。
+更新时间：2026-10-16。状态：**`0.1.0-beta.5` 已通过 GitHub Actions、人工审批及 npm OIDC 发布，registry 完整性与公开安装验证通过，修复默认单页 Swiper 分页和 Taro 共享分包映射失配；工具链迁移和 10.76.2 运行时对齐已通过本地验证，宿主接入、受控错误、Replay 关联与 Playback 保留各自候选的验收记录；真机、宿主 CI 及上传体积待验收**。本文件记录第二阶段证据；[第一阶段记录](./phase-one.md)保留其原候选包和验收范围，不因本轮改动自动延续为新产物的通过结论。
 
 ## 已确认范围
 
@@ -13,12 +13,12 @@
 
 目标组合为 Vite Plus 1.2.0、Node.js 26.12.0、pnpm 12.13.0。实际项目版本以根 `package.json`、`.node-version` 和锁文件为准；Vite、Vitest、Oxlint、Oxfmt 等跟随 Vite Plus 的整套版本。
 
-| 工作项                     | 当前状态           | 验收依据                                                                                              |
-| -------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------- |
-| 环境、依赖和锁文件统一     | 本地通过           | 实际 Node.js/pnpm 版本、冻结锁文件安装及 peer 检查                                                    |
-| Jest/ts-jest、ESLint 迁移  | 本地通过           | 76 个测试文件、959 项测试，`vp check` 和两次严格 TypeScript 检查                                      |
-| `vp pack` 库构建与产物格式 | 本地通过           | ESM/CJS、独立 Worker、声明、map、通知及 tarball 隔离消费者检查                                        |
-| CI 入口统一                | 远端发布工作流通过 | `0.1.0-beta.4` 的准备与发布 job 成功；见[微信最终映射兼容修复版本发布](#微信最终映射兼容修复版本发布) |
+| 工作项                     | 当前状态           | 验收依据                                                                                                        |
+| -------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| 环境、依赖和锁文件统一     | 本地通过           | 实际 Node.js/pnpm 版本、冻结锁文件安装及 peer 检查                                                              |
+| Jest/ts-jest、ESLint 迁移  | 本地通过           | 76 个测试文件、959 项测试，`vp check` 和两次严格 TypeScript 检查                                                |
+| `vp pack` 库构建与产物格式 | 本地通过           | ESM/CJS、独立 Worker、声明、map、通知及 tarball 隔离消费者检查                                                  |
+| CI 入口统一                | 远端发布工作流通过 | `0.1.0-beta.5` 的准备与发布 job 成功；见[Swiper 与共享分包映射修复版本发布](#swiper-与共享分包映射修复版本发布) |
 
 CI 使用 [`voidzero-dev/setup-vp@v1.21.2`](https://github.com/voidzero-dev/setup-vp/tree/v1.21.2) 管理环境，固定 action 版本并读取项目的 Vite Plus 和 Node.js 声明。`vp pack` 构建库；`vp pm pack` 通过项目包管理器运行 `prepack` 并生成 npm tarball，两者不是同一操作。
 
@@ -272,3 +272,18 @@ SLSA v1 provenance 声明中的仓库、工作流、tag、源码提交、run 和
 发布后使用匿名身份、空 npm 配置、全新目录和缓存，从官方 registry 固定安装 `0.1.0-beta.4`。锁文件完整性、严格类型、CJS/ESM、SDK/Replay 生命周期、运行时子路径与 `taro-plugin` 消费均通过；插件验证涵盖页面 SVG、资源读取、metadata、Worker 辅助及官方 CLI 的按需加载。报告保存在 `.artifacts/oidc-beta4-public-consumer.json`。
 
 本次完成发布流程和公开包消费验证；宿主升级、实际 CI 映射上传、体验版、iOS/Android 真机与微信上传体积仍须各自验收。监控与 Replay 运行时行为未改动，既有真实服务和 Playback 证据的适用范围不变。发布后的文档更新不重建或替换已发布 tarball。
+
+## Swiper 与共享分包映射修复版本发布
+
+2026-10-16，`0.1.0-beta.5` 按用户发布授权，通过 [Actions run 38842775478](https://github.com/xumoses/sentry-taro/actions/runs/38842775478) 的 `npm` Environment 审批和 OIDC 发布；`prepare` 与 `publish` 均成功。
+
+- 源码：`6640bfc13e01790ad6cb87238036ca870f8efbce`；Git tag：`v0.1.0-beta.5`。
+- Actions artifact：`12021797299`；文件 `xumoses-sentry-taro-0.1.0-beta.5.tgz`，1,955,037 字节。
+- SHA-256：`4f6d77a52db802aa35ec257af9be5879c759d4137008c491ed7d7ed131c55ad4`。
+- SHA-512（Base64）：`O38KsN0JyO20L8aNj9oIVpKUG/U4vw6G9BfjY1h35DbUPP2LZs9Dh8Xkr0mUieL3rdqaouQtLa+H7+ar5+h4zQ==`。
+
+修复默认单页 Swiper 的横向/纵向分页、初始与受控 `current`、原生切页状态采集；匿名 3+2 页面 fixture 的录制与本地浏览器几何验证通过。Taro 共享分包复制时保留精确 JS/map 副本的已压缩身份，避免再次压缩 JS 却沿用旧映射；不删除或截断映射段。
+
+发布准备通过冻结安装、格式/lint、类型、1,204 项 SDK/Replay/插件测试、72 项发布工具测试、构建、Worker、生产 bundle、隔离消费者和 npm dry-run。远端候选来自干净源码，下载后校验值与本地候选一致；官方 registry 实际 tarball 再次逐字节核验，`beta` 指向本版本，`latest` 保留 `0.1.0-beta.1`。实际下载包的隔离消费验证通过严格类型、CJS/ESM、SDK/Replay 生命周期、运行时子路径与构建插件。确切候选清单保存在忽略的 `.artifacts/beta5-oidc/`。
+
+本次发布不代表微信最终组合 map、真实第三方 chunk 符号化、新版本 Playback、体验版、真机或宿主 CI 已通过。发布后的文档更新不重建或替换已发布 tarball。
