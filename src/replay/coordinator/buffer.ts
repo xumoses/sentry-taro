@@ -44,3 +44,70 @@ export function mergeBufferedCaptures(
     stats: { ...last.stats, eventCount: events.length, approximateBytes },
   };
 }
+
+interface BufferHistoryContext {
+  now(): number;
+  limits(): { rollingWindowMs: number; maxEvents: number; maxBytes: number };
+  replayId(): string | undefined;
+}
+
+/** Error-buffer captures from earlier visible roots, kept within the buffer bounds. */
+export class ReplayBufferHistory {
+  readonly #context: BufferHistoryContext;
+  #captures: TaroReplayCapture[] = [];
+
+  constructor(context: BufferHistoryContext) {
+    this.#context = context;
+  }
+
+  get length(): number {
+    return this.#captures.length;
+  }
+
+  list(): TaroReplayCapture[] {
+    return [...this.#captures];
+  }
+
+  clear(): void {
+    this.#captures = [];
+  }
+
+  /** One bounded, playable capture from the history plus the live root's capture. */
+  merge(current?: TaroReplayCapture): TaroReplayCapture | undefined {
+    const limits = this.#context.limits();
+    return mergeBufferedCaptures(
+      [...this.#captures, ...(current ? [current] : [])],
+      {
+        now: this.#context.now(),
+        windowMs: limits.rollingWindowMs,
+        maxEvents: limits.maxEvents,
+        maxBytes: limits.maxBytes,
+      },
+      this.#context.replayId(),
+    );
+  }
+
+  store(capture: TaroReplayCapture): void {
+    const bounded = this.merge(capture);
+    this.#captures = bounded ? [bounded] : [];
+  }
+
+  /** Drop older page history when it and the live root together exceed the bounds. */
+  bound(current: Pick<TaroReplayCapture['stats'], 'eventCount' | 'approximateBytes'>): void {
+    if (!this.#captures.length) return;
+    const limits = this.#context.limits();
+    const historyBytes = this.#captures.reduce(
+      (sum, capture) => sum + capture.stats.approximateBytes,
+      0,
+    );
+    const historyEvents = this.#captures.reduce((sum, capture) => sum + capture.events.length, 0);
+    if (
+      historyBytes + current.approximateBytes > limits.maxBytes ||
+      historyEvents + current.eventCount > limits.maxEvents
+    ) {
+      // A new visible root has its own playable baseline. Under pressure, drop
+      // older page history as a whole instead of retaining two near-limit DOMs.
+      this.#captures = [];
+    }
+  }
+}
