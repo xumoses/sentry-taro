@@ -45,6 +45,19 @@
 
 候选包版本号与已发布的 beta.5 相同，运行时读到的 SDK 版本无法区分两者；候选身份以安装时逐文件比对的 integrity 为准。HTTP 200 只说明服务端接受了请求，Sentry 中的 Issue、双向关联展示和 Playback 尚未核验。验证项目的原始证据留在非公开环境。
 
+## 0.1.0-beta.6 发布
+
+2026-10-16，按用户发布授权推送 tag `v0.1.0-beta.6`，经 [Actions run 38883802644](https://github.com/xumoses/sentry-taro/actions/runs/38883802644) 的 `npm` Environment 审批后通过 OIDC 发布；`prepare` 与 `publish` 均成功。
+
+- 源码：`edbe88505d8c15401733fe8664e2de087613ea4f`；Git tag：`v0.1.0-beta.6`。
+- Actions artifact：`12039030961`；文件 `xumoses-sentry-taro-0.1.0-beta.6.tgz`，1,970,925 字节。
+- SHA-256：`fe215c01ef3fb8ddd6c4aeab38c4e94652348b7e092ff1015c6f960713e5be3e`。
+- SHA-512（Base64）：`lOAyUEpafG8W/zwEJigqP8mRaSkmkXGg/RPm0boIgi1YkcD3y7fnW1+L52SeFRXfbp40De3bfT84YdmHtsjxgg==`。
+
+本地发布准备使用 Node.js 26.12.0、pnpm 12.13.0、npm 11.20.0，通过格式/lint、类型、1,213 项测试、68 项发布工具测试、构建、Worker、生产 bundle、隔离消费者和 npm dry-run。远端候选与本地候选的 integrity 相同；官方 registry 实际 tarball 与本地候选逐字节一致，带 SLSA v1 provenance，`beta` 指向本版本，`latest` 保留 `0.1.0-beta.1`。`verify-release --published` 在发布提交的干净检出上通过。匿名、空 npm 配置的全新目录安装 `@beta` 得到 `0.1.0-beta.6`，CJS/ESM 入口、新录制器名称和 console/HTTP 集成均可用；实际下载包的隔离消费验证通过严格类型、运行时子路径与构建插件。
+
+开发者工具自动化验收针对的是同一源码功能、版本号仍为 beta.5 的本地候选（见上文），不自动延续为本 tarball 的运行时结论。Sentry 中的 Issue、关联展示和 Playback，以及首个验证项目改用本版本，仍待进行。发布后的文档更新不重建或替换已发布 tarball。
+
 ## 尚未进行
 
 - 电脑微信验收：真实错误接收、Replay 关联和 Playback。
