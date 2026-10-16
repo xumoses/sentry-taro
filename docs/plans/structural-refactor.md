@@ -1,6 +1,6 @@
 # 结构重构计划
 
-状态：计划已起草，2026-10-16；尚未开始实施。决策依据见 [ADR-0005](../adr/0005-layered-structural-refactor.md)，对齐原则见[设计原则](../design-principles.md)。本文记录范围、分期、门槛和待确认项；各阶段的实施证据另行记录，不在本文中标记为通过。
+状态：计划与范围决定已确认，2026-10-16；尚未开始实施。决策依据见 [ADR-0005](../adr/0005-layered-structural-refactor.md)，对齐原则见[设计原则](../design-principles.md)。本文记录范围、分期、门槛和范围决定；各阶段的实施证据另行记录，不在本文中标记为通过。
 
 ## 目标与非目标
 
@@ -31,19 +31,16 @@
 | 集成形式   | 17 个类式集成、9 个函数式集成；`Integrations` 命名空间中的 `Dedupe` 与默认使用的 core `dedupeIntegration` 重复           |
 | 主入口产物 | `dist/index.mjs` 274,738 B，gzip 后 85,373 B                                                                             |
 
-已完成的对齐不重复列为任务：默认集成支持 `integrations` 函数筛选；integration 名称为官方 `Replay`；顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia` 优先于兼容的 `privacy.*`。官方同名的 `captureConsoleIntegration` 和 `httpClientIntegration` 已在分支实现（提交 `a7bee33`），尚未合入主分支或发布。
+已完成的对齐不重复列为任务：默认集成支持 `integrations` 函数筛选；integration 名称为官方 `Replay`；顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia` 优先于兼容的 `privacy.*`。官方同名的 `captureConsoleIntegration` 和 `httpClientIntegration` 已合入主分支（提交 `a7bee33`），尚未发布或在电脑微信验收。
 
-## 范围决定与待确认项
+## 范围决定
 
-已确认（2026-10-16）：
+均已确认（2026-10-16）：
 
 1. **其他小程序平台和小游戏冻结保留。** 不删除相关代码，也不再开发新功能或做验收；重构期间保持其编译和现有测试通过，文档标为“保留、未验收”，以便将来恢复。
 2. **POC 名称有实际消费方，不直接删除。** 首个验证项目在测试和本地工具中使用 `startTaroDomReplayPoc` 和 `TARO_DOM_REPLAY_POC` 标记：登录密码遮罩测试直接调用低层 recorder，构建检查脚本用该标记判断入口是否包含 recorder。这些都不在运行时路径上。第一阶段改为正式名称，旧名称保留为弃用别名一个 beta，待验证项目迁移后再删除。
-
-待确认，第三阶段前决定：
-
-3. 非官方 API 的去留。首个验证项目未使用 `setConsent`/`requireConsent`、`enableOfflineCache`、`showReportDialog` 和 `wrap`。建议：`showReportDialog`（已是只打印警告的空实现）和 `wrap`（固定版 browser 已不公开导出）直接删除；离线缓存改为官方 `makeOfflineTransport`；consent 官方没有对应，需要单独决定是否保留为小程序扩展。
-4. `privacy.*` 兼容配置的移除时间。首个验证项目当前使用 `privacy.maskAllText`、`privacy.maskInputValues`、`privacy.allowUser`。前两项可直接改为官方顶层的 `maskAllText`、`maskAllInputs`；`allowUser` 随“Replay 从 scope 带用户”一并取消。需决定在第三阶段直接删除，还是先标记弃用、下一个 beta 再删除。
+3. **非官方 API 按官方对应处理。** 首个验证项目未使用 `setConsent`/`requireConsent`、`enableOfflineCache`、`showReportDialog` 和 `wrap`。`showReportDialog`（已是只打印警告的空实现）和 `wrap`（固定版 browser 已不公开导出）在第三阶段删除；离线缓存改为通过 `transport` 选项使用官方 `makeOfflineTransport`，`enableOfflineCache` 等开关删除。consent 官方没有对应，保留为文档标明的小程序扩展，行为不变，可用于在用户同意隐私协议前暂缓上报。
+4. **`privacy.*` 兼容配置先弃用、再删除。** 首个验证项目当前使用 `privacy.maskAllText`、`privacy.maskInputValues`、`privacy.allowUser`。第三阶段将 `privacy.*` 和 `maskInputValues` 标记为弃用并在运行时提示一次，迁移说明给出顶层 `maskAllText`、`maskAllInputs` 写法；`allowUser` 随“Replay 从 scope 带用户”一并弃用。下一个 beta 删除。与 POC 名称的别名策略一致。
 
 ## 分阶段计划
 
@@ -68,13 +65,13 @@
 
 ### 第三阶段：API 对齐官方
 
-依赖待确认项 3、4。
+依据范围决定 3、4。
 
 - 集成全部改为函数式 `xxxIntegration()`；`Integrations` 命名空间和 `enableXxx` 开关先标记弃用，迁移说明给出对应的 `integrations` 写法。
 - 帧路径处理改用 core 的 `rewriteFramesIntegration`，默认路径与 taro-plugin 上传的 sourcemap 一致；移除非官方的 `enableSourceMap`。Debug ID 方案单独评估，需先在电脑微信验证。
 - Replay 事件按官方方式从 scope 带用户信息，弃用 `getMetadata` 和 `privacy.allowUser`；对照官方 `stop()`/`start()` 核对 bridge 的 `reset` 语义。
-- 离线缓存改为通过 `transport` 选项使用官方 `makeOfflineTransport`。
-- 合入 `captureConsoleIntegration` 和 `httpClientIntegration`。
+- 离线缓存改为通过 `transport` 选项使用官方 `makeOfflineTransport`；删除 `showReportDialog` 和 `wrap`；`privacy.*`、`maskInputValues` 标记弃用。见范围决定 3、4。
+- 随本阶段 beta 发布 `captureConsoleIntegration` 和 `httpClientIntegration`，并在电脑微信验收。
 - 每项对齐都以 10.76.2 官方源码为依据，在[运行时迁移说明](../migrations/phase-two-runtime.md)或新的迁移文档中写明差异和替代写法。
 
 ### 第四阶段：发布与迁移

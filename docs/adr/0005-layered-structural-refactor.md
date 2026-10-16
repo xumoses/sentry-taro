@@ -1,6 +1,6 @@
 # 按官方 SDK 分层渐进重构统一包
 
-状态：方向已确认，2026-10-16；尚未开始实施。分阶段范围、门槛和待确认项见[结构重构计划](../plans/structural-refactor.md)。
+状态：方向已确认，2026-10-16；尚未开始实施。分阶段范围、门槛和范围决定见[结构重构计划](../plans/structural-refactor.md)。
 
 统一包已只发布 `@xumoses/sentry-taro`，但源码仍保留两个独立包时期的结构：`src/` 只转导出 `packages/sdk` 与 `packages/replay`，Replay 通过显式 `sdk` 参数调用另一侧的 recorder，部分模块在两侧各存一份且已出现分叉。SDK 还保留超出当前支持范围的多平台、小游戏和全局 polyfill 代码，以及早于官方 v8 的类式集成、`Integrations` 命名空间和一组 `enableXxx` 开关。
 
