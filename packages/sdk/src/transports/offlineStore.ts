@@ -1,3 +1,4 @@
+import { consoleSandbox } from '@sentry/core';
 import type { Envelope, OfflineStore, OfflineTransportOptions } from '@sentry/core';
 import { sdk } from '../crossPlatform';
 import { replayIdentity } from './replayIdentity';
@@ -201,7 +202,8 @@ export function createMiniappOfflineStore(
           throw new Error('Offline queue capacity exceeded');
       } catch (e) {
         if (options.strictPersistence) throw e;
-        console.warn('[sentry-miniapp] Failed to push to offline store', e);
+        // Bypass console instrumentation so captureConsoleIntegration cannot feed this back.
+        consoleSandbox(() => console.warn('[sentry-miniapp] Failed to push to offline store', e));
       }
     },
     unshift: async (env: Envelope): Promise<void> => {

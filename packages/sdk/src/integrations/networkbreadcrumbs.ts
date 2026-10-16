@@ -20,6 +20,52 @@ import {
   type ReplayNetworkDetails,
 } from '../network-details';
 
+/** Data passed to request instrumentation handlers once a request receives an HTTP response. */
+export interface MiniappRequestHandlerData {
+  /** Upper-cased request method. */
+  method: string;
+  /** The request URL as passed by the caller (not sanitized). */
+  url: string;
+  /** Normalized HTTP status code, if the platform reported one. */
+  statusCode: number | undefined;
+  /** Own data fields of the caller's `header`/`headers`, before Sentry trace headers are injected. */
+  requestHeaders: Record<string, unknown>;
+  /** The raw platform success result (`statusCode`, `header`/`headers`, `cookies`, `data`, ...). */
+  response: unknown;
+  /** Error created when the request was issued, for a call-site stack trace. */
+  virtualError: Error;
+}
+
+type MiniappRequestHandler = (data: MiniappRequestHandlerData) => void;
+
+const requestHandlers = new Set<MiniappRequestHandler>();
+
+/**
+ * Subscribe to responses of requests instrumented by {@link NetworkBreadcrumbs}.
+ * Reuses its single `request` / `httpRequest` patch instead of wrapping the platform API again,
+ * so handlers only fire while that integration is installed. Sentry's own requests are skipped.
+ *
+ * @returns a function that removes the handler.
+ */
+export function addMiniappRequestInstrumentationHandler(
+  handler: MiniappRequestHandler,
+): () => void {
+  requestHandlers.add(handler);
+  return () => {
+    requestHandlers.delete(handler);
+  };
+}
+
+function triggerRequestHandlers(data: MiniappRequestHandlerData): void {
+  for (const handler of requestHandlers) {
+    try {
+      handler(data);
+    } catch (_e) {
+      // A failing telemetry handler must not break the caller's callback.
+    }
+  }
+}
+
 /**
  * Network Breadcrumbs Integration.
  * Monkey patches miniapp network API (e.g. wx.request, my.httpRequest)
@@ -178,6 +224,11 @@ export class NetworkBreadcrumbs implements Integration {
         return originalRequest.call(this, options);
       }
 
+      // Handler data is only collected while someone (e.g. httpClientIntegration) listens.
+      const hasRequestHandlers = requestHandlers.size > 0;
+      const virtualError = hasRequestHandlers ? new Error() : undefined;
+      const callerRequestHeaders = hasRequestHandlers ? readRequestHeaders(callerOptions) : {};
+
       // 注入分布式追踪头
       const method = normalizeMethod(options.method);
       const requestData = options.data;
@@ -266,6 +317,17 @@ export class NetworkBreadcrumbs implements Integration {
           },
           res,
         );
+
+        if (virtualError) {
+          triggerRequestHandlers({
+            method,
+            url,
+            statusCode: normalizeStatusCode(statusCode),
+            requestHeaders: callerRequestHeaders,
+            response: res,
+            virtualError,
+          });
+        }
 
         if (typeof originalSuccess === 'function') {
           return withActiveSpan(requestSpan, () => originalSuccess.apply(this, args));
@@ -592,6 +654,20 @@ function cloneRequestOptions(options: Record<string, unknown>): Record<string, u
     }
   }
   return clone;
+}
+
+/** Own data fields only: header accessors are left for the native API to evaluate. */
+function readRequestHeaders(options: unknown): Record<string, unknown> {
+  const headers: Record<string, unknown> = {};
+  for (const key of ['headers', 'header']) {
+    const value = readNetworkDataField(options, key);
+    if (!isRecord(value)) continue;
+    for (const name of Object.keys(value)) {
+      const field = readNetworkDataField(value, name);
+      if (field !== undefined) headers[name] = field;
+    }
+  }
+  return headers;
 }
 
 function collectHeaders(

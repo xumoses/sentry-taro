@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- 新增与官方 10.76.2 同名的 `captureConsoleIntegration`（core 重导出）和 `httpClientIntegration`，均默认不启用；宿主可替代自行包装的 `console.error` 与 HTTP 5xx 上报。
+- `httpClientIntegration` 复用 `NetworkBreadcrumbs` 对平台请求 API 的包装，事件结构与官方一致；URL 去除账号密码、query 和 fragment，请求头与 cookie 仅在 `sendDefaultPii` / `dataCollection` 允许时附带。差异见 [API 指南](./docs/guides/api.md#错误采集集成)。
+- 离线缓存写入失败的提示改为绕过 console 包装输出，避免被 `captureConsoleIntegration` 再次上报。
+
 ## 0.1.0-beta.5 — 2026-10-16
 
 - 修复默认单页 Swiper 的 Replay 分页布局与切页状态采集，覆盖横向、纵向、原生切页及受控 `current` 更新。

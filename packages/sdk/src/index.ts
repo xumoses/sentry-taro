@@ -56,6 +56,7 @@ export {
   logger,
   metrics,
   consoleLoggingIntegration,
+  captureConsoleIntegration,
   startSpanManual,
   withActiveSpan,
   getActiveSpan,
@@ -158,6 +159,12 @@ export { defaultIntegrations, getDefaultIntegrations } from './sdk';
 export { miniappStackParser } from './stacktrace';
 
 export { pageTracingIntegration } from './integrations/pagetracing';
+export {
+  httpClientIntegration,
+  type HttpClientOptions,
+  type HttpRequestTarget,
+  type HttpStatusCodeRange,
+} from './integrations/httpclient';
 
 export type { NetworkDetailOptions } from './network-details';
 

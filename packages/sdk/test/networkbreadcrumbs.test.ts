@@ -52,7 +52,10 @@ vi.mock('@sentry/core', () => {
     startInactiveSpan: mockStartInactiveSpan,
   };
 });
-import { NetworkBreadcrumbs } from '../src/integrations/networkbreadcrumbs';
+import {
+  addMiniappRequestInstrumentationHandler,
+  NetworkBreadcrumbs,
+} from '../src/integrations/networkbreadcrumbs';
 import * as crossPlatform from '../src/crossPlatform';
 import { addBreadcrumb, getClient } from '@sentry/core';
 
@@ -550,5 +553,37 @@ describe('NetworkBreadcrumbs Integration', () => {
     expect(requestMock.mock.calls[0][0].header['sentry-trace']).toBe('trace-id-span-id-1');
     expect(options.header).toEqual({ accept: '*/*' });
     expect(requestMock.mock.calls[0][0]).not.toBe(options);
+  });
+
+  it('notifies request handlers from the single patch, skipping Sentry requests', () => {
+    const handler = vi.fn(() => {
+      throw new Error('handler failure must not reach the caller');
+    });
+    const remove = addMiniappRequestInstrumentationHandler(handler);
+    // Trace propagation merges nested header fields itself; isolate the handler's own reads.
+    new NetworkBreadcrumbs({ enableTracePropagation: false }).setupOnce();
+    const getter = vi.fn(() => ({}));
+    const success = vi.fn();
+    crossPlatform.sdk().request({
+      url: 'https://api.example.com/a?x=1',
+      method: 'post',
+      header: Object.defineProperty({ accept: '*/*' }, 'x-lazy', { get: getter, enumerable: true }),
+      success,
+    });
+    crossPlatform.sdk().request({ url: 'https://sentry.io/api/1/envelope/' });
+    remove();
+    crossPlatform.sdk().request({ url: 'https://api.example.com/b' });
+
+    expect(success).toHaveBeenCalledTimes(1);
+    expect(getter).not.toHaveBeenCalled();
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({
+      method: 'POST',
+      url: 'https://api.example.com/a?x=1',
+      statusCode: 200,
+      requestHeaders: { accept: '*/*' },
+      response: { statusCode: 200, data: { status: 'ok' } },
+      virtualError: expect.any(Error),
+    });
   });
 });
