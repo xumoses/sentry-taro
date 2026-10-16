@@ -1,11 +1,11 @@
 import { addBreadcrumb, getClient } from '@sentry/core';
-import { startTaroDomReplayPoc } from '../packages/sdk/src/replay-poc';
-import { SDK_NAME, SDK_VERSION } from '../packages/sdk/src/version';
-import { taroReplayIntegration as createIntegration } from '../packages/replay/src/coordinator/integration';
+import { startTaroDomReplayPoc } from './sdk/replay-poc';
+import { SDK_NAME, SDK_VERSION } from './sdk/version';
+import { taroReplayIntegration as createIntegration } from './replay/coordinator/integration';
 import type {
   TaroReplayIntegration,
   TaroReplayIntegrationOptions as LegacyOptions,
-} from '../packages/replay/src/coordinator/integration';
+} from './replay/coordinator/integration';
 
 export type ReplayIntegrationOptions = Omit<LegacyOptions, 'sdk'> & {
   /** Optional compatibility override. The unified SDK is used by default. */

@@ -25,7 +25,7 @@
 vp run release:version 0.1.0-beta.6
 ```
 
-命令同步根目录、`packages/sdk`、`packages/replay` 三个 `package.json` 的版本、SDK 的 `SDK_VERSION` 和根包 `publishConfig.tag`。支持稳定版本及 `alpha.N`、`beta.N`、`rc.N` 预发布版本。它不自动提交、不创建或推送 Git tag，也不发布包。
+命令同步根 `package.json` 的版本、SDK 的 `SDK_VERSION`（`src/sdk/version.ts`）和根包 `publishConfig.tag`。支持稳定版本及 `alpha.N`、`beta.N`、`rc.N` 预发布版本。它不自动提交、不创建或推送 Git tag，也不发布包。
 
 检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前已发布 `0.1.0-beta.5`，修复默认单页 Swiper 回放分页，以及 Taro 共享分包重复压缩导致的映射失配；后续版本仍须重新准备候选，公开 `beta` 以 registry 实际状态为准。
 

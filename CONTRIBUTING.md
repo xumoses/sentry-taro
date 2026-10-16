@@ -32,18 +32,20 @@ vp install --frozen-lockfile
 
 ## 代码导航
 
-| 路径                                               | 内容                                            |
-| -------------------------------------------------- | ----------------------------------------------- |
-| [`src/`](./src/)                                   | 统一包的公共入口与 Replay integration           |
-| [`packages/sdk/`](./packages/sdk/)                 | 小程序 SDK、平台适配、传输与相关测试            |
-| [`packages/replay/`](./packages/replay/)           | Replay 协调、Taro/React 接入、Worker 与相关测试 |
-| [`packages/taro-plugin/`](./packages/taro-plugin/) | Node 构建插件、Replay 资源生成与合成回归        |
-| [`config/`](./config/)                             | 构建与静态检查配置                              |
-| [`scripts/`](./scripts/)                           | 产物校验、隔离消费、版本管理与发布脚本          |
-| [`examples/taro-react/`](./examples/taro-react/)   | 可合入现有 Taro 工程的接入片段                  |
-| [`docs/`](./docs/)                                 | 用户指南、设计决策和实施记录                    |
+| 路径                                             | 内容                                         |
+| ------------------------------------------------ | -------------------------------------------- |
+| [`src/`](./src/)                                 | 统一包的公共入口与 Replay integration        |
+| [`src/sdk/`](./src/sdk/)                         | 小程序 SDK、平台适配、传输与 Replay recorder |
+| [`src/replay/`](./src/replay/)                   | Replay 协调、Taro/React 接入与 Worker        |
+| [`src/taro-plugin/`](./src/taro-plugin/)         | Node 构建插件与 Replay 资源生成              |
+| [`test/`](./test/)                               | 按 `sdk`、`replay`、`taro-plugin` 分组的测试 |
+| [`devtools/`](./devtools/)                       | 本地 Replay 查看器                           |
+| [`config/`](./config/)                           | 构建与静态检查配置                           |
+| [`scripts/`](./scripts/)                         | 产物校验、隔离消费、版本管理与发布脚本       |
+| [`examples/taro-react/`](./examples/taro-react/) | 可合入现有 Taro 工程的接入片段               |
+| [`docs/`](./docs/)                               | 用户指南、设计决策和实施记录                 |
 
-仓库只发布根包 `@xumoses/sentry-taro`，`packages/*` 是内部工作区。修改公共入口或打包配置时，需要同时验证声明文件、ESM/CJS 入口和独立 Worker。
+仓库只发布根包 `@xumoses/sentry-taro`，源码集中在 `src/`，没有内部工作区包。修改公共入口或打包配置时，需要同时验证声明文件、ESM/CJS 入口和独立 Worker。
 
 ## 检查改动
 

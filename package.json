@@ -27,17 +27,17 @@
       "require": "./dist/index.cjs.js"
     },
     "./react": {
-      "types": "./dist/types/packages/replay/src/react/index.d.ts",
+      "types": "./dist/types/src/replay/react/index.d.ts",
       "import": "./dist/react.mjs",
       "require": "./dist/react.cjs.js"
     },
     "./react/root": {
-      "types": "./dist/types/packages/replay/src/react/root.d.ts",
+      "types": "./dist/types/src/replay/react/root.d.ts",
       "import": "./dist/react-root.mjs",
       "require": "./dist/react-root.cjs.js"
     },
     "./taro/lifecycle": {
-      "types": "./dist/types/packages/replay/src/taro/lifecycle.d.ts",
+      "types": "./dist/types/src/replay/taro/lifecycle.d.ts",
       "import": "./dist/taro-lifecycle.mjs",
       "require": "./dist/taro-lifecycle.cjs.js"
     },
@@ -45,7 +45,7 @@
     "./devtools/server": "./dist/devtools/server.cjs",
     "./package.json": "./package.json",
     "./taro-plugin": {
-      "types": "./dist/types/packages/taro-plugin/src/index.d.ts",
+      "types": "./dist/types/src/taro-plugin/index.d.ts",
       "import": "./dist/taro-plugin/index.mjs",
       "require": "./dist/taro-plugin/index.cjs.js"
     }
@@ -71,7 +71,7 @@
     "test:sdk:coverage": "vp test run --project sdk --coverage",
     "test:replay": "vp test run --project replay",
     "test:release": "node --test scripts/*.test.cjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p packages/sdk/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.sdk.json",
     "check": "vp check",
     "lint": "vp lint",
     "format": "vp fmt",
@@ -115,6 +115,8 @@
   "devDependencies": {
     "@jridgewell/trace-mapping": "0.3.31",
     "@sentry/cli": "3.6.2",
+    "@tarojs/runtime": "4.2.0",
+    "@tarojs/taro": "4.2.0",
     "@types/adm-zip": "0.5.7",
     "@types/node": "26.6.5",
     "@types/picomatch": "4.0.2",
@@ -126,6 +128,7 @@
     "postcss": "8.5.30",
     "postcss-selector-parser": "7.1.1",
     "postcss-value-parser": "4.2.0",
+    "react": "18.3.1",
     "typescript": "7.0.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.2.0",
     "vite-plus": "1.2.0",

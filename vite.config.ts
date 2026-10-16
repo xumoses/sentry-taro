@@ -17,16 +17,16 @@ export default defineConfig({
   lint,
   test: {
     projects: [
-      'packages/sdk/vitest.config.ts',
-      'packages/replay/vitest.config.ts',
-      'packages/taro-plugin/vitest.config.ts',
+      'test/sdk/vitest.config.ts',
+      'test/replay/vitest.config.ts',
+      'test/taro-plugin/vitest.config.ts',
     ],
     coverage: {
       provider: 'v8',
       // Vitest 5 resolves these globs from each selected project's root.
       include: ['**/src/**/*.ts'],
       exclude: ['**/*.d.ts', '**/src/index.ts'],
-      reportsDirectory: 'packages/sdk/coverage',
+      reportsDirectory: 'coverage',
       reporter: ['text', 'lcov', 'html'],
     },
   },

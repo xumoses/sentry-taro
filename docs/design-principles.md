@@ -58,7 +58,7 @@ flowchart LR
 
 现有实现已经是自有 recorder 读取节点和变更、产生 rrweb 兼容数据。官方浏览器 Replay 依赖浏览器录制基础设施，不能仅凭 Taro 有模拟 DOM 就认为它可以直接运行。Taro 官方说明也明确区分 React 已挂载到 Taro DOM 与 `setData` 完成、视图层显示。
 
-依据：[Taro 官方实现细节](https://docs.taro.zone/docs/implement-note)、[Taro React 生命周期机制](https://docs.taro.zone/docs/react-overall)、[Taro DOM API](https://docs.taro.zone/docs/taro-dom)、[Taro 4.2.0 元素变更实现](https://github.com/NervJS/taro/blob/v4.2.0/packages/taro-runtime/src/dom/element.ts)、[本项目 recorder](../packages/sdk/src/replay-poc.ts)。
+依据：[Taro 官方实现细节](https://docs.taro.zone/docs/implement-note)、[Taro React 生命周期机制](https://docs.taro.zone/docs/react-overall)、[Taro DOM API](https://docs.taro.zone/docs/taro-dom)、[Taro 4.2.0 元素变更实现](https://github.com/NervJS/taro/blob/v4.2.0/packages/taro-runtime/src/dom/element.ts)、[本项目 recorder](../src/sdk/replay-poc.ts)。
 
 采用“官方 core + 小程序适配 + 可选 Taro DOM Replay”：平台无关核心尽量复用，错误采集、网络、生命周期、存储和 Worker 由小程序适配层承担，Taro DOM 提供录制数据源。完整浏览器仿真不作为第二阶段路线，具体能力在这个边界内实施和验证，见[平台适配决策](./adr/0003-mini-program-platform-adaptation.md)。
 
@@ -70,10 +70,10 @@ flowchart LR
 
 当前代码有几个需要实测的边界：
 
-- [SDK 入口](../packages/sdk/src/index.ts)和 [polyfills](../packages/sdk/src/polyfills.ts)存在导入时初始化，不能未经审计就全局声明 `sideEffects: false`。
+- [SDK 入口](../src/sdk/index.ts)和 [polyfills](../src/sdk/polyfills.ts)存在导入时初始化，不能未经审计就全局声明 `sideEffects: false`。
 - [Replay 门面](../src/replay.ts)只传递所需的五个 SDK 绑定；裁剪结果由真实生产模式的合成消费构建检查。
 - [库构建配置](../config/pack.ts)承载 SDK/core/coordinator 及各公开入口的产物规则；从原根构建迁入 `vp pack` 或调整文件后缀，均不能单独证明功能边界已经可裁剪。
-- [资源解码](../packages/replay/src/replay-assets.ts)也使用 `fflate`。ESM 保留其包边界及官方副作用声明，错误监控消费者可裁剪它；启用 Replay 后主线程仍需资源解码，独立压缩 Worker 不等于主线程完全不含该依赖。CJS 与 Worker 继续自包含。
+- [资源解码](../src/replay/replay-assets.ts)也使用 `fflate`。ESM 保留其包边界及官方副作用声明，错误监控消费者可裁剪它；启用 Replay 后主线程仍需资源解码，独立压缩 Worker 不等于主线程完全不含该依赖。CJS 与 Worker 继续自包含。
 - Worker 是小程序需要的独立执行资产，其脚本格式依据 Worker 运行环境确定。
 
 上述运行时结论与模块发布格式相互独立：没有浏览器环境不意味着不能消费 ESM，Taro 构建器可以将 ESM 编译为小程序产物。结合第一阶段保留原生宿主与 Taro 混合接入的既定范围，第二阶段以 ESM 作为构建器消费首选，同时保留自包含 CJS 兼容入口。
@@ -100,7 +100,7 @@ flowchart LR
 
 小程序包尺寸限制不能直接推导录制窗口或会话时长。延长缓冲时间不直接增加下载包体积，队列的字节上限也不是小程序安装包上限。
 
-官方依据：[10.76.2 Replay 常量](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/replay-internal/src/constants.ts)、[Integration 默认配置](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/replay-internal/src/integration.ts)、[会话与空闲处理](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/replay-internal/src/replay.ts)。当前实现：[协调器](../packages/replay/src/coordinator/ReplayCoordinator.ts)、[投递队列](../packages/replay/src/coordinator/delivery.ts)。这些比较尚不代表新默认值已在目标服务与设备验收。
+官方依据：[10.76.2 Replay 常量](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/replay-internal/src/constants.ts)、[Integration 默认配置](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/replay-internal/src/integration.ts)、[会话与空闲处理](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/replay-internal/src/replay.ts)。当前实现：[协调器](../src/replay/coordinator/ReplayCoordinator.ts)、[投递队列](../src/replay/coordinator/delivery.ts)。这些比较尚不代表新默认值已在目标服务与设备验收。
 
 ## 工具链版本与迁移方向
 

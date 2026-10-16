@@ -5,7 +5,7 @@ export const lint: NonNullable<UserConfig['lint']> = {
     '**/dist/**',
     '**/node_modules/**',
     '.artifacts/**',
-    'packages/replay/devtools/**',
+    'devtools/**',
     'examples/**',
     '**/scripts/**',
   ],
@@ -99,7 +99,7 @@ export const lint: NonNullable<UserConfig['lint']> = {
   overrides: [
     {
       // Preserve the SDK's existing ESLint exceptions during tool migration.
-      files: ['packages/sdk/**/*.ts'],
+      files: ['src/sdk/**/*.ts', 'test/sdk/**/*.ts'],
       rules: {
         'typescript/no-unsafe-function-type': 'off',
       },
@@ -137,11 +137,7 @@ export const lint: NonNullable<UserConfig['lint']> = {
     },
     {
       // Replay already enforced type-only imports; retain that scope.
-      files: [
-        'packages/replay/src/**/*.ts',
-        'packages/replay/src/**/*.tsx',
-        'packages/replay/test/**/*.ts',
-      ],
+      files: ['src/replay/**/*.ts', 'src/replay/**/*.tsx', 'test/replay/**/*.ts'],
       rules: { 'typescript/consistent-type-imports': 'error' },
     },
   ],

@@ -1,0 +1,174 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { init, captureException, captureMessage, addBreadcrumb } from '../../src/sdk/index';
+import { getClient, getCurrentScope, flush, installedIntegrations } from '@sentry/core';
+import { MiniappClient } from '../../src/sdk/client';
+import { resetPlatformCache } from '../../src/sdk/crossPlatform';
+import { _resetAppLifecycle } from '../../src/sdk/appLifecycle';
+
+/**
+ * 端到端集成测试（真 @sentry/core + 捕获型 transport）。
+ *
+ * 重写自一批「init() 后只 expect(true).toBe(true) / expect(fn).toBeDefined()」的伪覆盖用例：
+ * 它们搭好了真实场景（init、captureException、beforeSend 过滤）却不断言任何真实产物，且多数
+ * 因没清平台缓存而让内部 mock 断言根本不执行。这里改用捕获 transport 取到实际上报的 envelope，
+ * 断言其内容。保留原本就真实的两个用例（tracesSampler 透传、sampleRate=0 采样丢弃）。
+ */
+describe('Integration（真 @sentry/core 端到端）', () => {
+  let captured: any[];
+
+  function initWithCapture(extra: Record<string, any> = {}): MiniappClient | undefined {
+    return init({
+      dsn: 'https://test@o0.ingest.sentry.io/0',
+      enableAutoSessionTracking: false,
+      transport: () => ({
+        send: (env: any) => {
+          captured.push(env);
+          return Promise.resolve({ statusCode: 200 });
+        },
+        flush: () => Promise.resolve(true),
+      }),
+      ...extra,
+    } as any);
+  }
+
+  function capturedEvents(): any[] {
+    const events: any[] = [];
+    for (const env of captured) {
+      const items = env[1];
+      if (!Array.isArray(items)) continue;
+      for (const item of items) {
+        const header = item[0];
+        if (header && header.type === 'event') events.push(item[1]);
+      }
+    }
+    return events;
+  }
+
+  beforeEach(() => {
+    captured = [];
+    resetPlatformCache();
+    _resetAppLifecycle();
+    installedIntegrations.length = 0;
+  });
+
+  afterEach(async () => {
+    const c = getClient();
+    if (c) await c.close(0);
+    installedIntegrations.length = 0;
+    _resetAppLifecycle();
+    resetPlatformCache();
+  });
+
+  it('init 绑定 MiniappClient 并设为当前 client', () => {
+    const client = initWithCapture();
+    expect(client).toBeInstanceOf(MiniappClient);
+    expect(getClient()).toBe(client);
+  });
+
+  it('captureException 端到端：上报的 envelope 真带该异常', async () => {
+    initWithCapture();
+    captureException(new Error('e2e boom'));
+    await flush(2000);
+
+    const ev = capturedEvents().find((e) =>
+      e.exception?.values?.some((v: any) => v.value?.includes('e2e boom')),
+    );
+    expect(ev).toBeDefined();
+    expect(ev.platform).toBeTruthy();
+  });
+
+  it('captureMessage 端到端：上报的 envelope 真带该消息与级别', async () => {
+    initWithCapture();
+    captureMessage('hello e2e', 'warning');
+    await flush(2000);
+
+    const ev = capturedEvents().find((e) => e.message === 'hello e2e');
+    expect(ev).toBeDefined();
+    expect(ev.level).toBe('warning');
+  });
+
+  it('breadcrumb 真挂到随后上报的事件上', async () => {
+    initWithCapture();
+    addBreadcrumb({ category: 'navigation', message: 'go page', level: 'info' });
+    captureException(new Error('with crumb'));
+    await flush(2000);
+
+    const ev = capturedEvents().find((e) =>
+      e.exception?.values?.some((v: any) => v.value?.includes('with crumb')),
+    );
+    expect(ev?.breadcrumbs?.some((b: any) => b.message === 'go page')).toBe(true);
+  });
+
+  it('beforeSend 真能过滤敏感字段，其它字段保留', async () => {
+    initWithCapture({
+      beforeSend: (event: any) => {
+        if (event.extra) delete event.extra.password;
+        return event;
+      },
+    });
+    const scope = getCurrentScope();
+    scope.setExtra('password', 'secret123');
+    scope.setExtra('userId', '12345');
+    captureException(new Error('sensitive'));
+    await flush(2000);
+
+    const ev = capturedEvents().find((e) =>
+      e.exception?.values?.some((v: any) => v.value?.includes('sensitive')),
+    );
+    expect(ev).toBeDefined();
+    expect(ev.extra?.password).toBeUndefined(); // 被 beforeSend 删除
+    expect(ev.extra?.userId).toBe('12345'); // 其它字段保留
+
+    scope.setExtra('password', null);
+    scope.setExtra('userId', null);
+  });
+
+  it('sampleRate=0：错误事件被采样丢弃，transport 收不到', async () => {
+    const beforeSendEvent = vi.fn();
+    initWithCapture({ sampleRate: 0, beforeSendEvent });
+    captureException(new Error('sampled out'));
+    await flush(2000);
+    expect(capturedEvents().length).toBe(0);
+    expect(beforeSendEvent).not.toHaveBeenCalled();
+  });
+
+  it('beforeSendEvent 只观察真正将发送的错误，并可在建 envelope 前关联 replay_id', async () => {
+    const accepted = vi.fn((event: any) => {
+      event.contexts = { ...event.contexts, replay: { replay_id: 'a'.repeat(32) } };
+    });
+    initWithCapture({
+      sampleRate: 1,
+      beforeSendEvent: accepted,
+      beforeSend: (event: any) =>
+        event.exception?.values?.some((value: any) => value.value?.includes('drop-me'))
+          ? null
+          : event,
+    });
+
+    captureException(new Error('drop-me'));
+    captureException(new Error('keep-me'));
+    await flush(2_000);
+
+    expect(accepted).toHaveBeenCalledTimes(1);
+    expect(capturedEvents()).toEqual([
+      expect.objectContaining({
+        contexts: expect.objectContaining({
+          replay: { replay_id: 'a'.repeat(32) },
+        }),
+      }),
+    ]);
+  });
+
+  it('tracesSampler 透传到 client 选项', () => {
+    const tracesSampler = vi.fn<() => number>().mockReturnValue(0.5);
+    const client = initWithCapture({ tracesSampler, integrations: [] });
+    expect(client?.getOptions().tracesSampler).toBe(tracesSampler);
+  });
+
+  it('非法 DSN：不抛错但记录错误日志', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => init({ dsn: 'invalid-dsn', debug: true } as any)).not.toThrow();
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+});

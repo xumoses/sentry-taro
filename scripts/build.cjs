@@ -12,10 +12,11 @@ function run(command, args) {
 // Only the main pass clears root/dist. Other passes write to isolated output
 // directories, then copy their assets without deleting existing entrypoints.
 run('vp', ['run', 'build:main']);
-run(process.execPath, [join(root, 'packages/replay/scripts/build-worker.cjs')]);
+run(process.execPath, [join(root, 'scripts/build-worker.cjs')]);
 for (const [replayDist, destination] of [
-  [join(root, 'packages/replay/dist'), join(root, 'dist')],
-  [join(root, 'packages/taro-plugin/dist'), join(root, 'dist/taro-plugin')],
+  [join(root, '.build/adapters'), join(root, 'dist')],
+  [join(root, '.build/worker'), join(root, 'dist/worker')],
+  [join(root, '.build/taro-plugin'), join(root, 'dist/taro-plugin')],
 ]) {
   for (const name of readdirSync(replayDist)) {
     if (name.endsWith('.d.ts')) continue;
@@ -39,8 +40,8 @@ for (const [replayDist, destination] of [
   }
 }
 cpSync(
-  join(root, 'packages/taro-plugin/THIRD_PARTY_NOTICES'),
+  join(root, 'src/taro-plugin/THIRD_PARTY_NOTICES'),
   join(root, 'dist/taro-plugin/THIRD_PARTY_NOTICES'),
 );
-cpSync(join(root, 'packages/replay/devtools'), join(root, 'dist/devtools'), { recursive: true });
+cpSync(join(root, 'devtools'), join(root, 'dist/devtools'), { recursive: true });
 run('vp', ['run', 'build:types']);

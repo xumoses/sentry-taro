@@ -6,12 +6,7 @@ const { test } = require('node:test');
 const { releaseTag, verifyVersions } = require('./release-config.cjs');
 const { updateVersion } = require('./release-version.cjs');
 
-const files = [
-  'package.json',
-  'packages/sdk/package.json',
-  'packages/replay/package.json',
-  'packages/sdk/src/version.ts',
-];
+const files = ['package.json', 'src/sdk/version.ts'];
 
 function fixture(t, version = '0.1.0-beta.1') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sentry-taro-release-version-'));
@@ -27,8 +22,6 @@ function fixture(t, version = '0.1.0-beta.1') {
       },
       scripts: { test: 'unchanged' },
     },
-    { name: '@sentry-taro/internal-sdk', version, private: true },
-    { name: '@sentry-taro/internal-replay', version, private: true },
     `// Keep this comment.\nexport const SDK_VERSION = '${version}';\nexport const SDK_NAME = 'sentry.javascript.taro';\n`,
   ];
   for (let index = 0; index < files.length; index += 1) {
@@ -84,7 +77,7 @@ test('rejects ambiguous, unsupported, and invalid versions', () => {
   }
 });
 
-test('updates all four version sources and the npm channel while preserving other values', (t) => {
+test('updates both version sources and the npm channel while preserving other values', (t) => {
   const root = fixture(t);
   const before = snapshot(root);
   assert.deepEqual(updateVersion(root, '0.1.0-rc.1'), {
@@ -96,13 +89,11 @@ test('updates all four version sources and the npm channel while preserving othe
   });
   assert.equal(verifyVersions(root, 'v0.1.0-rc.1').tag, 'rc');
   const after = snapshot(root);
-  for (let index = 0; index < 3; index += 1) {
-    const expected = JSON.parse(before[index]);
-    expected.version = '0.1.0-rc.1';
-    if (index === 0) expected.publishConfig.tag = 'rc';
-    assert.deepEqual(JSON.parse(after[index]), expected);
-  }
-  assert.equal(after[3], before[3].replace('0.1.0-beta.1', '0.1.0-rc.1'));
+  const expected = JSON.parse(before[0]);
+  expected.version = '0.1.0-rc.1';
+  expected.publishConfig.tag = 'rc';
+  assert.deepEqual(JSON.parse(after[0]), expected);
+  assert.equal(after[1], before[1].replace('0.1.0-beta.1', '0.1.0-rc.1'));
   updateVersion(root, '0.1.0');
   assert.equal(verifyVersions(root).tag, 'latest');
 });
@@ -188,34 +179,6 @@ test('rejects unsafe package configuration and version drift before writing', as
         delete pkg.publishConfig;
       },
     ],
-    [
-      'public SDK',
-      1,
-      (pkg) => {
-        pkg.private = false;
-      },
-    ],
-    [
-      'public Replay',
-      2,
-      (pkg) => {
-        delete pkg.private;
-      },
-    ],
-    [
-      'SDK version drift',
-      1,
-      (pkg) => {
-        pkg.version = '0.1.0-beta.2';
-      },
-    ],
-    [
-      'Replay version drift',
-      2,
-      (pkg) => {
-        pkg.version = '0.1.0-beta.2';
-      },
-    ],
   ];
   for (const [label, index, mutate] of cases) {
     await t.test(label, (subtest) => {
@@ -231,12 +194,12 @@ test('rejects unsafe package configuration and version drift before writing', as
 
 test('rejects invalid JSON and invalid SDK source before writing', async (t) => {
   const cases = [
-    ['invalid JSON', 2, '{'],
-    ['SDK version drift', 3, "export const SDK_VERSION = '0.0.0';\n"],
-    ['missing SDK version', 3, "export const SDK_NAME = 'sentry.javascript.taro';\n"],
+    ['invalid JSON', 0, '{'],
+    ['SDK version drift', 1, "export const SDK_VERSION = '0.0.0';\n"],
+    ['missing SDK version', 1, "export const SDK_NAME = 'sentry.javascript.taro';\n"],
     [
       'duplicate SDK version',
-      3,
+      1,
       "export const SDK_VERSION = '0.1.0-beta.1';\nexport const SDK_VERSION = '0.1.0-beta.1';\n",
     ],
   ];

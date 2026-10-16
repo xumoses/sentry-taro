@@ -110,7 +110,7 @@ async function main() {
     if (/(?:react-root|taro-lifecycle)\./.test(path.basename(file))) {
       assert.ok(
         map.sources.every(
-          (source) => !/sdk\/src|@sentry\/core|coordinator\/|compression\//.test(source),
+          (source) => !/src\/sdk\/|@sentry\/core|coordinator\/|compression\//.test(source),
         ),
         'A lightweight entry bundled the SDK or coordinator',
       );
@@ -152,13 +152,13 @@ async function main() {
   );
   assertApi(await import(pathToFileURL(esmPath).href));
 
-  run(path.join(root, 'packages/replay/scripts/verify-assets.cjs'), [dist]);
+  run(path.join(root, 'scripts/verify-assets.cjs'), [dist]);
   const worker = path.join(dist, 'worker/replay-compression.js');
   assert.equal(
     fs.readFileSync(worker, 'utf8'),
-    fs.readFileSync(path.join(root, 'packages/replay/dist/worker/replay-compression.js'), 'utf8'),
+    fs.readFileSync(path.join(root, '.build/worker/replay-compression.js'), 'utf8'),
   );
-  run(path.join(root, 'packages/replay/scripts/verify-worker.cjs'));
+  run(path.join(root, 'scripts/verify-worker.cjs'));
   console.log(
     `Verified ${parsed} ES2015 assets, ${checkedSources} portable sourcemap sources, exports, notices, isolated root and Worker.`,
   );

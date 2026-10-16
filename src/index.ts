@@ -1,5 +1,5 @@
-export * from '../packages/sdk/src/index';
-export * from '../packages/replay/src/index';
+export * from './sdk/index';
+export * from './replay/index';
 
 // The recorder's node type retains optional event listener hooks from the SDK
 // and remains structurally compatible with the Replay adapter's node boundary.
@@ -8,11 +8,8 @@ export type {
   TaroReplayMutationObserverConstructor,
   TaroReplayMutationObserverLike,
   TaroReplayMutationRecordLike,
-} from '../packages/sdk/src/replay-poc';
+} from './sdk/replay-poc';
 
 export { getReplay, replayIntegration, taroReplayIntegration } from './replay';
 export type { ReplayIntegrationOptions, TaroReplayIntegrationOptions } from './replay';
-export type {
-  ReplayRecordingMode,
-  SendBufferedReplayOptions,
-} from '../packages/replay/src/coordinator/types';
+export type { ReplayRecordingMode, SendBufferedReplayOptions } from './replay/coordinator/types';

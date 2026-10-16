@@ -3,6 +3,7 @@ dist/
 coverage/
 *.tgz
 .artifacts/
+.build/
 .idea/
 .DS_Store
 .env

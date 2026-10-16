@@ -104,10 +104,10 @@ async function main() {
   const errors = await bundle(build, 'errors-only', 'bundle-errors.mjs');
   const replay = await bundle(build, 'errors-replay', 'bundle-replay.mjs');
   const replayWorker = await bundle(build, 'errors-replay-worker', 'bundle-worker.mjs');
-  const recorder = /packages\/sdk\/src\/(?:replay-[^/]+|rebase)\./;
-  const coordinator = /packages\/replay\/src\/coordinator\//;
+  const recorder = /src\/sdk\/(?:replay-[^/]+|rebase)\./;
+  const coordinator = /src\/replay\/coordinator\//;
   const replaySource = (source) =>
-    recorder.test(source) || /packages\/replay\/src\/|(?:^|\/)fflate(?:@[^/]+)?\//.test(source);
+    recorder.test(source) || /src\/replay\/|(?:^|\/)fflate(?:@[^/]+)?\//.test(source);
   assert.deepEqual(
     errors.mappedSources.filter(replaySource),
     [],
@@ -125,12 +125,12 @@ async function main() {
   }
   for (const result of [errors, replay, replayWorker]) {
     assert.ok(
-      result.mappedSources.some((source) => /packages\/sdk\/src\/polyfills\./.test(source)),
+      result.mappedSources.some((source) => /src\/sdk\/polyfills\./.test(source)),
       'Mini-program polyfill installation was discarded',
     );
     assert.ok(
       !result.mappedSources.some((source) =>
-        /packages\/replay\/src\/worker\/replay-compression\./.test(source),
+        /src\/replay\/worker\/replay-compression\./.test(source),
       ),
       'Standalone Worker code entered the main consumer',
     );

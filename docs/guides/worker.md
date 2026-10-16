@@ -61,7 +61,7 @@ export const replay = Sentry.replayIntegration({
 // 将 replay 传给现有 Sentry.init 的 integrations，并继续接入页面生命周期。
 ```
 
-`workerPath` 相对于最终小程序根目录，不是宿主源码目录或 npm 包路径。默认通过 `wx.createWorker` 创建 Worker；已有 Worker 工厂的宿主可以提供 `compression.createWorker`，函数签名及返回对象要求见 [ReplayCompressionOptions 和 ReplayWorker](../../packages/replay/src/compression.ts)。
+`workerPath` 相对于最终小程序根目录，不是宿主源码目录或 npm 包路径。默认通过 `wx.createWorker` 创建 Worker；已有 Worker 工厂的宿主可以提供 `compression.createWorker`，函数签名及返回对象要求见 [ReplayCompressionOptions 和 ReplayWorker](../../src/replay/compression.ts)。
 
 ## 降级和验证
 

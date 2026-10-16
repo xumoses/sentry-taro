@@ -6,7 +6,7 @@
     "outDir": "dist/types",
     "types": ["node", "react"]
   },
-  "include": ["src", "packages/sdk/src", "packages/replay/src", "packages/taro-plugin/src"],
+  "include": ["src"],
   "exclude": ["node_modules", "**/test", "**/dist"],
   "extends": "./tsconfig.base.json"
 }

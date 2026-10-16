@@ -6,8 +6,8 @@ const registry = 'https://registry.npmjs.org/';
 const versionPattern =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.(0|[1-9]\d*))?$/;
 const sdkVersionPattern = /^(export\s+const\s+SDK_VERSION\s*=\s*)(['"])([^'"\r\n]+)\2(\s*;?\s*)$/gm;
-const manifestPaths = ['package.json', 'packages/sdk/package.json', 'packages/replay/package.json'];
-const sdkVersionPath = 'packages/sdk/src/version.ts';
+const manifestPaths = ['package.json'];
+const sdkVersionPath = 'src/sdk/version.ts';
 
 function parseVersion(version) {
   assert.equal(typeof version, 'string', 'Version must be a string');
@@ -39,7 +39,7 @@ function readReleaseState(root) {
   const sdkVersions = [...sdkText.matchAll(sdkVersionPattern)];
   assert.equal(sdkVersions.length, 1, 'Expected exactly one exported SDK_VERSION string');
 
-  const [pkg, sdk, replay] = manifests.map((manifest) => manifest.value);
+  const [pkg] = manifests.map((manifest) => manifest.value);
   const tag = releaseTag(pkg.version);
   assert.equal(pkg.name, '@xumoses/sentry-taro', 'Unexpected root package name');
   assert.ok(
@@ -57,17 +57,6 @@ function readReleaseState(root) {
     tag,
     'Root publishConfig.tag must match the release channel',
   );
-  for (const [label, manifest] of [
-    ['SDK', sdk],
-    ['Replay', replay],
-  ]) {
-    assert.equal(manifest.private, true, `${label} package must remain private`);
-    assert.equal(
-      manifest.version,
-      pkg.version,
-      `${label} package version must match the root package`,
-    );
-  }
   assert.equal(sdkVersions[0][3], pkg.version, 'SDK_VERSION must match the root package');
 
   return {

@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "noEmit": true,
-    "types": ["node"],
-    "lib": ["ES2022", "DOM"]
-  },
-  "include": ["src", "test", "vitest.config.ts"],
-  "extends": "../../tsconfig.base.json"
-}

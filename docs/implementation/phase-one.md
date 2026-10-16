@@ -70,7 +70,7 @@ Worker 检查覆盖独立执行、zlib/Unicode 往返、缺少 `TextEncoder` 的
 
 通用触发条件：系统字符串在正常版本号后附加架构后缀，例如 `macOS 15.4.1 arm64`。原解析未正确拆分部分此类输入。
 
-[`runtime-os-regression.test.ts`](../../packages/replay/test/runtime-os-regression.test.ts) 使用完全人工构造的系统字符串，覆盖 macOS、Windows、Android、iOS、已知架构后缀和未知尾缀。修复前同一组案例 **7 失败、9 通过**；最小修复后 **16 个全部通过**。修复只调整系统名称与版本解析，保留完整原系统字符串；未知格式不被强行改写，也不新增真机架构采集。
+[`runtime-os-regression.test.ts`](../../test/replay/runtime-os-regression.test.ts) 使用完全人工构造的系统字符串，覆盖 macOS、Windows、Android、iOS、已知架构后缀和未知尾缀。修复前同一组案例 **7 失败、9 通过**；最小修复后 **16 个全部通过**。修复只调整系统名称与版本解析，保留完整原系统字符串；未知格式不被强行改写，也不新增真机架构采集。
 
 该回归证明合成输入下的解析行为得到修复，不宣称已经完成任何真实设备、企业事件或外部 Sentry 数据验证。
 
