@@ -2,7 +2,7 @@ import { withNetworkOptionsSnapshot } from '../network-config';
 import { snapshotNetworkOptions } from '../../sdk/network-details';
 import type { Integration } from '@sentry/core';
 
-import type { SentryMiniappReplaySdk, SentryReplayClient } from '../types';
+import type { SentryReplayClient } from '../types';
 import { ReplayCoordinator } from './ReplayCoordinator';
 import type {
   ReplayCoordinatorOptions,
@@ -16,7 +16,6 @@ export interface TaroReplayIntegrationOptions extends Omit<
   ReplayCoordinatorOptions,
   'client' | 'replaysSessionSampleRate' | 'replaysOnErrorSampleRate'
 > {
-  sdk: SentryMiniappReplaySdk;
   replaysSessionSampleRate?: number;
   replaysOnErrorSampleRate?: number;
   /** Official privacy options; top-level values take precedence over privacy.*. */
@@ -37,7 +36,7 @@ export interface TaroReplayIntegration extends Integration {
 }
 
 export function taroReplayIntegration(
-  options: TaroReplayIntegrationOptions,
+  options: TaroReplayIntegrationOptions = {},
 ): TaroReplayIntegration {
   const networkOptions = snapshotNetworkOptions(options);
   const privacy = {

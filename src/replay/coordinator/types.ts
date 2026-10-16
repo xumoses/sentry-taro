@@ -43,7 +43,8 @@ export interface ReplayCoordinatorSnapshot {
 }
 
 export interface ReplayCoordinatorOptions extends TaroReplayNetworkOptions {
-  sdk: SentryMiniappReplaySdk;
+  /** Test and compatibility override; defaults to this package's SDK and recorder. */
+  sdk?: SentryMiniappReplaySdk;
   client: SentryReplayClient;
   enabled?: boolean | (() => boolean);
   replaysSessionSampleRate?: number;

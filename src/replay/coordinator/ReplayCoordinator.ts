@@ -16,6 +16,7 @@ import { ReplayDelivery } from './delivery';
 import { ReplayInitialSendGate, type PendingReplaySegment } from './send-gate';
 import { observeRootActivity, ReplaySessionPolicy } from './session';
 import { REPLAY_BUFFER_WINDOW_MS } from '../../sdk/replay-constants';
+import { defaultReplaySdk } from './default-sdk';
 import type {
   ReplayAwareEvent,
   ReplayCoordinatorOptions,
@@ -356,7 +357,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
       this.#canvasRoot = this.#options.recordCanvas === true ? currentRoot(runtime) : undefined;
       this.#session.start(this.#now());
       const handle = createTaroReplay({
-        sdk: this.#options.sdk,
+        sdk: this.#options.sdk ?? defaultReplaySdk,
         runtime,
         ...snapshotNetworkOptions(this.#options),
         recordCanvas: this.#options.recordCanvas === true,
