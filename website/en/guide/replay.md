@@ -2,7 +2,7 @@
 
 Session Replay links Taro page structure, interactions and errors so you can see how the page changed around a problem. It is opt-in; if you only use error monitoring, you don't need the integration or page lifecycle below.
 
-It currently targets **Taro 4.2.x, React 18 and WeChat mini programs**, and is in beta. Recording is based on the Taro runtime DOM. It is not a screen video and does not cover everything browser Replay does. Delivery and playback verified in DevTools do not replace validation on devices.
+It currently targets **Taro 4.2.x, React 18 and WeChat mini programs**. Recording is based on the Taro runtime DOM. It is not a screen video and does not cover everything browser Replay does. Delivery and playback verified in DevTools do not replace validation on devices.
 
 ## 1. Initialize Replay
 

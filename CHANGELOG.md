@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0 — 2026-10-19
+
+首个正式版，发布到 npm `latest`。运行时代码与 `0.1.0-rc.4` 相同；该候选已在首个验证项目中通过电脑微信验收（错误上报、Replay 录制与 Playback、默认上传映射后的栈帧还原），记录见[正式版实施记录](./docs/implementation/release-0.1.0.md)。手机微信仍为待验证。
+
+- `latest` 由 `0.1.0-beta.1` 改为 `0.1.0`：安装命令不再需要 `@rc` 标签，直接安装 `@xumoses/sentry-taro` 即可；`beta` 渠道停在 `0.1.0-beta.6`，不再更新。
+- 从 `0.1.0-beta.*` 升级的破坏性变化见 `0.1.0-rc.1` 条目和[正式版前删除的弃用接口](./docs/migrations/phase-two-runtime.md#正式版前删除的弃用接口)；从 `0.1.0-rc.*` 升级无需改动。
+- README 与网站中英文安装页、示例和 Agent Skill 的安装命令去掉 `@rc`；网站改用 Sentry 的配色、字体与标志。
+
 ## 0.1.0-rc.4 — 2026-10-19
 
 - 修复 `0.1.0-rc.3` 的电脑版主包行号修正可能失效：修正原在事件处理阶段执行，宿主 `beforeSend` 若按 `hint.originalException.stack` 重新解析帧，会把行号覆盖回运行时值，而 `contexts.miniapp.main_package_line_offset` 标记仍保留。现改在 `beforeSendEvent` 钩子（所有 `beforeSend` 之后、发送之前）修正并标记，每个事件只执行一次；`beforeSend` 看到的是运行时行号，不要在其中自行减去偏移。

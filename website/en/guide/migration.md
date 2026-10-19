@@ -19,7 +19,7 @@ With Claude Code, Cursor or similar tools, you can install the repository's [age
 Install the new package in the app directory. Remove the old packages only after replacing imports and confirming no other code uses them:
 
 ```sh
-pnpm add @xumoses/sentry-taro@rc
+pnpm add @xumoses/sentry-taro
 ```
 
 ```sh

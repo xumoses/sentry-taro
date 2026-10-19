@@ -19,7 +19,7 @@
 在应用目录中安装新包。替换完导入并确认其他代码不再使用旧依赖后，再移除旧包：
 
 ```sh
-pnpm add @xumoses/sentry-taro@rc
+pnpm add @xumoses/sentry-taro
 ```
 
 ```sh

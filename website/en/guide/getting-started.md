@@ -10,8 +10,8 @@
 | Platform     | WeChat mini programs; Replay support does not include H5 or other mini-program platforms |
 | Installation | Node.js ≥ 20 and an existing Taro React project                                          |
 
-::: warning Pre-release
-Error ingestion and Replay playback have been verified in WeChat DevTools; desktop WeChat acceptance is not yet complete and mobile WeChat is unverified. Verify your service and target devices before adopting. No minimum WeChat base-library version is promised yet.
+::: tip Verification scope
+Error reporting, Replay playback and stack frame restoration have been accepted on desktop WeChat; mobile WeChat is unverified. Verify your service and target devices before adopting. No minimum WeChat base-library version is promised yet.
 :::
 
 ## 1. Install
@@ -19,20 +19,20 @@ Error ingestion and Replay playback have been verified in WeChat DevTools; deskt
 ::: code-group
 
 ```sh [npm]
-npm install @xumoses/sentry-taro@rc
+npm install @xumoses/sentry-taro
 ```
 
 ```sh [pnpm]
-pnpm add @xumoses/sentry-taro@rc
+pnpm add @xumoses/sentry-taro
 ```
 
 ```sh [yarn]
-yarn add @xumoses/sentry-taro@rc
+yarn add @xumoses/sentry-taro
 ```
 
 :::
 
-Replace `rc` with an explicit version to pin a release.
+To pin a release, append an exact version, e.g. `@xumoses/sentry-taro@0.1.0`.
 
 ## 2. Initialize error monitoring
 

@@ -170,4 +170,4 @@ Session defaults: max 60 min (`maxReplayDuration`), idle pause 5 min (`sessionId
 | Recording stops after navigating back   | Using one-shot `useTaroReplay`, or `stop()` was called earlier.                              |
 | Nothing from a hybrid native page       | Native pages have no Taro DOM; only Taro pages record.                                       |
 
-Local inspection of capture JSON (not real playback): `pnpm dlx --package=@xumoses/sentry-taro@rc sentry-taro-viewer` → `http://127.0.0.1:4178`. Final playback is verified in Sentry.
+Local inspection of capture JSON (not real playback): `pnpm dlx --package=@xumoses/sentry-taro sentry-taro-viewer` → `http://127.0.0.1:4178`. Final playback is verified in Sentry.

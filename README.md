@@ -1,6 +1,6 @@
 # Sentry for Taro
 
-[![npm rc](https://img.shields.io/npm/v/%40xumoses%2Fsentry-taro/rc)](https://www.npmjs.com/package/@xumoses/sentry-taro)
+[![npm](https://img.shields.io/npm/v/%40xumoses%2Fsentry-taro)](https://www.npmjs.com/package/@xumoses/sentry-taro)
 [![CI](https://github.com/xumoses/sentry-taro/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xumoses/sentry-taro/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -15,7 +15,7 @@
 ## 快速开始
 
 ```sh
-npm install @xumoses/sentry-taro@rc
+npm install @xumoses/sentry-taro
 ```
 
 初始化、Replay 接入、构建插件和全部配置见[文档站点](https://sentry-taro.pages.dev/guide/getting-started)。也可以安装 [Agent Skill](./skills/sentry-taro/SKILL.md)，让 Claude Code、Cursor 等工具完成接入或旧包迁移：

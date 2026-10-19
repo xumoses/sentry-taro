@@ -24,7 +24,7 @@ List what you found to the user before changing it.
 Install the new package first, update imports, then remove the old ones once nothing references them:
 
 ```sh
-pnpm add @xumoses/sentry-taro@rc
+pnpm add @xumoses/sentry-taro
 pnpm remove @xumoses/sentry-miniapp @xumoses/sentry-miniapp-replay-taro
 ```
 
