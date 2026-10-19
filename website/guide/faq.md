@@ -32,6 +32,6 @@ import { ScrollView } from '@tarojs/components';
 - [线上小程序分包解析正常，主包 sourcemap 解析为 null](https://developers.weixin.qq.com/community/develop/doc/000eeca78cce1096cf0e0534956400)（2022）
 - [sourceMap下载版本也是正确的 但是行号输入一直无法匹配](https://developers.weixin.qq.com/community/develop/doc/000a0a189f47c0ff266d753bb5bc00)（2022）
 
-从 `0.1.0-rc.3` 起，默认的 `rewriteFramesIntegration()` 在**已知的**电脑版客户端上，先把主包帧的行号减去该客户端的偏移，再交给 Sentry 匹配；修正过的事件带有 `contexts.miniapp.main_package_line_offset`。目前已知 Mac 微信 `4.1.15.55` 偏移 1406 行，这个值来自同一构建在手机和电脑上的成对事件。手机、开发者工具、分包帧以及未列出的电脑版本一律保持原样，不做猜测；偏移值因客户端版本而异，未列出的版本仍会出现上述现象。
+从 `0.1.0-rc.4` 起，默认的 `rewriteFramesIntegration()` 在**已知的**电脑版客户端上，于事件发送前（所有 `beforeSend` 之后）把主包帧的行号减去该客户端的偏移；修正过的事件带有 `contexts.miniapp.main_package_line_offset`。`beforeSend` 中看到的仍是运行时行号，即使它按原始堆栈重新解析帧，修正也不会丢失；不要在 `beforeSend` 里自行减去偏移，否则会重复修正。目前已知 Mac 微信 `4.1.15.55` 偏移 1406 行，这个值来自同一构建在手机和电脑上的成对事件。手机、开发者工具、分包帧以及未列出的电脑版本一律保持原样，不做猜测；偏移值因客户端版本而异，未列出的版本仍会出现上述现象。
 
 如果你在其他电脑版客户端上遇到同样的现象，可以对比同一构建在手机和电脑上同一帧的行号差，并附上客户端版本提交 issue。

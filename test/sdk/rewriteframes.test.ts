@@ -69,6 +69,10 @@ describe('rewriteFramesIntegration', () => {
   });
 
   it('keeps the legacy app:/// names for frozen platforms', () => {
+    const g = globalThis as Record<string, unknown>;
+    delete g['wx'];
+    g['tt'] = { request() {} };
+    resetPlatformCache();
     expect(
       rewrite(rewriteFramesIntegration(), [
         'https://appx/app.js',
@@ -76,6 +80,14 @@ describe('rewriteFramesIntegration', () => {
         'swan://app.js',
       ]),
     ).toEqual(['app:///app.js', 'app:///pages/index/index.js', 'app:///app.js']);
+  });
+
+  it('keeps other runtime schemes unchanged on WeChat', () => {
+    const frames = [
+      'weapp:///taroMiniapp/pages/Swap/Trade/index.js',
+      'webpack-internal:///./src/pages/Swap/Trade/index.jsx',
+    ];
+    expect(rewrite(rewriteFramesIntegration(), frames)).toEqual(frames);
   });
 
   it('follows a custom upload prefix with or without a trailing slash', () => {
@@ -117,7 +129,7 @@ describe('rewriteFramesIntegration', () => {
   });
 });
 
-describe('desktop WeChat main-package line correction', () => {
+describe('desktop WeChat main-package line offset', () => {
   function host(platform: string, version: string): void {
     const wx = (globalThis as unknown as { wx: Record<string, unknown> }).wx;
     wx['getDeviceInfo'] = () => ({ platform, system: 'synthetic', brand: 'synthetic', model: 'x' });
@@ -125,48 +137,9 @@ describe('desktop WeChat main-package line correction', () => {
     resetPlatformCache();
   }
 
-  function capture(frames: StackFrame[], options = {}): Event {
-    const event: Event = {
-      contexts: { miniapp: { platform: 'wechat' } },
-      exception: { values: [{ stacktrace: { frames } }] },
-    };
-    const integration = rewriteFramesIntegration(options);
-    const process = integration.processEvent as (e: Event, h: object, c: never) => Event;
-    return process(event, {}, undefined as never);
-  }
-  const lines = (event: Event) =>
-    event.exception!.values![0]!.stacktrace!.frames!.map((frame) => [frame.filename, frame.lineno]);
-
-  // Paired trial events of one build: Android ran the SDK handler at 9187, Mac 4.1.15.55 at 10593.
-  it('shifts only main-package frames on a listed Mac client and marks the event', () => {
+  it('is known only for listed desktop clients', () => {
     host('mac', '4.1.15.55');
     expect(desktopMainPackageLineOffset()).toBe(1406);
-    const event = capture([
-      { filename: 'https://usr/app-service.js', lineno: 10593, colno: 84273 },
-      { filename: 'https://usr/taroMiniapp/pages/ReplayPoc/app-service.js', lineno: 1097 },
-      { filename: 'https://lib/WAServiceMainContext.js', lineno: 2 },
-      { filename: 'https://usr/app-service.js', lineno: 12 },
-    ]);
-    expect(lines(event)).toEqual([
-      ['https://usr/app-service.js', 9187],
-      ['https://usr/taroMiniapp/pages/ReplayPoc/app-service.js', 1097],
-      ['https://lib/WAServiceMainContext.js', 2],
-      ['https://usr/app-service.js', 12],
-    ]);
-    expect(event.exception!.values![0]!.stacktrace!.frames![0]!.colno).toBe(84273);
-    expect(event.contexts!['miniapp']).toEqual({
-      platform: 'wechat',
-      main_package_line_offset: 1406,
-    });
-  });
-
-  it('applies before a custom iteratee', () => {
-    host('mac', '4.1.15.55');
-    const seen: number[] = [];
-    capture([{ filename: 'https://usr/app-service.js', lineno: 10640 }], {
-      iteratee: (frame: StackFrame) => (seen.push(frame.lineno!), frame),
-    });
-    expect(seen).toEqual([9234]);
   });
 
   it.each([
@@ -175,11 +148,13 @@ describe('desktop WeChat main-package line correction', () => {
     ['devtools', '4.1.15.55'],
     ['mac', '4.1.16.0'],
     ['windows', '4.1.15.55'],
-  ])('leaves %s %s unchanged', (platform, version) => {
+  ])('is unknown on %s %s', (platform, version) => {
     host(platform, version);
     expect(desktopMainPackageLineOffset()).toBeUndefined();
-    const event = capture([{ filename: 'https://usr/app-service.js', lineno: 9187 }]);
-    expect(lines(event)).toEqual([['https://usr/app-service.js', 9187]]);
-    expect(event.contexts!['miniapp']).toEqual({ platform: 'wechat' });
+  });
+
+  it('leaves frames to the sending hook instead of event processing', () => {
+    host('mac', '4.1.15.55');
+    expect(rewrite(rewriteFramesIntegration(), ['https://usr/app-service.js']).length).toBe(1);
   });
 });

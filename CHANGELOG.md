@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-rc.4 — 2026-10-19
+
+- 修复 `0.1.0-rc.3` 的电脑版主包行号修正可能失效：修正原在事件处理阶段执行，宿主 `beforeSend` 若按 `hint.originalException.stack` 重新解析帧，会把行号覆盖回运行时值，而 `contexts.miniapp.main_package_line_offset` 标记仍保留。现改在 `beforeSendEvent` 钩子（所有 `beforeSend` 之后、发送之前）修正并标记，每个事件只执行一次；`beforeSend` 看到的是运行时行号，不要在其中自行减去偏移。
+- 修复 iOS 等 JavaScriptCore 堆栈丢失抛错位置的帧：`@sentry/core` 的事件构建会跳过堆栈第一行（假定为 V8 的 `Error: message` 头），而 JavaScriptCore 堆栈第一行就是帧。现与官方浏览器 SDK 一致从第一行解析，头部行不会被识别为帧；链式错误同样适用。
+- `wx.onError` 传入字符串时，以该字符串（含原始堆栈）作为堆栈解析，帧来自出错代码，而不是 SDK 的处理函数；字符串中没有堆栈时事件不再附带指向 SDK 内部的帧。
+- 帧路径 `https://usr//…`（重复斜杠）和 `http://usr/…` 统一写成上传产物使用的 `https://usr/…`。
+- 微信上 `weapp:///`、`webpack-internal:///` 等其他运行时 scheme 的帧保持原样，不再被改写为冻结平台使用的 `app:///…`。
+- 以上修复后，宿主无需在 `beforeSend` 中按原始堆栈重新解析或改写路径；已有此类代码可以删除。
+
 ## 0.1.0-rc.3 — 2026-10-19
 
 - 修复 Mac 电脑版微信上主包堆栈帧指向无关业务文件：电脑版实际运行的主包脚本比微信最终映射多出若干行（仅行号偏移，列号正确，微信侧已知问题）。默认 `rewriteFramesIntegration()` 在已知的电脑版客户端上先把主包帧行号减去偏移再匹配，修正过的事件带 `contexts.miniapp.main_package_line_offset`；目前仅收录 Mac 微信 `4.1.15.55`（1406 行）。手机、开发者工具、分包帧和未收录的客户端保持原样。原因与参考见[常见问题](./website/guide/faq.md#电脑版微信上主包的堆栈帧指向了无关文件)。

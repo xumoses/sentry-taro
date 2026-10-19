@@ -99,6 +99,19 @@ describe('GlobalHandlers', () => {
       );
     });
 
+    it('uses the stack carried in the onError string', () => {
+      const integration = new GlobalHandlers();
+      integration.setupOnce();
+
+      const message =
+        'Error: swap controlled\n    at swapProbe (https://usr/taroMiniapp/pages/Swap/app-service.js:30:9)';
+      mockSdk.onError.mock.calls[0][0](message);
+
+      const error = (captureException as Mock).mock.calls[0][0] as Error;
+      expect(error.message).toBe(message);
+      expect(error.stack).toBe(message);
+    });
+
     it('should capture Error objects', () => {
       const integration = new GlobalHandlers();
       integration.setupOnce();

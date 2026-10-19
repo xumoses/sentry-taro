@@ -6,9 +6,11 @@ import { appName, getSystemInfo } from '../crossPlatform';
 /** Same origin `taro-plugin` uploads WeChat final maps under (`wechat.urlPrefix` default). */
 export const DEFAULT_FRAME_PREFIX = 'https://usr/';
 
-const WECHAT_PACKAGE_ORIGIN = 'https://usr/';
+// Device frames use `https://usr/`; some runtimes repeat the slash or report `http://usr/`.
+const WECHAT_PACKAGE_ORIGIN = /^https?:\/\/usr\/+/i;
 const WECHAT_APP_SERVICE = /^(?:appservice|app-service)\/(.+)$/i;
-// Frozen platforms keep their legacy `app:///` names (no upload counterpart here).
+// Frozen platforms keep their legacy `app:///` names (no upload counterpart here). On WeChat,
+// other schemes are runtime URLs without an upload and stay unchanged.
 const FROZEN_PLATFORM_FRAME = /^(?:https:\/\/appx\/|(?!https?:|app:)[a-z][a-z\d+.-]*:\/\/)(.*)$/i;
 
 export interface RewriteFramesOptions {
@@ -38,11 +40,12 @@ export function miniappFrameIteratee(
     if (!filename) return frame;
     if (root && filename.startsWith(root)) {
       frame.filename = `${prefix}${filename.slice(root.length).replace(/^\/+/, '')}`;
-    } else if (filename.startsWith(WECHAT_PACKAGE_ORIGIN)) {
-      frame.filename = `${prefix}${filename.slice(WECHAT_PACKAGE_ORIGIN.length)}`;
+    } else if (WECHAT_PACKAGE_ORIGIN.test(filename)) {
+      frame.filename = `${prefix}${filename.replace(WECHAT_PACKAGE_ORIGIN, '')}`;
     } else {
       const appService = WECHAT_APP_SERVICE.exec(filename);
-      const frozen = appService ? undefined : FROZEN_PLATFORM_FRAME.exec(filename);
+      const frozen =
+        appService || appName() === 'wechat' ? undefined : FROZEN_PLATFORM_FRAME.exec(filename);
       if (appService) frame.filename = `${prefix}${appService[1]}`;
       else if (frozen) frame.filename = `app:///${frozen[1]!.replace(/^\/+/, '')}`;
     }
@@ -78,11 +81,15 @@ export function desktopMainPackageLineOffset(): number | undefined {
 }
 
 /** Shifts desktop main-package frames back to the lines WeChat's final source map uses. */
-function correctDesktopMainPackageLines(event: Event, offset: number): void {
+function correctDesktopMainPackageLines(
+  event: Event,
+  offset: number,
+  mainScripts: ReadonlySet<string>,
+): void {
   let corrected = false;
   for (const exception of event.exception?.values ?? []) {
     for (const frame of exception.stacktrace?.frames ?? []) {
-      if (frame.filename !== MAIN_PACKAGE_SCRIPT) continue;
+      if (!frame.filename || !mainScripts.has(frame.filename)) continue;
       if (typeof frame.lineno !== 'number' || frame.lineno <= offset) continue;
       frame.lineno -= offset;
       corrected = true;
@@ -98,21 +105,32 @@ function correctDesktopMainPackageLines(event: Event, offset: number): void {
 
 /**
  * Official `rewriteFramesIntegration` (same name and options) with a mini-program default iteratee,
- * so default frames match the WeChat source maps uploaded by `taro-plugin`. On desktop WeChat
- * clients listed in {@link DESKTOP_MAIN_PACKAGE_LINE_OFFSETS}, main-package line numbers are first
- * shifted to match the final map; see the FAQ for the WeChat-side cause.
+ * so default frames match the WeChat source maps uploaded by `taro-plugin`.
+ *
+ * On desktop WeChat clients listed in {@link DESKTOP_MAIN_PACKAGE_LINE_OFFSETS}, main-package line
+ * numbers are shifted to match the final map in the `beforeSendEvent` hook: after every
+ * `beforeSend`, once per sent event, so a `beforeSend` that re-parses the original stack cannot
+ * undo it and `beforeSend` itself still sees runtime lines. See the FAQ for the WeChat-side cause.
  */
 export function rewriteFramesIntegration(options: RewriteFramesOptions = {}): Integration {
   const integration = coreRewriteFramesIntegration({
     iteratee: options.iteratee ?? miniappFrameIteratee(options),
   });
-  const processEvent = integration.processEvent;
+  // Main-package names before and after the default iteratee renames them.
+  const mainScripts = new Set([MAIN_PACKAGE_SCRIPT]);
+  if (!options.iteratee) {
+    const prefix = options.prefix || DEFAULT_FRAME_PREFIX;
+    mainScripts.add(`${prefix.endsWith('/') ? prefix : `${prefix}/`}app-service.js`);
+  }
+  const setup = integration.setup;
   return {
     ...integration,
-    processEvent(event, hint, client) {
-      const offset = desktopMainPackageLineOffset();
-      if (offset) correctDesktopMainPackageLines(event, offset);
-      return processEvent ? processEvent.call(integration, event, hint, client) : event;
+    setup(client) {
+      setup?.call(integration, client);
+      client.on('beforeSendEvent', (event) => {
+        const offset = desktopMainPackageLineOffset();
+        if (offset) correctDesktopMainPackageLines(event, offset, mainScripts);
+      });
     },
   };
 }

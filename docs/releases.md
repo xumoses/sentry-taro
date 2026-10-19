@@ -37,7 +37,7 @@ vp run release:version 0.1.0-beta.6
 
 命令同步根 `package.json` 的版本、SDK 的 `SDK_VERSION`（`src/sdk/version.ts`）和根包 `publishConfig.tag`。支持稳定版本及 `alpha.N`、`beta.N`、`rc.N` 预发布版本。它不自动提交、不创建或推送 Git tag，也不发布包。
 
-检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前已发布 `0.1.0-beta.6`，包含结构重构第一阶段、低层录制器正式命名和官方同名的 console/HTTP 错误集成；`0.1.0-rc.2` 已发布到 `rc`；`main` 已更新为 `0.1.0-rc.3`，尚未发布。后续版本仍须重新准备候选，公开渠道以 registry 实际状态为准。
+检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前已发布 `0.1.0-beta.6`，包含结构重构第一阶段、低层录制器正式命名和官方同名的 console/HTTP 错误集成；`0.1.0-rc.3` 已发布到 `rc`；`main` 已更新为 `0.1.0-rc.4`，尚未发布。后续版本仍须重新准备候选，公开渠道以 registry 实际状态为准。
 
 ## 准备候选
 

@@ -11,6 +11,16 @@ interface GlobalHandlersIntegrations {
   onmemorywarning: boolean;
 }
 
+/**
+ * `wx.onError` passes the message and the original stack as one string. Use that string as the
+ * stack so frames come from the failing code, not from this handler.
+ */
+function errorFromOnErrorString(message: string): Error {
+  const error = new Error(message);
+  error.stack = message;
+  return error;
+}
+
 /** Global handlers */
 export class GlobalHandlers implements Integration {
   /**
@@ -82,7 +92,7 @@ export class GlobalHandlers implements Integration {
 
     if (sdk().onError) {
       this._errorHandler = (err: string | Error) => {
-        const error = typeof err === 'string' ? new Error(err) : err;
+        const error = typeof err === 'string' ? errorFromOnErrorString(err) : err;
         captureException(error, {
           mechanism: {
             type: 'onerror',

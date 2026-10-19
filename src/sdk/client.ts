@@ -16,6 +16,7 @@ import type {
   EventHint,
   ParameterizedString,
   SeverityLevel,
+  StackParser,
 } from '@sentry/core';
 
 import { appName } from './crossPlatform';
@@ -39,6 +40,15 @@ import { miniappStackParser } from './stacktrace';
  * @see MiniappOptions for documentation on configuration options.
  * @see SentryClient for usage documentation.
  */
+/**
+ * Core's event builders skip the first stack line, assuming a V8 `Error: message` header.
+ * JavaScriptCore (iOS) stacks start with a frame, so that would drop the throwing frame; like the
+ * official browser SDK, parse from the first line (a header line matches no frame pattern).
+ */
+function keepFirstStackLine(parser: StackParser): StackParser {
+  return (stack, _skipFirstLines, framesToPop) => parser(stack, 0, framesToPop);
+}
+
 export class MiniappClient extends Client<MiniappClientOptions> {
   private _readConsent: () => boolean = () => true;
   private _writeConsent: (granted: boolean) => void = () => {};
@@ -79,7 +89,9 @@ export class MiniappClient extends Client<MiniappClientOptions> {
         defaultIntegrations: options.defaultIntegrations ?? [],
       }),
       sendClientReports: options.sendClientReports ?? true,
-      stackParser: stackParserFromStackParserOptions(options.stackParser || miniappStackParser),
+      stackParser: keepFirstStackLine(
+        stackParserFromStackParserOptions(options.stackParser || miniappStackParser),
+      ),
       _metadata: {
         ...options._metadata,
         sdk: {
