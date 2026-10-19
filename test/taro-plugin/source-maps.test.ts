@@ -4,6 +4,8 @@ import { afterEach, describe, expect, test, vi } from 'vite-plus/test';
 import {
   PreserveTaroSourceMapOffsets,
   mapAfterPrefixInjection,
+  prepareSourceMapForWeChat,
+  UNAVAILABLE_SOURCE_CONTENT,
   type PreserveTaroSourceMapOptions,
   type SourceMapCompilation,
   type SourceMapCompiler,
@@ -198,7 +200,7 @@ describe('Webpack compilation integration', () => {
       'unmapped.js': 'module.exports = {};',
       'app.wxss': 'page{color:red}',
     });
-    expect(compilation.stages.map((item) => item.stage)).toEqual([1000, 5000]);
+    expect(compilation.stages.map((item) => item.stage)).toEqual([1000, 5000, 5001]);
     compilation.run(1000);
     const finalCode = `require("./one");\n${originalCode}`;
     compilation.write(assetName, finalCode);
@@ -382,5 +384,74 @@ describe('Taro shared chunk copies', () => {
     else build.write(shared + '.map', JSON.stringify(sourceMap(1)));
     build.copy(shared, copy);
     expect(build.minimized(copy)).toBe(false);
+  });
+});
+
+describe('WeChat source map preparation', () => {
+  const external = (sources: string[], sourcesContent: (string | null)[]) => ({
+    ...sourceMap(),
+    sources,
+    sourcesContent,
+  });
+
+  test('leaves a map WeChat already keeps unchanged', () => {
+    expect(prepareSourceMapForWeChat(sourceMap())).toBeUndefined();
+  });
+
+  test('renames root-escaping sources uniquely and keeps their content', () => {
+    const map = prepareSourceMapForWeChat(
+      external(
+        [
+          'webpack://app/../../../src/dom/event.ts',
+          'webpack://app/../src/dom/event.ts',
+          'webpack://app/src/pages/index.jsx?bd76',
+          'webpack://app/src/a/../b.ts',
+          '../plain/index.js',
+        ],
+        ['event', 'other event', 'page', 'b', 'plain'],
+      ),
+    )!;
+    expect(map.sources).toEqual([
+      'webpack://app/__external__/src/dom/event.ts',
+      'webpack://app/__external__/src/dom/event.ts?2',
+      'webpack://app/src/pages/index.jsx?bd76',
+      'webpack://app/src/b.ts',
+      '__external__/plain/index.js',
+    ]);
+    expect(map.sourcesContent).toEqual(['event', 'other event', 'page', 'b', 'plain']);
+    expect(map.mappings).toBe(sourceMap().mappings);
+  });
+
+  test('fills null and empty source content so WeChat keeps the whole file map', () => {
+    const map = prepareSourceMapForWeChat(
+      external([sourcePath, 'webpack://app/b.ts', 'webpack://app/c.ts'], [null, 'b', '']),
+    )!;
+    expect(map.sources).toEqual([sourcePath, 'webpack://app/b.ts', 'webpack://app/c.ts']);
+    expect(map.sourcesContent).toEqual([
+      UNAVAILABLE_SOURCE_CONTENT,
+      'b',
+      UNAVAILABLE_SOURCE_CONTENT,
+    ]);
+  });
+
+  test('runs after offset repair on every emitted JavaScript map', () => {
+    const shared = 'pages/example/sub-common/shared.js';
+    const build = harness().compile({
+      [assetName]: originalCode,
+      [`${assetName}.map`]: JSON.stringify(external(['webpack://example/../src/page.ts'], [null])),
+      [shared]: originalCode,
+      [`${shared}.map`]: JSON.stringify(sourceMap()),
+    });
+    build.run(1000);
+    build.write(assetName, `require("./one");\n${originalCode}`);
+    build.run(5000);
+    build.run(5001);
+    const map = build.map();
+    expect(map.sources).toEqual(['webpack://example/__external__/src/page.ts']);
+    expect(map.sourcesContent).toEqual([UNAVAILABLE_SOURCE_CONTENT]);
+    expect(
+      originalPositionFor(new TraceMap(JSON.stringify(map)), { line: 2, column: 13 }),
+    ).toMatchObject({ source: 'webpack://example/__external__/src/page.ts', line: 2 });
+    expect(build.read(`${shared}.map`)).toBe(JSON.stringify(sourceMap()));
   });
 });

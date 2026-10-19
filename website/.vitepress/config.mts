@@ -25,6 +25,7 @@ function zhSidebar(): DefaultTheme.SidebarItem[] {
       items: [
         { text: 'API 与配置', link: '/guide/api' },
         { text: '从旧包迁移', link: '/guide/migration' },
+        { text: '常见问题', link: '/guide/faq' },
       ],
     },
   ];
@@ -53,6 +54,7 @@ function enSidebar(): DefaultTheme.SidebarItem[] {
       items: [
         { text: 'API and configuration', link: '/en/guide/api' },
         { text: 'Migrating from legacy packages', link: '/en/guide/migration' },
+        { text: 'FAQ', link: '/en/guide/faq' },
       ],
     },
   ];

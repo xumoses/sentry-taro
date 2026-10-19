@@ -2,6 +2,8 @@
 
 ## 0.1.0-rc.2 — 2026-10-19
 
+- 修复框架运行库帧在 Sentry 中指向无关业务文件：微信生成最终映射时，会整份丢弃 `sourcesContent` 含 null 或空字符串的 sourcemap，并折叠 `../` 逃逸路径（常见于 `taro.js`）。Taro 构建插件在产出后统一改写：逃逸的 source 改名为唯一的 `__external__/…`，缺失或空的内容补为占位注释；映射位置不变。需重新构建并上传映射；Sentry 中的实际还原待体验版确认。
+- 新增[常见问题](./website/guide/faq.md)页面，说明 CSS overflow 容器滚动无法录制（微信 `view` 不向逻辑层派发滚动事件，改用 `ScrollView`）等。
 - Replay 与官方一致，发送时带上 scope 用户（`Sentry.setUser`，合并 global、isolation、current scope）；修复 `0.1.0-rc.1` 删除 `privacy.allowUser` 后宿主无法为 Replay 关联用户的问题。只设置了 scope 用户的宿主此后会在 Replay 上看到同一用户；`getMetadata` 返回的 `user` 不采用。见[迁移说明](./docs/migrations/phase-two-runtime.md#正式版前删除的弃用接口)。
 
 ## 0.1.0-rc.1 — 2026-10-19

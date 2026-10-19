@@ -73,6 +73,8 @@ const { readSentryBuildMetadata, uploadSourceMaps } = require('@xumoses/sentry-t
 
   On `0.1.0-beta.6` or earlier the default writes `app:///...`, which does not match. Either upgrade, or add `enableSourceMap: false` plus `new Sentry.Integrations.RewriteFrames({ prefix: 'https://usr/' })`; remove both after upgrading. When migrating a host that normalized frames itself in `beforeSend` (often with `enableSourceMap: false`), that code can be dropped. Verify on a real event that business frames resolve to source before relying on it.
 
+- **Runtime frames pointing at an unrelated business file** (for example every React/Taro runtime frame resolving to one page's line 11) mean WeChat dropped a chunk's map from the final map. Up to `0.1.0-rc.1` the plugin could emit maps with null or empty `sourcesContent` entries or `../` sources (typically `taro.js`), which WeChat drops whole. From `0.1.0-rc.2` the plugin renames such sources to `__external__/...` and fills missing content with a placeholder comment; rebuild and re-upload after upgrading.
+
 - Read metadata from the exact output that was uploaded to WeChat; never regenerate identity before upload.
 - Credentials must come from CI secrets. Never write the auth token into files.
 - Not implemented (unknown fields error): `rewriteSources`, `resolveSourceMap`, `filesToDeleteAfterUpload`, `setCommits`, `deploy`, `telemetry`, Debug ID upload.

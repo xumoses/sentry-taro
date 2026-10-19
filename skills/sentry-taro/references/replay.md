@@ -1,6 +1,6 @@
 # Session Replay
 
-Replay records the Taro runtime DOM (structure, mutations, interactions, scroll, viewport) and links it to errors. It is opt-in, beta, and limited to Taro 4.2 + React 18 + WeChat. It is not a pixel video: native component internals, computed browser styles, and final view-layer timing are not captured.
+Replay records the Taro runtime DOM (structure, mutations, interactions, scroll, viewport) and links it to errors. It is opt-in, beta, and limited to Taro 4.2 + React 18 + WeChat. It is not a pixel video: native component internals, computed browser styles, and final view-layer timing are not captured. Scrolling is recorded only for the page, `ScrollView`, and `Swiper`; a `View` scrolled with CSS `overflow` sends no scroll events to the logic layer, so playback stays at its initial position. Suggest a `ScrollView` when the user needs that area's scrolling.
 
 ## 1. Add the integration
 

@@ -146,6 +146,63 @@ export function mapAfterPrefixInjection<TSource extends MappedSource>(
   return { ...updatedMap, ...(originalMap.file === undefined ? {} : { file: originalMap.file }) };
 }
 
+const SOURCE_PREFIX = /^([a-z][a-z\d+.-]*:\/\/[^/]*\/)?(.*)$/i;
+/** Marks sources that Webpack named relative to an input map outside the project root. */
+export const EXTERNAL_SOURCE_DIR = '__external__';
+/** WeChat turns empty content into null, so a missing source needs non-empty text. */
+export const UNAVAILABLE_SOURCE_CONTENT = '/* sentry-taro: original source unavailable */';
+
+function normalizeSourcePath(path: string): string {
+  const parts: string[] = [];
+  for (const part of path.split('/')) {
+    if (part === '.' || (part === '' && parts.length > 0)) continue;
+    if (part === '..' && parts.length > 0 && parts[parts.length - 1] !== '..') parts.pop();
+    else parts.push(part);
+  }
+  let escapes = 0;
+  while (parts[escapes] === '..') escapes += 1;
+  const inside = parts.slice(escapes).join('/');
+  return escapes ? `${EXTERNAL_SOURCE_DIR}/${inside}` : inside;
+}
+
+/**
+ * Prepares a map for WeChat's final compilation, which drops a file's whole map when any
+ * `sourcesContent` entry is null or empty, and collapses `../` source names (merging or
+ * emptying sources). Escaping names become unique `__external__/…` names; missing content
+ * becomes a placeholder comment.
+ */
+export function prepareSourceMapForWeChat(map: TaroSourceMap): TaroSourceMap | undefined {
+  const used = new Set<string>();
+  let changed = false;
+  const sources = map.sources.map((source) => {
+    const [, prefix = '', path = ''] = SOURCE_PREFIX.exec(source) ?? [];
+    const query = path.search(/[?#]/);
+    const pathname = query < 0 ? path : path.slice(0, query);
+    const suffix = query < 0 ? '' : path.slice(query);
+    let name = `${prefix}${normalizeSourcePath(pathname)}${suffix}`;
+    for (let index = 2; used.has(name); index += 1) {
+      name = `${prefix}${normalizeSourcePath(pathname)}${suffix || '?'}${suffix ? '&' : ''}${index}`;
+    }
+    used.add(name);
+    if (name !== source) changed = true;
+    return name;
+  });
+  const content = map.sourcesContent;
+  // Webpack omits the whole array when every entry is null; treat that like null entries.
+  const sourcesContent = map.sources.map(
+    (_, index) => content?.[index] || UNAVAILABLE_SOURCE_CONTENT,
+  );
+  if (
+    !content ||
+    content.length !== sources.length ||
+    content.some((value) => typeof value !== 'string' || value === '')
+  ) {
+    changed = true;
+  }
+  if (!changed) return undefined;
+  return { ...map, sources, sourcesContent };
+}
+
 /** Keep maps aligned after Taro's MiniSplitChunksPlugin rewrites emitted JavaScript. */
 export class PreserveTaroSourceMapOffsets {
   constructor(private readonly options: PreserveTaroSourceMapOptions = {}) {}
@@ -240,6 +297,27 @@ export class PreserveTaroSourceMapOffsets {
           }
           if (this.options.debug && !this.options.silent) {
             console.log(`[sentry-taro] Repaired ${repaired} Taro source maps.`);
+          }
+        },
+      );
+      // After offset repair, so every emitted map reaches WeChat in a form it keeps.
+      compilation.hooks.processAssets.tap(
+        { name: PLUGIN_NAME, stage: Compilation.PROCESS_ASSETS_STAGE_REPORT + 1 },
+        () => {
+          let prepared = 0;
+          for (const { name, source } of compilation.getAssets()) {
+            if (!name.endsWith('.js.map')) continue;
+            try {
+              const map = prepareSourceMapForWeChat(parseSourceMap(source.source().toString()));
+              if (!map) continue;
+              compilation.updateAsset(name, new sources.RawSource(JSON.stringify(map)));
+              prepared += 1;
+            } catch (cause) {
+              this.handleFailure(compilation, name.slice(0, -'.map'.length), cause);
+            }
+          }
+          if (this.options.debug && !this.options.silent) {
+            console.log(`[sentry-taro] Prepared ${prepared} source maps for WeChat.`);
           }
         },
       );
