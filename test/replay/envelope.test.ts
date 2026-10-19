@@ -1,8 +1,15 @@
-import { makeDsn, type ReplayEnvelope } from '@sentry/core';
-import { describe, expect, test, vi } from 'vite-plus/test';
+import {
+  getCurrentScope,
+  getGlobalScope,
+  getIsolationScope,
+  makeDsn,
+  type ReplayEnvelope,
+} from '@sentry/core';
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test';
 
 import {
   createReplayEnvelope,
+  getScopeUser,
   sendReplayCapture,
   serializeDsn,
   serializeReplayRecording,
@@ -80,5 +87,37 @@ describe('Sentry Replay envelope', () => {
       dsn: 'https://public@example.test/1',
     });
     expect(sendEnvelope.mock.calls[0]![0][1][0][0]).toEqual({ type: 'replay_event' });
+  });
+});
+
+describe('scope user', () => {
+  afterEach(() => {
+    getGlobalScope().setUser(null);
+    getIsolationScope().setUser(null);
+    getCurrentScope().setUser(null);
+  });
+
+  test('merges global, isolation and current scope users like core', () => {
+    expect(getScopeUser()).toBeUndefined();
+    getGlobalScope().setUser({ id: 'global', segment: 'synthetic' });
+    getIsolationScope().setUser({ id: 'isolation', username: 'synthetic-name' });
+    getCurrentScope().setUser({ id: 'current' });
+    expect(getScopeUser()).toEqual({
+      id: 'current',
+      username: 'synthetic-name',
+      segment: 'synthetic',
+    });
+  });
+
+  test('reads the user at send time so logout stops attaching identity', async () => {
+    const sent: unknown[] = [];
+    const client = { sendEnvelope: async (envelope: unknown) => void sent.push(envelope) };
+    const capture = makeCapture();
+    getIsolationScope().setUser({ id: 'synthetic-user' });
+    await sendReplayCapture(client, capture);
+    getIsolationScope().setUser(null);
+    await sendReplayCapture(client, capture);
+    const users = sent.map((envelope: any) => envelope[1][0][1].user);
+    expect(users).toEqual([{ id: 'synthetic-user' }, undefined]);
   });
 });

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-rc.2 — 2026-10-19
+
+- Replay 与官方一致，发送时带上 scope 用户（`Sentry.setUser`，合并 global、isolation、current scope）；修复 `0.1.0-rc.1` 删除 `privacy.allowUser` 后宿主无法为 Replay 关联用户的问题。只设置了 scope 用户的宿主此后会在 Replay 上看到同一用户；`getMetadata` 返回的 `user` 不采用。见[迁移说明](./docs/migrations/phase-two-runtime.md#正式版前删除的弃用接口)。
+
 ## 0.1.0-rc.1 — 2026-10-19
 
 正式版 `0.1.0` 的候选版本，通过 npm `rc` 渠道发布。删除 beta 期承诺移除的弃用接口；候选经电脑微信与 Sentry 栈帧还原验收后，以相同内容发布 `0.1.0` 到 `latest`。迁移步骤见[正式版前删除的弃用接口](./docs/migrations/phase-two-runtime.md#正式版前删除的弃用接口)。

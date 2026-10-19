@@ -1,4 +1,5 @@
-import type { DsnComponents, ReplayEnvelope, ReplayEvent, SdkInfo } from '@sentry/core';
+import { getCurrentScope, getGlobalScope, getIsolationScope } from '@sentry/core';
+import type { DsnComponents, ReplayEnvelope, ReplayEvent, SdkInfo, User } from '@sentry/core';
 
 import { utf8ByteLength } from '../sdk/utf8';
 import { mergeReplayContexts } from './metadata';
@@ -27,6 +28,20 @@ export interface ReplayEnvelopeOptions {
   replayStartTimestamp?: number;
   /** Prepared recording bytes, with the uncompressed segment header already prepended. */
   recording?: string | Uint8Array;
+  /** Scope user at send time, as official Replay applies scope data to each segment. */
+  user?: User;
+}
+
+/** Global, isolation and current scope user merged in the same order as `@sentry/core`. */
+export function getScopeUser(): User | undefined {
+  const user: User = {};
+  for (const scope of [getGlobalScope(), getIsolationScope(), getCurrentScope()]) {
+    // `setUser(null)` leaves keys set to undefined; they neither count nor clear outer scopes.
+    for (const [key, value] of Object.entries(scope.getScopeData().user)) {
+      if (value !== undefined) user[key] = value;
+    }
+  }
+  return Object.keys(user).length ? user : undefined;
 }
 
 export interface ReplaySendResult {
@@ -60,7 +75,7 @@ export function createReplayEnvelope(
     ...(metadata.release ? { release: metadata.release } : {}),
     ...(metadata.dist ? { dist: metadata.dist } : {}),
     ...(metadata.sdk ? { sdk: metadata.sdk } : {}),
-    ...(metadata.user ? { user: metadata.user } : {}),
+    ...(metadata.user || options.user ? { user: metadata.user || options.user } : {}),
     ...(metadata.tags ? { tags: metadata.tags } : {}),
     ...(metadata.contexts ? { contexts: mergeReplayContexts({}, metadata.contexts) } : {}),
   };
@@ -112,8 +127,10 @@ export async function sendReplayCapture(
   if (!shouldSend()) return { status: 'cancelled' };
   const dsnComponents = client.getDsn?.();
   const dsn = dsnComponents ? serializeDsn(dsnComponents) : undefined;
+  const user = getScopeUser();
   const envelope = createReplayEnvelope(capture, {
     ...(dsn ? { dsn } : {}),
+    ...(user ? { user } : {}),
     ...(capture.metadata?.sdk ? { sdk: capture.metadata.sdk } : {}),
     ...options,
   });

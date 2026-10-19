@@ -10,20 +10,20 @@
 grep -rnE "startTaroDomReplayPoc|TARO_DOM_REPLAY_POC_MARKER|TaroDomReplayPoc|TaroReplayPoc|StartTaroDomReplayPoc|Integrations\.RewriteFrames|enableSourceMap|privacy:" src
 ```
 
-| 删除项                                                                       | 替代                                                                                                |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `startTaroDomReplayPoc`                                                      | `startTaroReplayRecorder`                                                                           |
-| `TARO_DOM_REPLAY_POC_MARKER`                                                 | `TARO_REPLAY_CAPTURE_MARKER`（值不变，仍为 `'TARO_DOM_REPLAY_POC'`）                                |
-| `StartTaroDomReplayPocOptions`、`TaroDomReplayPocController`                 | `StartTaroReplayRecorderOptions`、`TaroReplayRecorder`                                              |
-| `TaroReplayPocCapture`、`TaroReplayPocEvent`、`TaroReplayPocMetadata`        | `TaroReplayCapture`、`TaroReplayEvent`、`TaroReplayMetadata`                                        |
-| 自定义 `sdk` 对象的 `startTaroDomReplayPoc` 方法（`SentryMiniappReplaySdk`） | 改名为 `startTaroReplayRecorder`；不传 `sdk` 的接入不受影响                                         |
-| `Integrations.RewriteFrames` 类（旧 `app:///` 行为）                         | 默认的 `rewriteFramesIntegration()`；需要旧名时传 `rewriteFramesIntegration({ prefix: 'app:///' })` |
-| `init` 的 `enableSourceMap` 选项                                             | `integrations: defaults => defaults.filter(i => i.name !== 'RewriteFrames')`                        |
-| `replayIntegration` / `taroReplayIntegration` 的 `privacy` 对象              | 顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia`、`maskAttributes`                              |
-| `privacy.maskInputValues`                                                    | 顶层 `maskAllInputs`                                                                                |
-| `privacy.allowUser`                                                          | 无替代；Replay 元数据中的自定义 `user` 一律丢弃                                                     |
+| 删除项                                                                       | 替代                                                                                                                    |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `startTaroDomReplayPoc`                                                      | `startTaroReplayRecorder`                                                                                               |
+| `TARO_DOM_REPLAY_POC_MARKER`                                                 | `TARO_REPLAY_CAPTURE_MARKER`（值不变，仍为 `'TARO_DOM_REPLAY_POC'`）                                                    |
+| `StartTaroDomReplayPocOptions`、`TaroDomReplayPocController`                 | `StartTaroReplayRecorderOptions`、`TaroReplayRecorder`                                                                  |
+| `TaroReplayPocCapture`、`TaroReplayPocEvent`、`TaroReplayPocMetadata`        | `TaroReplayCapture`、`TaroReplayEvent`、`TaroReplayMetadata`                                                            |
+| 自定义 `sdk` 对象的 `startTaroDomReplayPoc` 方法（`SentryMiniappReplaySdk`） | 改名为 `startTaroReplayRecorder`；不传 `sdk` 的接入不受影响                                                             |
+| `Integrations.RewriteFrames` 类（旧 `app:///` 行为）                         | 默认的 `rewriteFramesIntegration()`；需要旧名时传 `rewriteFramesIntegration({ prefix: 'app:///' })`                     |
+| `init` 的 `enableSourceMap` 选项                                             | `integrations: defaults => defaults.filter(i => i.name !== 'RewriteFrames')`                                            |
+| `replayIntegration` / `taroReplayIntegration` 的 `privacy` 对象              | 顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia`、`maskAttributes`                                                  |
+| `privacy.maskInputValues`                                                    | 顶层 `maskAllInputs`                                                                                                    |
+| `privacy.allowUser`                                                          | `0.1.0-rc.2` 起与官方一致：Replay 事件在发送时带上 scope 用户（`Sentry.setUser`），`getMetadata` 返回的 `user` 不再采用 |
 
-录制数据中的 marker 值、默认隐私行为和其他公共入口不变。JavaScript 宿主传入的 `privacy` 对象会被忽略而不报错，只有 TypeScript 会提示；迁移时应逐项改为顶层选项，否则显式放宽的遮罩会恢复为默认遮罩。低层 `createTaroReplay` 与 `ReplayCoordinator` 的 `privacy` 参数仍保留。
+录制数据中的 marker 值、默认隐私行为和其他公共入口不变。`0.1.0-rc.1` 曾直接丢弃 Replay 用户且无替代，`0.1.0-rc.2` 改为继承 scope 用户；只设置了 `Sentry.setUser` 的宿主此后会在 Replay 上看到同一用户，不希望关联时不要设置 scope 用户或在 Replay 期间清除。JavaScript 宿主传入的 `privacy` 对象会被忽略而不报错，只有 TypeScript 会提示；迁移时应逐项改为顶层选项，否则显式放宽的遮罩会恢复为默认遮罩。低层 `createTaroReplay` 与 `ReplayCoordinator` 的 `privacy` 参数仍保留。
 
 ## SDK 公共契约
 

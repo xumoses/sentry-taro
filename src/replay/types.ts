@@ -236,7 +236,7 @@ export interface TaroReplayPrivacyOptions {
   maskAllInputs?: boolean;
   blockAllMedia?: boolean;
   maskAttributes?: string[];
-  /** Default false. Custom metadata.user is discarded unless explicitly enabled. */
+  /** Low-level only. Default false; when enabled, a custom metadata.user overrides the scope user. */
   allowUser?: boolean;
 }
 

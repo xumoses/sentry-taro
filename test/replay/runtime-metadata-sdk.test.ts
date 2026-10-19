@@ -6,7 +6,7 @@ import { makeRuntime } from './fixtures';
 // The real client and recorder contract is mandatory in the unified workspace.
 afterEach(() => vi.unstubAllGlobals());
 describe('workspace SDK shared error and Replay metadata', () => {
-  test('early Replay and real core error share one bounded provider and never inherit scope identity', async () => {
+  test('early Replay and real core error share one bounded provider and apply only the scope user', async () => {
     const sdk = await import('../../src/index');
     const platform = await import('../../src/sdk/crossPlatform');
     const device = vi.fn(() => ({
@@ -105,7 +105,9 @@ describe('workspace SDK shared error and Replay metadata', () => {
       expect(recording.contexts.device).not.toHaveProperty('brand');
       expect(recording.contexts.miniapp_simulator.system).toBe('iOS 10.0.1');
       expect(error.user.id).toBe('scope-only-user');
-      expect(JSON.stringify(recording)).not.toMatch(/scope-only|private-app-id/);
+      // Official Replay applies the scope user; other scope data stays out of replay events.
+      expect(recording.user).toEqual({ id: 'scope-only-user' });
+      expect(JSON.stringify(recording)).not.toMatch(/scope-only-context|private-app-id/);
       expect(hints).toHaveBeenCalledOnce();
       expect(device).toHaveBeenCalledOnce();
       expect(runtime.getDeviceInfo).not.toHaveBeenCalled();

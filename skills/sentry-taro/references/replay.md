@@ -74,7 +74,7 @@ Both default to off when omitted. `beforeErrorSampling(event)` returning `false`
 
 ## 4. Privacy
 
-Defaults: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`. Use these top-level options, plus `maskAttributes` for attribute names to mask. The legacy `privacy.*` object was removed in `0.1.0-rc.1` and is silently ignored, so any loosened setting left there reverts to the masked default. Password inputs are always masked.
+Defaults: `maskAllText: true`, `maskAllInputs: true`, `blockAllMedia: true`. Use these top-level options, plus `maskAttributes` for attribute names to mask. Replay events carry the scope user (`Sentry.setUser`) at send time, as official Replay does; clear it on logout. The legacy `privacy.*` object was removed in `0.1.0-rc.1` and is silently ignored, so any loosened setting left there reverts to the masked default. Password inputs are always masked.
 
 Local markers (class or `data-` attribute; they apply to descendants; mask beats unmask):
 

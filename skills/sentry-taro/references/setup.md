@@ -101,7 +101,7 @@ Replace the example API origin with the user's backend origin. Propagating trace
 ## Context APIs
 
 ```ts
-Sentry.setUser({ id: 'user_123' }); // avoid emails/names unless the user approves PII
+Sentry.setUser({ id: 'user_123' }); // also attached to Replay events; avoid emails/names unless the user approves PII
 Sentry.setTag('feature', 'checkout');
 Sentry.setContext('screen', { name: 'checkout' });
 Sentry.addBreadcrumb({ category: 'ui.action', message: 'Tapped pay', level: 'info' });
