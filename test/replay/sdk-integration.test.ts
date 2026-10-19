@@ -16,9 +16,9 @@ const error = () => ({
   exception: { values: [{ type: 'Error', value: 'synthetic candidate test' }] },
 });
 async function candidate() {
-  const { startTaroDomReplayPoc } = (await import('../../src/replay/recorder/recorder')) as Pick<
+  const { startTaroReplayRecorder } = (await import('../../src/replay/recorder/recorder')) as Pick<
     SentryMiniappReplaySdk,
-    'startTaroDomReplayPoc'
+    'startTaroReplayRecorder'
   >;
   const f = makeSdk();
   let active = 0;
@@ -49,8 +49,8 @@ async function candidate() {
       this.connected = false;
     }
   };
-  f.sdk.startTaroDomReplayPoc = (options) => {
-    const controller = startTaroDomReplayPoc(options);
+  f.sdk.startTaroReplayRecorder = (options) => {
+    const controller = startTaroReplayRecorder(options);
     controllers.push(controller);
     return controller;
   };

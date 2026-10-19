@@ -1,8 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vite-plus/test';
 import { Event, type StackFrame } from '@sentry/core';
 import * as Sentry from '../../src/sdk/index';
 import {
-  RewriteFrames,
   miniappFrameIteratee,
   rewriteFramesIntegration,
 } from '../../src/sdk/integrations/rewriteframes';
@@ -113,97 +112,5 @@ describe('rewriteFramesIntegration', () => {
       'https://usr/a.js',
     );
     expect(miniappFrameIteratee()({ function: 'noFile' })).toEqual({ function: 'noFile' });
-  });
-
-  it('is omitted when the deprecated enableSourceMap is false', () => {
-    expect(
-      getDefaultIntegrations({ enableSourceMap: false }).map((integration) => integration.name),
-    ).not.toContain('RewriteFrames');
-  });
-});
-
-describe('deprecated RewriteFrames class', () => {
-  let rewriteFrames: RewriteFrames;
-
-  beforeEach(() => {
-    rewriteFrames = new RewriteFrames();
-  });
-
-  it('should normalize wechat appservice path', () => {
-    const event: Event = {
-      exception: {
-        values: [
-          {
-            stacktrace: {
-              frames: [
-                { filename: 'appservice/pages/index/index.js' },
-                { filename: 'app-service/app.js' },
-                { filename: 'WAService.js' },
-              ],
-            },
-          },
-        ],
-      },
-    };
-
-    const processed = rewriteFrames.processEvent(event);
-    const frames = (processed.exception!.values as any)[0].stacktrace.frames;
-
-    expect(frames[0].filename).toBe('app:///pages/index/index.js');
-    expect(frames[1].filename).toBe('app:///app.js');
-    expect(frames[2].filename).toBe('app:///WAService.js');
-  });
-
-  it('should normalize alipay and bytedance paths', () => {
-    const event: Event = {
-      exception: {
-        values: [
-          {
-            stacktrace: {
-              frames: [
-                { filename: 'https://appx/app.js' },
-                { filename: 'tt://pages/index/index.js' },
-                { filename: 'swan://app.js' },
-              ],
-            },
-          },
-        ],
-      },
-    };
-
-    const processed = rewriteFrames.processEvent(event);
-    const frames = (processed.exception!.values as any)[0].stacktrace.frames;
-
-    expect(frames[0].filename).toBe('app:///app.js');
-    expect(frames[1].filename).toBe('app:///pages/index/index.js');
-    expect(frames[2].filename).toBe('app:///app.js');
-  });
-
-  it('should prevent double prefixing', () => {
-    const event: Event = {
-      exception: {
-        values: [
-          {
-            stacktrace: {
-              frames: [{ filename: 'app:///pages/index/index.js' }],
-            },
-          },
-        ],
-      },
-    };
-
-    const processed = rewriteFrames.processEvent(event);
-    const frames = (processed.exception!.values as any)[0].stacktrace.frames;
-
-    expect(frames[0].filename).toBe('app:///pages/index/index.js');
-  });
-
-  it('should not throw if frames or exception is missing', () => {
-    const event: Event = {
-      message: 'test',
-    };
-
-    const processed = rewriteFrames.processEvent(event);
-    expect(processed.message).toBe('test');
   });
 });

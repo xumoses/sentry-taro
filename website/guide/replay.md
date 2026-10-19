@@ -106,7 +106,7 @@ export default function ExamplePage() {
 
 ## 4. 配置隐私
 
-默认遮罩文本和输入值、遮挡媒体。顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia` 优先于兼容的 `privacy.*` 配置。密码输入和显式标记为遮罩的输入始终保持遮罩。
+默认遮罩文本和输入值、遮挡媒体。使用顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia` 调整，`maskAttributes` 指定需要遮罩的属性名；`0.1.0-rc.1` 起不再接受 `privacy.*` 对象。密码输入和显式标记为遮罩的输入始终保持遮罩。
 
 可以对明确不含用户数据的静态文案使用局部标记，同时继续保护敏感区域：
 

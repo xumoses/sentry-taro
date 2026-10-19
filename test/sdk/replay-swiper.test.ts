@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from 'vite-plus/test';
 import {
-  startTaroDomReplayPoc,
+  startTaroReplayRecorder,
   type TaroReplayNodeLike,
   type TaroReplayMutationRecordLike,
   type TaroReplayScrollEventLike,
@@ -41,7 +41,7 @@ function node(
   });
   return result;
 }
-const controllers: ReturnType<typeof startTaroDomReplayPoc>[] = [];
+const controllers: ReturnType<typeof startTaroReplayRecorder>[] = [];
 afterEach(() => controllers.splice(0).forEach((controller) => controller.stop()));
 it('preserves a two-page 3+2 carousel and records native and controlled page changes', () => {
   const pages = [3, 2].map((count) =>
@@ -54,7 +54,7 @@ it('preserves a two-page 3+2 carousel and records native and controlled page cha
   const swiper = node('swiper', { current: 0, style: 'height:400rpx' }, pages);
   const root = node('root', {}, [swiper]);
   let mutate = (_records: TaroReplayMutationRecordLike[]) => {};
-  const controller = startTaroDomReplayPoc({
+  const controller = startTaroReplayRecorder({
     root,
     width: 375,
     height: 800,
@@ -96,7 +96,7 @@ it('retains page indexes after reordering and normalizes an initial page beyond 
   const pages = [node('swiper-item', { style: 'background:red' }), node('swiper-item')];
   const swiper = node('swiper', { current: 99, vertical: true }, pages);
   let mutate = (_records: TaroReplayMutationRecordLike[]) => {};
-  const controller = startTaroDomReplayPoc({
+  const controller = startTaroReplayRecorder({
     root: swiper,
     MutationObserver: class {
       constructor(callback: typeof mutate) {

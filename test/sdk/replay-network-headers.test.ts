@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vite-plus/test';
-import { startTaroDomReplayPoc } from '../../src/replay/recorder/recorder';
+import { startTaroReplayRecorder } from '../../src/replay/recorder/recorder';
 import type { NetworkDetailOptions } from '../../src/sdk/network-details';
 
 class Observer {
@@ -7,7 +7,7 @@ class Observer {
   disconnect() {}
 }
 function record(config: NetworkDetailOptions, data: Record<string, unknown>) {
-  const recorder = startTaroDomReplayPoc({
+  const recorder = startTaroReplayRecorder({
     root: { sid: 'root', nodeName: 'view', nodeType: 1, childNodes: [] },
     MutationObserver: Observer,
     ...config,

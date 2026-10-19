@@ -48,7 +48,6 @@ function setup(
     enableNavigationBreadcrumbs: false,
     enableUserInteractionBreadcrumbs: false,
     enableNetworkStatusMonitoring: false,
-    enableSourceMap: false,
     enableOfflineCache: false,
     ...sampleRates,
     transport: () => ({

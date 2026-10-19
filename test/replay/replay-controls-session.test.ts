@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test';
-import { startTaroDomReplayPoc } from '../../src/replay/recorder/recorder';
+import { startTaroReplayRecorder } from '../../src/replay/recorder/recorder';
 import {
   taroReplayIntegration,
   type TaroReplayIntegrationOptions,
@@ -52,9 +52,9 @@ function fixture(
     }
   };
   const starts: StartTaroReplayRecorderOptions[] = [];
-  f.sdk.startTaroDomReplayPoc = (recordingOptions) => {
+  f.sdk.startTaroReplayRecorder = (recordingOptions) => {
     starts.push(recordingOptions);
-    return startTaroDomReplayPoc(recordingOptions);
+    return startTaroReplayRecorder(recordingOptions);
   };
   const integration = taroReplayIntegration({
     sdk: f.sdk,
@@ -535,10 +535,10 @@ describe('official Replay controls and independent session clocks', () => {
     expect(f.active()).toBe(1);
   });
 
-  test('top-level official privacy options take precedence over compatibility options', () => {
+  test('passes top-level official privacy options to the recorder', () => {
     const f = fixture({
       replaysOnErrorSampleRate: 1,
-      privacy: { maskAllText: true, maskAllInputs: true, blockAllMedia: false },
+      maskAttributes: ['title'],
       maskAllText: false,
       maskAllInputs: false,
       blockAllMedia: true,
@@ -548,7 +548,17 @@ describe('official Replay controls and independent session clocks', () => {
       maskAllText: false,
       maskAllInputs: false,
       blockAllMedia: true,
+      maskAttributes: ['title'],
     });
+  });
+
+  test('ignores the removed privacy object', () => {
+    const f = fixture({
+      replaysOnErrorSampleRate: 1,
+      ...({ privacy: { maskAllText: false, allowUser: true } } as object),
+    });
+    f.attach();
+    expect(f.starts[0]).toMatchObject({ maskAllText: true });
   });
 
   test('public controls before client setup do not allocate a recording', async () => {

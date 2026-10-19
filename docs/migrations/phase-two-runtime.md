@@ -2,6 +2,29 @@
 
 本轮将 `@sentry/core` 从 10.66.0 升级到精确版本 **10.76.2**，采用“官方 core + 小程序适配 + 可选 Taro DOM Replay”。以下描述本地实现和合成契约验证；目标服务、Playback、发布包 CI 和设备验收分别记录在[第二阶段进度](../implementation/phase-two.md)。npm 发布前暂停，版本号相同也不能延用旧 tarball 的验收结论。
 
+## 正式版前删除的弃用接口
+
+`0.1.0-rc.1` 删除 beta 期承诺“后续 beta 移除”的接口，正式版不再携带。升级前用以下命令查找残留用法：
+
+```sh
+grep -rnE "startTaroDomReplayPoc|TARO_DOM_REPLAY_POC_MARKER|TaroDomReplayPoc|TaroReplayPoc|StartTaroDomReplayPoc|Integrations\.RewriteFrames|enableSourceMap|privacy:" src
+```
+
+| 删除项                                                                       | 替代                                                                                                |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `startTaroDomReplayPoc`                                                      | `startTaroReplayRecorder`                                                                           |
+| `TARO_DOM_REPLAY_POC_MARKER`                                                 | `TARO_REPLAY_CAPTURE_MARKER`（值不变，仍为 `'TARO_DOM_REPLAY_POC'`）                                |
+| `StartTaroDomReplayPocOptions`、`TaroDomReplayPocController`                 | `StartTaroReplayRecorderOptions`、`TaroReplayRecorder`                                              |
+| `TaroReplayPocCapture`、`TaroReplayPocEvent`、`TaroReplayPocMetadata`        | `TaroReplayCapture`、`TaroReplayEvent`、`TaroReplayMetadata`                                        |
+| 自定义 `sdk` 对象的 `startTaroDomReplayPoc` 方法（`SentryMiniappReplaySdk`） | 改名为 `startTaroReplayRecorder`；不传 `sdk` 的接入不受影响                                         |
+| `Integrations.RewriteFrames` 类（旧 `app:///` 行为）                         | 默认的 `rewriteFramesIntegration()`；需要旧名时传 `rewriteFramesIntegration({ prefix: 'app:///' })` |
+| `init` 的 `enableSourceMap` 选项                                             | `integrations: defaults => defaults.filter(i => i.name !== 'RewriteFrames')`                        |
+| `replayIntegration` / `taroReplayIntegration` 的 `privacy` 对象              | 顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia`、`maskAttributes`                              |
+| `privacy.maskInputValues`                                                    | 顶层 `maskAllInputs`                                                                                |
+| `privacy.allowUser`                                                          | 无替代；Replay 元数据中的自定义 `user` 一律丢弃                                                     |
+
+录制数据中的 marker 值、默认隐私行为和其他公共入口不变。JavaScript 宿主传入的 `privacy` 对象会被忽略而不报错，只有 TypeScript 会提示；迁移时应逐项改为顶层选项，否则显式放宽的遮罩会恢复为默认遮罩。低层 `createTaroReplay` 与 `ReplayCoordinator` 的 `privacy` 参数仍保留。
+
 ## SDK 公共契约
 
 - `MiniappOptions` 继承官方 core options，`beforeSend`、`beforeBreadcrumb`、`tracesSampler` 和 transport 使用其参数与返回值类型。平台扩展保持显式声明。
@@ -31,8 +54,7 @@
 - 曾用 `enableSourceMap: false` 加 `new Integrations.RewriteFrames({ prefix: 'https://usr/' })`，或在 `beforeSend` 中自行改写为 `https://usr/` 的接入，可删除这些代码。保留也不会出错：同名集成会替换默认项，`beforeSend` 收到的已是 `https://usr/…`。
 - 自定义 `wechat.urlPrefix` 时，传入 `rewriteFramesIntegration({ prefix: '<相同前缀>' })`。
 - 曾以 `app:///` 名称自行上传映射的，改用 `https://usr` 前缀上传，或传入 `rewriteFramesIntegration({ prefix: 'app:///' })` 保持旧名。
-- `Integrations.RewriteFrames` 类保留原有 `app:///` 行为并标记弃用，后续 beta 移除。
-- `enableSourceMap` 不是官方选项，标记弃用，仍可用，后续 beta 移除。关闭改写改用 `integrations: defaults => defaults.filter(i => i.name !== 'RewriteFrames')`。
+- `Integrations.RewriteFrames` 类和非官方的 `enableSourceMap` 选项已在 `0.1.0-rc.1` 删除，见[正式版前删除的弃用接口](#正式版前删除的弃用接口)。关闭改写改用 `integrations: defaults => defaults.filter(i => i.name !== 'RewriteFrames')`。
 
 本地测试以上传测试夹具核对两侧命名一致；Sentry 中的实际还原仍需用真实事件确认。官方依据：[core rewriteFrames](https://github.com/getsentry/sentry-javascript/blob/10.76.2/packages/core/src/integrations/rewriteframes.ts)。
 
@@ -80,18 +102,18 @@ await Sentry.flush(2000);
 
 ## 默认会话与资源保护
 
-| 行为                       | 新默认值及边界                                                                                                            |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 最短上传时长               | 默认 4,999 毫秒，`minReplayDuration` 可设为 0–50,000 毫秒；活动中的短录制延后发送，显式 stop 会丢弃尚未达到最小时长的数据 |
-| 出错前窗口                 | 60 秒，字节/事件预算可缩短实际保留时间                                                                                    |
-| 单个已发送 Replay 最长时长 | 60 分钟，`maxReplayDuration` 可缩短，优先于兼容 `limits.maxDurationMs`                                                    |
-| full-session 无用户活动    | 5 分钟暂停 recorder 并保留身份；15 分钟过期，之后活动重新采样并使用新身份                                                 |
-| 尚未发送的 error buffer    | 保持有界滚动窗口，不因无活动或已有身份年龄而过期；是否上传在错误发生时采样                                                |
-| error buffer 发送后        | 保留原本 buffer 的采样身份，不套用 full-session 的 5 分钟暂停；按已发送 Replay 的时长/过期策略处理                        |
-| 活动来源                   | 可见 Taro 根的交互事件与显式页面滚动，只观察活动发生，不读取输入值；DOM 更新和网络流量不伪装成用户活动                    |
-| 隐私                       | 文本、输入默认遮罩，媒体默认阻止；顶层官方隐私开关优先于兼容 `privacy.*`                                                  |
+| 行为                       | 新默认值及边界                                                                                                             |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 最短上传时长               | 默认 4,999 毫秒，`minReplayDuration` 可设为 0–50,000 毫秒；活动中的短录制延后发送，显式 stop 会丢弃尚未达到最小时长的数据  |
+| 出错前窗口                 | 60 秒，字节/事件预算可缩短实际保留时间                                                                                     |
+| 单个已发送 Replay 最长时长 | 60 分钟，`maxReplayDuration` 可缩短，优先于兼容 `limits.maxDurationMs`                                                     |
+| full-session 无用户活动    | 5 分钟暂停 recorder 并保留身份；15 分钟过期，之后活动重新采样并使用新身份                                                  |
+| 尚未发送的 error buffer    | 保持有界滚动窗口，不因无活动或已有身份年龄而过期；是否上传在错误发生时采样                                                 |
+| error buffer 发送后        | 保留原本 buffer 的采样身份，不套用 full-session 的 5 分钟暂停；按已发送 Replay 的时长/过期策略处理                         |
+| 活动来源                   | 可见 Taro 根的交互事件与显式页面滚动，只观察活动发生，不读取输入值；DOM 更新和网络流量不伪装成用户活动                     |
+| 隐私                       | 文本、输入默认遮罩，媒体默认阻止；仅接受顶层官方隐私开关 `maskAllText`、`maskAllInputs`、`blockAllMedia`、`maskAttributes` |
 
-录制器与会话身份分开：切换页面、排出分段或空闲暂停并不自动创建新 Replay。低层 `startTaroDomReplayPoc` / React 单次录制接口保留兼容名称，默认最长时长也调整为 60 分钟，但不拥有协调器的完整会话策略。
+录制器与会话身份分开：切换页面、排出分段或空闲暂停并不自动创建新 Replay。低层 `startTaroReplayRecorder` / React 单次录制接口默认最长时长也调整为 60 分钟，但不拥有协调器的完整会话策略。
 
 原有保护继续保留：默认每个录制缓冲最多 500 个事件、512 KiB、10,000 次 mutation；投递队列最多 4 段、2 MiB、最多重试 2 次。录制窗口、内存预算、下载体积是不同维度。这些值是既有保守保护，尚未通过本轮设备测量证明为最优预算；不可将 60 秒表述为任何负载下都能保留的保证。
 

@@ -14,9 +14,9 @@ test('an opted-in bridge delegates a current-page canvas read to its recorder', 
   root.childNodes!.push(canvas);
   const runtime = makeRuntime(root);
   runtime.document.getElementById = (id) => (id === 'chart' ? canvas : root);
-  const start = f.sdk.startTaroDomReplayPoc;
+  const start = f.sdk.startTaroReplayRecorder;
   let insideRecorder = false;
-  f.sdk.startTaroDomReplayPoc = (options) => ({
+  f.sdk.startTaroReplayRecorder = (options) => ({
     ...start(options),
     recordCanvas: (node, read) => {
       if (options.recordCanvas !== true || node !== canvas) return false;
@@ -52,8 +52,8 @@ test('pixels from a foreign, detached, or replaced page root are never read', ()
   const runtime = makeRuntime(root);
   let currentRoot = root;
   runtime.document.getElementById = (id) => (id === 'chart' ? canvas : currentRoot);
-  const start = f.sdk.startTaroDomReplayPoc;
-  f.sdk.startTaroDomReplayPoc = (options) => ({
+  const start = f.sdk.startTaroReplayRecorder;
+  f.sdk.startTaroReplayRecorder = (options) => ({
     ...start(options),
     recordCanvas: (_node, read) => Boolean(read()),
   });
@@ -99,9 +99,9 @@ test.each([
   const runtime = makeRuntime(root);
   const lookup = vi.fn((id: string) => (id === 'chart' ? canvas : root));
   runtime.document.getElementById = lookup;
-  const start = f.sdk.startTaroDomReplayPoc;
+  const start = f.sdk.startTaroReplayRecorder;
   if (mode !== 'old-sdk')
-    f.sdk.startTaroDomReplayPoc = (options) => ({
+    f.sdk.startTaroReplayRecorder = (options) => ({
       ...start(options),
       recordCanvas: (_node, read) => Boolean(read()),
     });
@@ -137,8 +137,8 @@ test('ownership is checked again when the SDK asks for pixels', () => {
   const canvas: TaroReplayNodeLike = { nodeType: 1, nodeName: 'canvas', parentNode: root };
   const runtime = makeRuntime(root);
   runtime.document.getElementById = (id) => (id === 'chart' ? canvas : root);
-  const start = f.sdk.startTaroDomReplayPoc;
-  f.sdk.startTaroDomReplayPoc = (options) => ({
+  const start = f.sdk.startTaroReplayRecorder;
+  f.sdk.startTaroReplayRecorder = (options) => ({
     ...start(options),
     recordCanvas: (_node, read) => {
       c.detachRoot();
@@ -166,8 +166,8 @@ test('integration subscribers can capture a previously drawn canvas after each v
   const canvas: TaroReplayNodeLike = { nodeType: 1, nodeName: 'canvas', parentNode: root };
   const runtime = makeRuntime(root);
   runtime.document.getElementById = (id) => (id === 'chart' ? canvas : root);
-  const start = f.sdk.startTaroDomReplayPoc;
-  f.sdk.startTaroDomReplayPoc = (options) => ({
+  const start = f.sdk.startTaroReplayRecorder;
+  f.sdk.startTaroReplayRecorder = (options) => ({
     ...start(options),
     recordCanvas: (_node, read) => Boolean(read()),
   });
@@ -206,10 +206,10 @@ test.each(['buffer-duration', 'error-promotion', 'segment-restart'] as const)(
     const canvas: TaroReplayNodeLike = { nodeType: 1, nodeName: 'canvas', parentNode: root };
     const runtime = makeRuntime(root);
     runtime.document.getElementById = (id) => (id === 'chart' ? canvas : root);
-    const start = f.sdk.startTaroDomReplayPoc;
+    const start = f.sdk.startTaroReplayRecorder;
     let recorder = 0;
     const capturedBy: number[] = [];
-    f.sdk.startTaroDomReplayPoc = (options) => {
+    f.sdk.startTaroReplayRecorder = (options) => {
       const owner = ++recorder;
       return {
         ...start(options),

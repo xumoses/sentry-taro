@@ -30,7 +30,6 @@ async function main() {
     enableNavigationBreadcrumbs: false,
     enableUserInteractionBreadcrumbs: false,
     enableNetworkStatusMonitoring: false,
-    enableSourceMap: false,
     enableOfflineCache: false,
     transport: () => ({
       send: async (envelope) => {

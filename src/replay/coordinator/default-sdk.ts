@@ -10,5 +10,5 @@ export const defaultReplaySdk: SentryMiniappReplaySdk = {
   SDK_VERSION,
   getClient,
   addBreadcrumb,
-  startTaroDomReplayPoc: startTaroReplayRecorder,
+  startTaroReplayRecorder,
 };

@@ -83,7 +83,7 @@ function shouldSendCapture(options: CreateTaroReplayOptions, reason: string | nu
 export function createTaroReplay(options: CreateTaroReplayOptions): TaroReplayHandle {
   const networkOptions = snapshotNetworkOptions(options);
   const networkPolicy = createNetworkHeaderPolicy(networkOptions);
-  let controller: ReturnType<typeof options.sdk.startTaroDomReplayPoc> | undefined;
+  let controller: ReturnType<typeof options.sdk.startTaroReplayRecorder> | undefined;
   let lastCapture: TaroReplayCapture | undefined;
   let detachBreadcrumb: (() => void) | undefined;
   let finalization: Promise<void> | undefined;
@@ -300,7 +300,7 @@ export function createTaroReplay(options: CreateTaroReplayOptions): TaroReplayHa
         options.runtime.getReplayImageSources?.(context.route),
       );
 
-      controller = options.sdk.startTaroDomReplayPoc({
+      controller = options.sdk.startTaroReplayRecorder({
         root,
         ...snapshotNetworkOptions(networkOptions),
         recordCanvas: options.recordCanvas === true,

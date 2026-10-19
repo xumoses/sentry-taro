@@ -16,7 +16,6 @@ const requiredExports = [
   'getClient',
   'getReplay',
   'startTaroReplayRecorder',
-  'startTaroDomReplayPoc',
   'replayIntegration',
   'taroReplayIntegration',
   'createTaroReplay',

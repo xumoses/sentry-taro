@@ -1,12 +1,21 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-rc.1 — 2026-10-19
 
+正式版 `0.1.0` 的候选版本，通过 npm `rc` 渠道发布。删除 beta 期承诺移除的弃用接口；候选经电脑微信与 Sentry 栈帧还原验收后，以相同内容发布 `0.1.0` 到 `latest`。迁移步骤见[正式版前删除的弃用接口](./docs/migrations/phase-two-runtime.md#正式版前删除的弃用接口)。
+
+破坏性变化：
+
+- 删除低层录制器的弃用别名 `startTaroDomReplayPoc`、`TARO_DOM_REPLAY_POC_MARKER`、`StartTaroDomReplayPocOptions`、`TaroDomReplayPocController`、`TaroReplayPocCapture`、`TaroReplayPocEvent`、`TaroReplayPocMetadata`，改用 `0.1.0-beta.6` 起提供的正式名称；录制数据中的 marker 值不变。
+- `SentryMiniappReplaySdk` 的录制方法由 `startTaroDomReplayPoc` 改名为 `startTaroReplayRecorder`；只影响向 `replayIntegration({ sdk })` 传入自定义 `sdk` 的宿主。
+- 删除 `Integrations.RewriteFrames` 类和非官方 `enableSourceMap` 选项；默认的 `rewriteFramesIntegration()` 不变，关闭改写改用 `integrations` 回调过滤 `RewriteFrames`。
+- `replayIntegration` / `taroReplayIntegration` 不再接受 `privacy` 对象，改用顶层 `maskAllText`、`maskAllInputs`、`blockAllMedia`，新增顶层 `maskAttributes`；`privacy.allowUser` 无替代，Replay 元数据中的自定义 `user` 一律丢弃。遗留的 `privacy` 对象被忽略，其中放宽的设置恢复为默认遮罩。
+
+其他变化：
+
+- 修复默认栈帧路径与构建插件上传前缀不一致：默认集成改为官方 core 的 `rewriteFramesIntegration`（新增同名导出），真机 `https://usr/…` 与 `appservice/…` 帧写成 `https://usr/…`，与上传产物同名；开发者工具 HTTP 帧和基础库帧保持原样。`0.1.0-beta.6` 及更早版本写成 `app:///…`，Sentry 无法匹配默认上传的映射。差异见[运行时迁移说明](./docs/migrations/phase-two-runtime.md#栈帧路径)；Sentry 中的实际还原尚待真实事件确认，是本候选的验收项。
 - 使用文档从 `docs/guides/` 迁入项目网站 [`website/`](./website/guide/getting-started.md)，新增“核心概念”页和完整英文版，部署在 [sentry-taro.pages.dev](https://sentry-taro.pages.dev/)；README 精简为概览与文档入口，链接指向线上站点；贡献指南改为英文。
 - 新增英文 Agent Skill [`skills/sentry-taro`](./skills/sentry-taro/SKILL.md)，覆盖新项目接入、Replay、Taro 构建插件，以及从 `@xumoses/sentry-miniapp` / `@xumoses/sentry-miniapp-replay-taro` 迁移；可通过 `npx skills add https://github.com/xumoses/sentry-taro --skill sentry-taro` 安装。Skill 不随 npm 包发布，运行时行为不变。
-- 修复默认栈帧路径与构建插件上传前缀不一致：默认集成改为官方 core 的 `rewriteFramesIntegration`（新增同名导出），真机 `https://usr/…` 与 `appservice/…` 帧写成 `https://usr/…`，与上传产物同名；开发者工具 HTTP 帧和基础库帧保持原样。`0.1.0-beta.6` 及更早版本写成 `app:///…`，Sentry 无法匹配默认上传的映射。迁移及差异见[运行时迁移说明](./docs/migrations/phase-two-runtime.md#栈帧路径)；Sentry 中的实际还原尚待真实事件确认。
-- 弃用 `Integrations.RewriteFrames` 类（保留旧 `app:///` 行为）和非官方的 `enableSourceMap` 选项，后续 beta 移除。
-- Skill 与指南注明 `privacy.*` 将被直接删除，并提示 npm `latest` 仍指向 `0.1.0-beta.1`，安装时需使用 `@beta` 或固定版本。
 
 ## 0.1.0-beta.6 — 2026-10-16
 

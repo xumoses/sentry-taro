@@ -83,16 +83,16 @@ function spans(events: TaroReplayEvent[]) {
     );
 }
 async function fixture() {
-  const { startTaroDomReplayPoc } = (await import('../../src/replay/recorder/recorder')) as Pick<
+  const { startTaroReplayRecorder } = (await import('../../src/replay/recorder/recorder')) as Pick<
     SentryMiniappReplaySdk,
-    'startTaroDomReplayPoc'
+    'startTaroReplayRecorder'
   >;
   const f = makeSdk();
   const controllers: TaroReplayRecorderController[] = [];
   const starts: StartTaroReplayRecorderOptions[] = [];
-  f.sdk.startTaroDomReplayPoc = (options) => {
+  f.sdk.startTaroReplayRecorder = (options) => {
     starts.push(options);
-    const controller = startTaroDomReplayPoc(options);
+    const controller = startTaroReplayRecorder(options);
     controllers.push(controller);
     return controller;
   };

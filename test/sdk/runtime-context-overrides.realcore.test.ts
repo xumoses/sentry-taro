@@ -34,7 +34,6 @@ test.each(['event', 'scope'] as const)(
       enableNavigationBreadcrumbs: false,
       enableUserInteractionBreadcrumbs: false,
       enableNetworkStatusMonitoring: false,
-      enableSourceMap: false,
       enableOfflineCache: false,
       transport: () => ({
         send: async (envelope) => {

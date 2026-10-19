@@ -2,7 +2,7 @@ import { withNetworkOptionsSnapshot } from '../network-config';
 import { snapshotNetworkOptions } from '../../sdk/network-details';
 import type { Integration } from '@sentry/core';
 
-import type { SentryReplayClient } from '../types';
+import type { SentryReplayClient, TaroReplayPrivacyOptions } from '../types';
 import { ReplayCoordinator } from './ReplayCoordinator';
 import type {
   ReplayCoordinatorOptions,
@@ -14,14 +14,16 @@ import type {
 
 export interface TaroReplayIntegrationOptions extends Omit<
   ReplayCoordinatorOptions,
-  'client' | 'replaysSessionSampleRate' | 'replaysOnErrorSampleRate'
+  'client' | 'replaysSessionSampleRate' | 'replaysOnErrorSampleRate' | 'privacy'
 > {
   replaysSessionSampleRate?: number;
   replaysOnErrorSampleRate?: number;
-  /** Official privacy options; top-level values take precedence over privacy.*. */
+  /** Official privacy options; text, input values and media are protected by default. */
   maskAllText?: boolean;
   maskAllInputs?: boolean;
   blockAllMedia?: boolean;
+  /** Attribute names whose values are masked outside unmasked subtrees. */
+  maskAttributes?: string[];
 }
 
 export interface TaroReplayIntegration extends Integration {
@@ -39,11 +41,11 @@ export function taroReplayIntegration(
   options: TaroReplayIntegrationOptions = {},
 ): TaroReplayIntegration {
   const networkOptions = snapshotNetworkOptions(options);
-  const privacy = {
-    ...options.privacy,
+  const privacy: TaroReplayPrivacyOptions = {
     ...(options.maskAllText === undefined ? {} : { maskAllText: options.maskAllText }),
     ...(options.maskAllInputs === undefined ? {} : { maskAllInputs: options.maskAllInputs }),
     ...(options.blockAllMedia === undefined ? {} : { blockAllMedia: options.blockAllMedia }),
+    ...(options.maskAttributes ? { maskAttributes: [...options.maskAttributes] } : {}),
   };
   let coordinator: ReplayCoordinator | undefined;
   const listeners = new Set<(snapshot: ReplayCoordinatorSnapshot) => void>();

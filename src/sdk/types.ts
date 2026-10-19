@@ -135,14 +135,6 @@ export interface MiniappOptions extends Options<BaseTransportOptions>, NetworkDe
   /** Native/Taro Page load and resume idle spans; enabled when tracing is configured. No Page API means no-op. */
   enablePageTracing?: boolean;
 
-  /**
-   * Whether to install the default `rewriteFramesIntegration()` (default true).
-   *
-   * @deprecated Not an official option. Pass `rewriteFramesIntegration({...})` in `integrations`
-   * to customize, or filter `RewriteFrames` out of the defaults to disable. Removed in a later beta.
-   */
-  enableSourceMap?: boolean;
-
   /** Whether to capture and record request and response body in network breadcrumbs */
   traceNetworkBody?: boolean;
 

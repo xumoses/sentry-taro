@@ -45,7 +45,7 @@ pnpm remove @xumoses/sentry-miniapp @xumoses/sentry-miniapp-replay-taro
 
 Two namespace imports usually collapse into one (`import * as Sentry from '@xumoses/sentry-taro'`).
 
-Renamed recorder APIs (old names are deprecated aliases scheduled for removal in the next beta):
+Renamed recorder APIs (the old names were removed in `0.1.0-rc.1`; replace every use):
 
 | Old                                           | New                                                            |
 | --------------------------------------------- | -------------------------------------------------------------- |
@@ -54,6 +54,8 @@ Renamed recorder APIs (old names are deprecated aliases scheduled for removal in
 | `TaroDomReplayPocController`                  | `TaroReplayRecorder`                                           |
 | `StartTaroDomReplayPocOptions`                | `StartTaroReplayRecorderOptions`                               |
 | `TaroReplayPocCapture` / `Event` / `Metadata` | `TaroReplayCapture` / `TaroReplayEvent` / `TaroReplayMetadata` |
+
+A custom `sdk` object passed to `replayIntegration({ sdk })` must name its recorder method `startTaroReplayRecorder` (was `startTaroDomReplayPoc`).
 
 ## 4. Rewrite init
 
@@ -91,8 +93,9 @@ Sentry.init({
 - Drop `sdk: Sentry` — the integration uses the same-package SDK. (Still accepted, but passing a namespace from the old package would create two SDKs.)
 - Drop the `...Sentry.getDefaultIntegrations()` spread: an `integrations` **array now merges with defaults**. `getDefaultIntegrations(options)` now depends on options, so calling it without the real options can produce a different default set. Use the callback form `integrations: (defaults) => [...]` to filter.
 - If the old code passed an `integrations` array deliberately to **replace** defaults, that no longer happens — use the callback form or `defaultIntegrations: false` to keep that behavior, and confirm with the user.
+- Remove `enableSourceMap` (removed in `0.1.0-rc.1`) and any `Integrations.RewriteFrames` instance; the default `rewriteFramesIntegration()` already matches the build plugin upload names. To disable frame rewriting, filter `RewriteFrames` out with the `integrations` callback.
 - Preserve every other existing option (DSN, release, environment, consent, offline cache, filters, network detail options, `beforeSend`, …); their names are unchanged.
-- Move privacy settings to the official top-level options `maskAllText` / `maskAllInputs` / `blockAllMedia` now. Legacy `privacy.*` (including `privacy.maskInputValues` and `privacy.allowUser`) still works in `0.1.0-beta.6`, with top-level values taking precedence, but it is scheduled for removal without a deprecation period.
+- Move privacy settings to the official top-level options `maskAllText` / `maskAllInputs` / `blockAllMedia` now. Legacy `privacy.*` was removed in `0.1.0-rc.1` and is silently ignored: `privacy.maskInputValues` becomes `maskAllInputs`, `privacy.maskAttributes` becomes `maskAttributes`, and `privacy.allowUser` has no replacement (custom `user` in Replay metadata is always dropped).
 
 Lifecycle/page code keeps the same API: `installTaroReplayPageLifecycle({ bridge: replay.bridge, getReplayStyles, getReplayImageSources })`, `useTaroReplayRoot`, `useTaroReplaySnapshot`. Only the import path changes. Still one lifecycle owner per page.
 

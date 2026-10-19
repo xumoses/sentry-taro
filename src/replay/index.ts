@@ -1,9 +1,7 @@
 export { createTaroReplay } from './createTaroReplay';
 export {
   startTaroReplayRecorder,
-  startTaroDomReplayPoc,
   TARO_REPLAY_CAPTURE_MARKER,
-  TARO_DOM_REPLAY_POC_MARKER,
   type TaroReplayScrollEventLike,
 } from './recorder/recorder';
 export { ReplayCoordinator } from './coordinator/ReplayCoordinator';
@@ -22,9 +20,7 @@ export type {
   CreateTaroReplayOptions,
   SentryMiniappReplaySdk,
   SentryReplayClient,
-  StartTaroDomReplayPocOptions,
   StartTaroReplayRecorderOptions,
-  TaroDomReplayPocController,
   TaroReplayCapture,
   TaroReplayContext,
   TaroReplayControllerView,
@@ -39,9 +35,6 @@ export type {
   TaroReplayNodeLike,
   TaroReplayNetworkOptions,
   TaroReplayPrivacyOptions,
-  TaroReplayPocCapture,
-  TaroReplayPocEvent,
-  TaroReplayPocMetadata,
   TaroReplayRecorder,
   TaroReplayRecorderController,
   TaroReplayRuntime,

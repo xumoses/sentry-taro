@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import {
-  startTaroDomReplayPoc,
+  startTaroReplayRecorder,
   type TaroReplayMutationRecordLike,
   type TaroReplayNodeLike,
 } from '../../src/replay/recorder/recorder';
@@ -46,16 +46,16 @@ function harness() {
     emit: (records: TaroReplayMutationRecordLike[]) => emit(records),
   };
 }
-const active: ReturnType<typeof startTaroDomReplayPoc>[] = [];
+const active: ReturnType<typeof startTaroReplayRecorder>[] = [];
 afterEach(() => {
   active.splice(0).forEach((controller) => controller.stop());
 });
-function start(options: Parameters<typeof startTaroDomReplayPoc>[0]) {
-  const controller = startTaroDomReplayPoc(options);
+function start(options: Parameters<typeof startTaroReplayRecorder>[0]) {
+  const controller = startTaroReplayRecorder(options);
   active.push(controller);
   return controller;
 }
-function noCanary(controller: ReturnType<typeof startTaroDomReplayPoc>) {
+function noCanary(controller: ReturnType<typeof startTaroReplayRecorder>) {
   const serialized = JSON.stringify(controller.getCapture());
   // Boolean assertions keep synthetic password strings out of failure output.
   expect(serialized.includes(canary)).toBe(false);

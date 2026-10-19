@@ -4,6 +4,16 @@
 
 首版通过常规 npm 认证发布；`0.1.0-beta.2` 首次完成 OIDC 发布，`0.1.0-beta.3` 至 `0.1.0-beta.6` 也已完成远端准备、Environment 审批暂停、用户批准后发布、registry 完整性和公开安装验证。`NPM_OIDC_PUBLISH_ENABLED=true`。证据见[首版发布记录](./implementation/phase-two.md#首次-npm-发布结果)、[首次 OIDC 发布记录](./implementation/phase-two.md#首次-oidc-发布结果)、[Taro 构建插件版本发布](./implementation/phase-two.md#taro-构建插件版本发布)、[微信最终映射兼容修复版本发布](./implementation/phase-two.md#微信最终映射兼容修复版本发布)、[Swiper 与共享分包映射修复版本发布](./implementation/phase-two.md#swiper-与共享分包映射修复版本发布)及[结构重构版本发布](./implementation/structural-refactor.md#010-beta6-发布)。
 
+## 正式版 0.1.0 发布路径
+
+正式版先发布 `0.1.0-rc.1` 候选到 npm `rc` 渠道，再以相同源码发布 `0.1.0` 到 `latest`。`rc.1` 删除了 beta 期承诺移除的弃用接口，迁移步骤见[正式版前删除的弃用接口](./migrations/phase-two-runtime.md#正式版前删除的弃用接口)。
+
+1. `0.1.0-rc.1` 按下文“常规 tag 发布”完成准备、审批与发布，发布后核验 registry 中 `rc` 指向。
+2. 在首个验证项目中以 `rc.1` 完成电脑微信验收：错误上报、Replay 录制与 Playback、默认上传映射后真实事件的栈帧还原。结果记入 [docs/implementation/](./implementation/)，本地测试不能代替。
+3. 验收发现问题时修复并发布 `rc.2`，重复第 2 步。
+4. 验收通过后执行 `vp run release:version 0.1.0`，`publishConfig.tag` 随之变为 `latest`。同一提交中：CHANGELOG 新增 `0.1.0` 条目；README、网站中英文安装页、示例和 Agent Skill 的安装命令从 `@beta` 改为不带标签，删除“`latest` 仍指向 `0.1.0-beta.1`”的提示；本文更新渠道现状。
+5. 推送 `v0.1.0` tag，审批发布后核验 `latest` 指向 `0.1.0`。`beta` 渠道保留在 `0.1.0-beta.6`，不再更新。
+
 ## CI、Git tag 与 npm 标签
 
 [CI 工作流](../.github/workflows/ci.yml) 负责日常验证；[发布工作流](../.github/workflows/publish.yml) 由推送 `v*` Git tag 触发。Git tag 用来标记源码提交，例如 `v0.1.0-beta.2`；npm 的 `beta` 是指向某个已发布版本的 dist-tag，两者独立。
@@ -27,7 +37,7 @@ vp run release:version 0.1.0-beta.6
 
 命令同步根 `package.json` 的版本、SDK 的 `SDK_VERSION`（`src/sdk/version.ts`）和根包 `publishConfig.tag`。支持稳定版本及 `alpha.N`、`beta.N`、`rc.N` 预发布版本。它不自动提交、不创建或推送 Git tag，也不发布包。
 
-检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前已发布 `0.1.0-beta.6`，包含结构重构第一阶段、低层录制器正式命名和官方同名的 console/HTTP 错误集成；后续版本仍须重新准备候选，公开 `beta` 以 registry 实际状态为准。
+检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。当前已发布 `0.1.0-beta.6`，包含结构重构第一阶段、低层录制器正式命名和官方同名的 console/HTTP 错误集成；`main` 已更新为 `0.1.0-rc.1`，尚未发布。后续版本仍须重新准备候选，公开渠道以 registry 实际状态为准。
 
 ## 准备候选
 

@@ -106,7 +106,7 @@ The default pre-error window is **60 seconds**. Event-count and byte budgets may
 
 ## 4. Configure privacy
 
-Text and input values are masked and media is blocked by default. The top-level `maskAllText`, `maskAllInputs` and `blockAllMedia` take precedence over the compatible `privacy.*` options. Password inputs and inputs explicitly marked for masking always stay masked.
+Text and input values are masked and media is blocked by default. Adjust them with the top-level `maskAllText`, `maskAllInputs` and `blockAllMedia`, and list attribute names to mask in `maskAttributes`; the `privacy.*` object is no longer accepted since `0.1.0-rc.1`. Password inputs and inputs explicitly marked for masking always stay masked.
 
 You can use local markers for static copy that clearly contains no user data while still protecting sensitive regions:
 

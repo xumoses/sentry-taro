@@ -1,11 +1,11 @@
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 import { createCheckpointRebaser } from '../../src/replay/recorder/rebase';
 import {
-  startTaroDomReplayPoc,
-  type StartTaroDomReplayPocOptions,
+  startTaroReplayRecorder,
+  type StartTaroReplayRecorderOptions,
   type TaroReplayMutationRecordLike,
   type TaroReplayNodeLike,
-  type TaroReplayPocCapture,
+  type TaroReplayCapture,
   type TaroReplayScrollEventLike,
 } from '../../src/replay/recorder/recorder';
 
@@ -62,8 +62,8 @@ function node(name = 'view', props: Record<string, unknown> = {}, children: Node
   });
   return result;
 }
-const controllers: ReturnType<typeof startTaroDomReplayPoc>[] = [];
-function mount(root: Node, options: Partial<StartTaroDomReplayPocOptions> = {}) {
+const controllers: ReturnType<typeof startTaroReplayRecorder>[] = [];
+function mount(root: Node, options: Partial<StartTaroReplayRecorderOptions> = {}) {
   let onMutations = (_records: TaroReplayMutationRecordLike[]) => {};
   const listeners = new Map<string, (event: TaroReplayScrollEventLike) => void>();
   root.addEventListener = (name, fn) => {
@@ -79,7 +79,7 @@ function mount(root: Node, options: Partial<StartTaroDomReplayPocOptions> = {}) 
     observe() {}
     disconnect() {}
   }
-  const controller = startTaroDomReplayPoc({ root, MutationObserver: Observer, ...options });
+  const controller = startTaroReplayRecorder({ root, MutationObserver: Observer, ...options });
   controllers.push(controller);
   return {
     controller,
@@ -90,7 +90,7 @@ function mount(root: Node, options: Partial<StartTaroDomReplayPocOptions> = {}) 
 afterEach(() => {
   controllers.splice(0).forEach((controller) => controller.stop());
 });
-function nodes(capture: TaroReplayPocCapture): SnapshotNode[] {
+function nodes(capture: TaroReplayCapture): SnapshotNode[] {
   const snapshot = capture.events.filter((event) => event.type === 2).at(-1)!;
   const result: SnapshotNode[] = [];
   const visit = (current: SnapshotNode) => {
@@ -414,7 +414,7 @@ it('retains accepted Canvas pixels and image IDs when promoting an error buffer'
 
 it('drains a full session before appending a permitted Canvas frame', () => {
   const canvas = node('view', { 'data-sentry-canvas': true });
-  const segments: TaroReplayPocCapture[] = [];
+  const segments: TaroReplayCapture[] = [];
   const { controller } = mount(node('view', {}, [canvas]), {
     recordCanvas: true,
     maxEvents: 2,

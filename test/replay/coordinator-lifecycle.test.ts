@@ -19,7 +19,7 @@ function recorderHarness({ drain = true, initialLimit = false, promotion = false
   const onBufferFull: (() => void)[] = [];
   const pageScroll = vi.fn(() => true);
   const viewport = vi.fn(() => true);
-  f.sdk.startTaroDomReplayPoc = (options) => {
+  f.sdk.startTaroReplayRecorder = (options) => {
     onBufferFull.push(() => options.onBufferFull?.());
     const startedAt = Date.now();
     let stopped = false;

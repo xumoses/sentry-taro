@@ -9,8 +9,6 @@ export { System } from './system';
 export { Router } from './router';
 export { PerformanceIntegration, performanceIntegration } from './performance';
 export { rewriteFramesIntegration } from './rewriteframes';
-/** @deprecated Use `rewriteFramesIntegration()`; removed in a later beta. */
-export { RewriteFrames } from './rewriteframes';
 export { NetworkBreadcrumbs } from './networkbreadcrumbs';
 export { httpClientIntegration } from './httpclient';
 export { PageBreadcrumbs, pageBreadcrumbsIntegration } from './pagebreadcrumbs';

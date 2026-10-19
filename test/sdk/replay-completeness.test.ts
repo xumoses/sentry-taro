@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
-  startTaroDomReplayPoc,
-  type StartTaroDomReplayPocOptions,
+  startTaroReplayRecorder,
+  type StartTaroReplayRecorderOptions,
   type TaroReplayMutationRecordLike,
   type TaroReplayNodeLike,
   type TaroReplayScrollEventLike,
-  type TaroReplayPocEvent,
-  type TaroReplayPocCapture,
+  type TaroReplayEvent,
+  type TaroReplayCapture,
 } from '../../src/replay/recorder/recorder';
 import { boundReplayEvents } from '../../src/replay/recorder/buffer';
 import { createCheckpointRebaser } from '../../src/replay/recorder/rebase';
@@ -63,9 +63,9 @@ function harness(root: Node) {
     emit: (name: string, event: TaroReplayScrollEventLike) => listeners.get(name)?.(event),
   };
 }
-const active: ReturnType<typeof startTaroDomReplayPoc>[] = [];
-function start(options: StartTaroDomReplayPocOptions) {
-  const controller = startTaroDomReplayPoc(options);
+const active: ReturnType<typeof startTaroReplayRecorder>[] = [];
+function start(options: StartTaroReplayRecorderOptions) {
+  const controller = startTaroReplayRecorder(options);
   active.push(controller);
   return controller;
 }
@@ -77,7 +77,7 @@ afterEach(() => {
 function json(events: unknown): string {
   return JSON.stringify(events);
 }
-function latestSnapshot(events: TaroReplayPocEvent[]): TaroReplayPocEvent {
+function latestSnapshot(events: TaroReplayEvent[]): TaroReplayEvent {
   return events.filter((event) => event.type === 2).at(-1)!;
 }
 
@@ -451,7 +451,7 @@ describe('bounded session streaming', () => {
     childNodes?: PlaybackNode[];
     textContent?: string;
   }
-  function playback(controller: ReturnType<typeof startTaroDomReplayPoc>): PlaybackNode[] {
+  function playback(controller: ReturnType<typeof startTaroReplayRecorder>): PlaybackNode[] {
     const events = controller.getCapture().events;
     const state = createCheckpointRebaser(events[1]!);
     events.slice(2).forEach((event) => {
@@ -479,7 +479,7 @@ describe('bounded session streaming', () => {
     visit(state.getSnapshot().data['node'] as PlaybackNode);
     return nodes;
   }
-  function labels(controller: ReturnType<typeof startTaroDomReplayPoc>): string[] {
+  function labels(controller: ReturnType<typeof startTaroReplayRecorder>): string[] {
     return playback(controller)
       .filter((node) => node.textContent && !node.textContent.startsWith('html,body'))
       .map((node) => node.textContent!);
@@ -674,7 +674,7 @@ describe('bounded session streaming', () => {
   it('keeps a CSS-heavy checkpoint once while additions stream across bounded segments', () => {
     const root = element();
     const h = harness(root);
-    const segments: TaroReplayPocCapture[] = [];
+    const segments: TaroReplayCapture[] = [];
     const controller = start({
       root,
       MutationObserver: h.MutationObserver,
@@ -803,7 +803,7 @@ describe('bounded session streaming', () => {
 
 describe('rolling checkpoint transitions', () => {
   it('rebases a serialized root element scroll into element attributes', () => {
-    const events: TaroReplayPocEvent[] = [
+    const events: TaroReplayEvent[] = [
       { type: 4, timestamp: 0, data: {} },
       { type: 2, timestamp: 1, data: { node: { id: 1, type: 2, tagName: 'div' } } },
       { type: 3, timestamp: 2, data: { source: 3, id: 1, x: 12, y: 120 } },
@@ -821,12 +821,12 @@ describe('rolling checkpoint transitions', () => {
   });
 
   it('retains multiple pages in-window and advances Meta and DOM together on count eviction', () => {
-    const meta = (timestamp: number, href: string): TaroReplayPocEvent => ({
+    const meta = (timestamp: number, href: string): TaroReplayEvent => ({
       type: 4,
       timestamp,
       data: { href },
     });
-    const full = (timestamp: number, value: string): TaroReplayPocEvent => ({
+    const full = (timestamp: number, value: string): TaroReplayEvent => ({
       type: 2,
       timestamp,
       data: { node: { id: 1, type: 0, childNodes: [{ id: 2, type: 3, textContent: value }] } },
@@ -834,7 +834,7 @@ describe('rolling checkpoint transitions', () => {
     const events = [
       meta(0, '/one'),
       full(1, 'one'),
-      { type: 5 as TaroReplayPocEvent['type'], timestamp: 2, data: { action: true } },
+      { type: 5 as TaroReplayEvent['type'], timestamp: 2, data: { action: true } },
       meta(3, '/two'),
       full(4, 'two'),
     ];

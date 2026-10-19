@@ -24,7 +24,6 @@ function initialize(options: Sentry.MiniappOptions = {}) {
     enableNavigationBreadcrumbs: false,
     enableUserInteractionBreadcrumbs: false,
     enableNetworkStatusMonitoring: false,
-    enableSourceMap: false,
     enableOfflineCache: false,
     transport: () => ({
       send: async (env) => {

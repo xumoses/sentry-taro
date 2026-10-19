@@ -30,24 +30,20 @@ import { normalizeReplayRpx, TARO_REPLAY_BASE_STYLESHEET } from './styles';
 import { attachScrollSubtree } from './widgets';
 
 export type {
-  StartTaroDomReplayPocOptions,
   StartTaroReplayRecorderOptions,
-  TaroDomReplayPocController,
+  TaroReplayCapture,
+  TaroReplayEvent,
+  TaroReplayMetadata,
   TaroReplayMutationObserverConstructor,
   TaroReplayMutationObserverLike,
   TaroReplayMutationRecordLike,
   TaroReplayNodeLike,
-  TaroReplayPocCapture,
-  TaroReplayPocEvent,
-  TaroReplayPocMetadata,
   TaroReplayRecorder,
 } from '../types';
 export type { TaroReplayScrollEventLike } from './nodes';
 
 /** Capture marker. The value keeps its historical spelling because tools match it in data. */
 export const TARO_REPLAY_CAPTURE_MARKER = 'TARO_DOM_REPLAY_POC';
-/** @deprecated Use TARO_REPLAY_CAPTURE_MARKER. */
-export const TARO_DOM_REPLAY_POC_MARKER = TARO_REPLAY_CAPTURE_MARKER;
 
 const SYNTHETIC_NODE_MAX_ID = 9;
 
@@ -292,6 +288,3 @@ export function startTaroReplayRecorder(
 
   return controller;
 }
-
-/** @deprecated Use startTaroReplayRecorder. */
-export const startTaroDomReplayPoc = startTaroReplayRecorder;

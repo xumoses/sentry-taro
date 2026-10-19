@@ -51,7 +51,6 @@ describe('workspace SDK shared error and Replay metadata', () => {
       enableNavigationBreadcrumbs: false,
       enableUserInteractionBreadcrumbs: false,
       enableNetworkStatusMonitoring: false,
-      enableSourceMap: false,
       enableOfflineCache: false,
       transport: () => ({
         send: async (envelope: Envelope) => {

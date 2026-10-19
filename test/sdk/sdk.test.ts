@@ -94,23 +94,6 @@ describe('SDK', () => {
       expect(client).toBeInstanceOf(MiniappClient);
     });
 
-    it('should add RewriteFrames when enableSourceMap is not false', () => {
-      const client = init({
-        dsn: 'https://test@sentry.io/123',
-        integrations: [],
-      });
-      expect(client).toBeInstanceOf(MiniappClient);
-    });
-
-    it('should skip RewriteFrames when enableSourceMap is false', () => {
-      const client = init({
-        dsn: 'https://test@sentry.io/123',
-        integrations: [],
-        enableSourceMap: false,
-      });
-      expect(client).toBeInstanceOf(MiniappClient);
-    });
-
     it('should add PageBreadcrumbs by default', () => {
       const client = init({
         dsn: 'https://test@sentry.io/123',

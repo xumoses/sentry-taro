@@ -151,17 +151,6 @@ export interface StartTaroReplayRecorderOptions extends TaroReplayNetworkOptions
   onStop?: (capture: TaroReplayCapture) => void;
 }
 
-/** @deprecated Use StartTaroReplayRecorderOptions. */
-export type StartTaroDomReplayPocOptions = StartTaroReplayRecorderOptions;
-/** @deprecated Use TaroReplayRecorder. */
-export type TaroDomReplayPocController = TaroReplayRecorder;
-/** @deprecated Use TaroReplayCapture. */
-export type TaroReplayPocCapture = TaroReplayCapture;
-/** @deprecated Use TaroReplayEvent. */
-export type TaroReplayPocEvent = TaroReplayEvent;
-/** @deprecated Use TaroReplayMetadata. */
-export type TaroReplayPocMetadata = TaroReplayMetadata;
-
 export interface SentryReplayClient {
   getDsn?(): DsnComponents | undefined;
   getOptions?(): {
@@ -194,7 +183,7 @@ export interface SentryMiniappReplaySdk {
   SDK_VERSION?: string;
   getClient(): SentryReplayClient | undefined;
   addBreadcrumb?(breadcrumb: Breadcrumb, hint?: BreadcrumbHint): void;
-  startTaroDomReplayPoc(options: StartTaroReplayRecorderOptions): TaroReplayRecorderController;
+  startTaroReplayRecorder(options: StartTaroReplayRecorderOptions): TaroReplayRecorderController;
 }
 
 export interface TaroReplayRuntime {

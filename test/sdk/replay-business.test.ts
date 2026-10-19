@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import {
-  startTaroDomReplayPoc,
+  startTaroReplayRecorder,
   type TaroReplayNodeLike,
   type TaroReplayScrollEventLike,
   type TaroReplayMutationRecordLike,
@@ -67,7 +67,7 @@ function find(
 function marked(node: SnapshotNode, marker: string) {
   return find(node, (current) => current.attributes?.['data-fixture'] === marker);
 }
-function snapshot(controller: ReturnType<typeof startTaroDomReplayPoc>): SnapshotNode {
+function snapshot(controller: ReturnType<typeof startTaroReplayRecorder>): SnapshotNode {
   return controller
     .getCapture()
     .events.filter((event) => event.type === 2)
@@ -89,7 +89,7 @@ describe('Taro business component replay semantics', () => {
       enabled,
       disabled,
     ]);
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [clipped]),
       MutationObserver: observer.MutationObserver,
@@ -112,7 +112,7 @@ describe('Taro business component replay semantics', () => {
   it('checkpoints inserted or removed Portal subtrees without orphaning detached nodes', () => {
     const observer = harness();
     const root = element('root');
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root,
       MutationObserver: observer.MutationObserver,
@@ -139,7 +139,7 @@ describe('Taro business component replay semantics', () => {
       'data-fixture': 'dynamic',
       src: 'data:image/png;base64,cHJpdmF0ZQ==',
     });
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [image, dynamic]),
       MutationObserver: observer.MutationObserver,
@@ -171,7 +171,7 @@ describe('Taro business component replay semantics', () => {
     const svg = 'data:image/svg+xml;base64,PHN2Zy8+';
     const charsetSvg = 'data:image/svg+xml;charset=utf-8;base64,PHN2Zy8+';
     const image = element('image', { 'data-fixture': 'svg', src: '/assets/icon.svg' });
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [image]),
       MutationObserver: observer.MutationObserver,
@@ -194,7 +194,7 @@ describe('Taro business component replay semantics', () => {
     const svg = `data:image/svg+xml,${payload}`;
     const charsetSvg = `data:image/svg+xml;charset=utf-8,${payload}`;
     const image = element('image', { 'data-fixture': 'svg', src: svg });
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [image]),
       MutationObserver: observer.MutationObserver,
@@ -218,7 +218,7 @@ describe('Taro business component replay semantics', () => {
     const trusted = 'data:image/svg+xml;base64,PHN2Zy8+';
     const image = element('image', { 'data-fixture': 'image', src: runtimeBase64 });
     const view = element('view', { 'data-fixture': 'view', src: trusted });
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [image, view]),
       MutationObserver: observer.MutationObserver,
@@ -268,7 +268,7 @@ describe('Taro business component replay semantics', () => {
     const trusted = 'data:image/svg+xml;base64,PHN2Zy8+';
     const dynamic = element('image', { 'data-fixture': 'dynamic', src: percent });
     const mutable = element('image', { 'data-fixture': 'mutable', src: '/assets/icon.svg' });
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [dynamic, mutable]),
       MutationObserver: observer.MutationObserver,
@@ -293,7 +293,7 @@ describe('Taro business component replay semantics', () => {
     const observer = harness();
     const trusted = 'data:image/svg+xml;base64,PHN2Zy8+';
     const ordinary = ' \thttps://example.test/static/icon\n.svg';
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [
         element('image', { 'data-fixture': 'exact', src: trusted }),
@@ -325,7 +325,7 @@ describe('Taro business component replay semantics', () => {
   ])('filters invalid or oversized trusted SVG encoding: %s', (_name, value) => {
     const observer = harness();
     const image = element('image', { 'data-fixture': 'image', src: '/assets/icon.svg' });
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [image]),
       MutationObserver: observer.MutationObserver,
@@ -346,7 +346,7 @@ describe('Taro business component replay semantics', () => {
     expect(Buffer.byteLength(JSON.stringify(staticImageSources))).toBeGreaterThan(512 * 1024);
     const record = (count: number) => {
       const observer = harness();
-      const controller = startTaroDomReplayPoc({
+      const controller = startTaroReplayRecorder({
         blockAllMedia: false,
         root: element(
           'root',
@@ -381,7 +381,7 @@ describe('Taro business component replay semantics', () => {
     const images = Object.keys(sources).map((src) =>
       element('image', { 'data-fixture': src, src }),
     );
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, images),
       MutationObserver: observer.MutationObserver,
@@ -408,7 +408,7 @@ describe('Taro business component replay semantics', () => {
       column('left'),
       column('right'),
     ]);
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [picker]),
       MutationObserver: observer.MutationObserver,
@@ -462,7 +462,7 @@ describe('Taro business component replay semantics', () => {
       ),
     });
     const root = element('root', {}, [picker]);
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root,
       MutationObserver: observer.MutationObserver,
@@ -480,7 +480,7 @@ describe('Taro business component replay semantics', () => {
     expect(controller.getCapture().events).toHaveLength(count);
     controller.stop();
     expect(listeners).toEqual(new Set([application]));
-    const restarted = startTaroDomReplayPoc({
+    const restarted = startTaroReplayRecorder({
       blockAllMedia: false,
       root,
       MutationObserver: observer.MutationObserver,
@@ -499,7 +499,7 @@ describe('Taro business component replay semantics', () => {
     const input = element('input', { 'data-fixture': 'input', value: '' });
     const rows = Array.from({ length: 12 }, () => element('view'));
     const list = element('view', { 'data-fixture': 'list' }, rows);
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root: element('root', {}, [input, list]),
       MutationObserver: observer.MutationObserver,
@@ -534,13 +534,13 @@ describe('Taro business component replay semantics', () => {
     const observer = harness();
     const input = element('input', { value: '' });
     const root = element('root', {}, [input]);
-    const sizing = startTaroDomReplayPoc({
+    const sizing = startTaroReplayRecorder({
       blockAllMedia: false,
       root,
       MutationObserver: observer.MutationObserver,
     });
     const maxBytes = sizing.stop().stats.approximateBytes + 64;
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       blockAllMedia: false,
       root,
       MutationObserver: observer.MutationObserver,

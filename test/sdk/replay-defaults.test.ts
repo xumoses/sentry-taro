@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import {
-  startTaroDomReplayPoc,
-  type TaroDomReplayPocController,
+  startTaroReplayRecorder,
+  type TaroReplayRecorder,
 } from '../../src/replay/recorder/recorder';
 
-const recordings: TaroDomReplayPocController[] = [];
+const recordings: TaroReplayRecorder[] = [];
 const root = { nodeType: 1, nodeName: 'view', childNodes: [], attributes: [] };
 class Observer {
   observe() {}
@@ -20,7 +20,7 @@ describe('recorder policy used by the Replay adapter', () => {
   it('keeps a default recording alive beyond the former POC window and stops at one hour', () => {
     vi.useFakeTimers();
     const onStop = vi.fn();
-    const controller = startTaroDomReplayPoc({ root, MutationObserver: Observer, onStop });
+    const controller = startTaroReplayRecorder({ root, MutationObserver: Observer, onStop });
     recordings.push(controller);
 
     vi.advanceTimersByTime(60 * 60_000 - 1);
@@ -34,7 +34,7 @@ describe('recorder policy used by the Replay adapter', () => {
   it('honors a smaller explicit duration and releases its timer on manual stop', () => {
     vi.useFakeTimers();
     const onStop = vi.fn();
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       root,
       MutationObserver: Observer,
       maxDurationMs: 1000,
@@ -53,7 +53,7 @@ describe('recorder policy used by the Replay adapter', () => {
   it('falls back to a 60-second rolling window without losing bounded history', () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000_000);
-    const controller = startTaroDomReplayPoc({
+    const controller = startTaroReplayRecorder({
       root,
       MutationObserver: Observer,
       rollingWindowMs: NaN,

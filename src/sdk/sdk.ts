@@ -61,10 +61,7 @@ export function getDefaultIntegrations(options: MiniappOptions = {}): Integratio
       reportInterval: 30000,
     }),
   ];
-  // Deprecated switch; prefer filtering the `RewriteFrames` integration out of the defaults.
-  if (options.enableSourceMap !== false) {
-    integrations.push(rewriteFramesIntegration());
-  }
+  integrations.push(rewriteFramesIntegration());
 
   const networkOptions: Record<string, any> = {
     traceNetworkBody: options.traceNetworkBody,

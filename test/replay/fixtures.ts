@@ -128,7 +128,7 @@ export function makeSdk(): {
       sendEnvelope,
     }),
     addBreadcrumb: (breadcrumb, hint) => breadcrumbHook?.(breadcrumb, hint),
-    startTaroDomReplayPoc: (options) => {
+    startTaroReplayRecorder: (options) => {
       startOptions = options;
       if (capture.stopReason) {
         capture = makeCapture({ endedAt: null, stopReason: null, events: [] });
