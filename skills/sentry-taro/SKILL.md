@@ -50,7 +50,7 @@ Ask the user only for things you cannot infer: the DSN (never invent one — use
 
 After editing:
 
-1. Install with the project's package manager (`@xumoses/sentry-taro@beta`, or a pinned version) and run the project's own typecheck/lint/build.
+1. Install with the project's package manager (`@xumoses/sentry-taro@rc`, or a pinned version) and run the project's own typecheck/lint/build.
 2. Ask the user to trigger a synthetic error from a test button (`Sentry.captureException(new Error('sentry-taro smoke test'))`) in WeChat DevTools and confirm it appears in Sentry Issues.
 3. With Replay: interact with the page for **more than ~5 seconds** before triggering the error (default `minReplayDuration` is 4,999 ms), then confirm the issue links a replay.
 4. Confirm the Sentry ingest domain is in the mini program's `request` trusted-domain list (WeChat MP console), otherwise nothing is sent on devices.

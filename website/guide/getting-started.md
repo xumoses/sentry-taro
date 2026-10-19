@@ -10,8 +10,8 @@
 | 平台     | 微信小程序；Replay 的支持范围不包含 H5 或其他小程序平台 |
 | 安装环境 | Node.js ≥ 20；已有的 Taro React 项目                    |
 
-::: warning 当前为 Beta
-错误接收与 Replay 播放已在微信开发者工具中验证，真机验收尚未完成。使用前请在自己的服务和目标设备上验证；当前未承诺最低微信基础库版本。
+::: warning 当前为预发布版本
+错误接收与 Replay 播放已在微信开发者工具中验证；电脑微信验收尚未完成，手机微信待验证。使用前请在自己的服务和目标设备上验证；当前未承诺最低微信基础库版本。
 :::
 
 ## 1. 安装
@@ -19,20 +19,20 @@
 ::: code-group
 
 ```sh [npm]
-npm install @xumoses/sentry-taro@beta
+npm install @xumoses/sentry-taro@rc
 ```
 
 ```sh [pnpm]
-pnpm add @xumoses/sentry-taro@beta
+pnpm add @xumoses/sentry-taro@rc
 ```
 
 ```sh [yarn]
-yarn add @xumoses/sentry-taro@beta
+yarn add @xumoses/sentry-taro@rc
 ```
 
 :::
 
-需要锁定版本时，将 `beta` 替换为具体版本号。
+需要锁定版本时，将 `rc` 替换为具体版本号。
 
 ## 2. 初始化错误监控
 

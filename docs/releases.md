@@ -1,6 +1,6 @@
 # npm 发布流程
 
-常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`@xumoses/sentry-taro@0.1.0-beta.6` 已于 2026-10-16 通过该流程公开发布；`beta` 当前指向 `0.1.0-beta.6`，`latest` 保留在 `0.1.0-beta.1`。推荐固定版本或显式使用 `@beta`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
+常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`@xumoses/sentry-taro@0.1.0-beta.6` 已于 2026-10-16 通过该流程公开发布；`beta` 当前指向 `0.1.0-beta.6`，`latest` 保留在 `0.1.0-beta.1`。推荐固定版本或显式使用 `@rc`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
 
 首版通过常规 npm 认证发布；`0.1.0-beta.2` 首次完成 OIDC 发布，`0.1.0-beta.3` 至 `0.1.0-beta.6` 也已完成远端准备、Environment 审批暂停、用户批准后发布、registry 完整性和公开安装验证。`NPM_OIDC_PUBLISH_ENABLED=true`。证据见[首版发布记录](./implementation/phase-two.md#首次-npm-发布结果)、[首次 OIDC 发布记录](./implementation/phase-two.md#首次-oidc-发布结果)、[Taro 构建插件版本发布](./implementation/phase-two.md#taro-构建插件版本发布)、[微信最终映射兼容修复版本发布](./implementation/phase-two.md#微信最终映射兼容修复版本发布)、[Swiper 与共享分包映射修复版本发布](./implementation/phase-two.md#swiper-与共享分包映射修复版本发布)及[结构重构版本发布](./implementation/structural-refactor.md#010-beta6-发布)。
 
@@ -11,7 +11,7 @@
 1. `0.1.0-rc.1` 按下文“常规 tag 发布”完成准备、审批与发布，发布后核验 registry 中 `rc` 指向。
 2. 在首个验证项目中以 `rc.1` 完成电脑微信验收：错误上报、Replay 录制与 Playback、默认上传映射后真实事件的栈帧还原。结果记入 [docs/implementation/](./implementation/)，本地测试不能代替。
 3. 验收发现问题时修复并发布 `rc.2`，重复第 2 步。
-4. 验收通过后执行 `vp run release:version 0.1.0`，`publishConfig.tag` 随之变为 `latest`。同一提交中：CHANGELOG 新增 `0.1.0` 条目；README、网站中英文安装页、示例和 Agent Skill 的安装命令从 `@beta` 改为不带标签，删除“`latest` 仍指向 `0.1.0-beta.1`”的提示；本文更新渠道现状。
+4. 验收通过后执行 `vp run release:version 0.1.0`，`publishConfig.tag` 随之变为 `latest`。同一提交中：CHANGELOG 新增 `0.1.0` 条目；README、网站中英文安装页、示例和 Agent Skill 的安装命令从 `@rc` 改为不带标签，删除“`latest` 仍指向 `0.1.0-beta.1`”的提示；本文更新渠道现状。
 5. 推送 `v0.1.0` tag，审批发布后核验 `latest` 指向 `0.1.0`。`beta` 渠道保留在 `0.1.0-beta.6`，不再更新。
 
 ## CI、Git tag 与 npm 标签
