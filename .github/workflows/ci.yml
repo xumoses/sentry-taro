@@ -25,6 +25,8 @@ jobs:
       - run: vp run release:check
       - run: vp run test:release
       - run: vp check
+      # Deployment is path-filtered in docs.yml; every push still checks the build.
+      - run: vp run website:build
       - run: vp run typecheck
       - run: vp test run
       # prepack builds and verifies every published entry, map and Worker.

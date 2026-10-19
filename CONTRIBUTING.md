@@ -61,6 +61,7 @@ These commands match the checks in the [CI workflow](./.github/workflows/ci.yml)
 vp run release:check
 vp run test:release
 vp check
+vp run website:build
 vp run typecheck
 vp test run
 vp pm pack --pack-destination .artifacts
@@ -68,7 +69,7 @@ vp run verify:bundles
 vp run verify:consumer --online
 ```
 
-`vp check` runs formatting and lint checks; type checking runs separately. Preview the website locally with `vp run website:dev` and build it with `vp run website:build`; the build fails on dead links. Documentation-only changes can focus on formatting, links and example accuracy; changes to code, dependencies or release artifacts should pass the full checks.
+`vp check` runs formatting and lint checks; type checking runs separately. Preview the website locally with `vp run website:dev` and build it with `vp run website:build`; the build fails on dead links. Pushes to `main` that touch the website, dependencies or Node.js version deploy it to Cloudflare Pages (`sentry-taro.pages.dev`) through the [website workflow](./.github/workflows/docs.yml); the job needs the `CLOUDFLARE_API_TOKEN` secret and `CLOUDFLARE_ACCOUNT_ID` variable in the `cloudflare-pages` environment. Documentation-only changes can focus on formatting, links and example accuracy; changes to code, dependencies or release artifacts should pass the full checks.
 
 ### Build and tarball verification
 

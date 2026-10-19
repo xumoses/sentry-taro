@@ -20,6 +20,9 @@ allowBuilds:
   esbuild@0.21.5: true
   # The optional platform package already supplies the CLI binary; skip the CDN fallback installer.
   '@sentry/cli@3.6.2': false
+  # Wrangler (website deployment only) validates its platform binaries.
+  esbuild@0.28.1: true
+  workerd@1.20260911.1: true
 
 # This alias exposes Vite 8.3.4 with the Vite Plus distribution's version.
 peerDependencyRules:
