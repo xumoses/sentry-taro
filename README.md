@@ -4,7 +4,7 @@
 [![CI](https://github.com/xumoses/sentry-taro/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xumoses/sentry-taro/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-[English](./README.en.md) · [文档](./website/guide/getting-started.md) · [核心概念](./website/guide/concepts.md) · [问题反馈](https://github.com/xumoses/sentry-taro/issues)
+[English](./README.en.md) · [文档](https://sentry-taro.pages.dev/guide/getting-started) · [核心概念](https://sentry-taro.pages.dev/guide/concepts) · [问题反馈](https://github.com/xumoses/sentry-taro/issues)
 
 `@xumoses/sentry-taro` 是面向 **Taro React 微信小程序**的社区 Sentry SDK，基于官方 `@sentry/core`，提供错误监控、性能监控和可选的 Session Replay。
 
@@ -31,7 +31,7 @@ Sentry.init({
 });
 ```
 
-完整步骤、Replay 接入和配置见[文档](./website/guide/getting-started.md)。也可以安装 [Agent Skill](./skills/sentry-taro/SKILL.md)，让 Claude Code、Cursor 等工具完成接入或旧包迁移：
+完整步骤、Replay 接入和配置见[文档](https://sentry-taro.pages.dev/guide/getting-started)。也可以安装 [Agent Skill](./skills/sentry-taro/SKILL.md)，让 Claude Code、Cursor 等工具完成接入或旧包迁移：
 
 ```sh
 npx skills add https://github.com/xumoses/sentry-taro --skill sentry-taro
@@ -39,16 +39,16 @@ npx skills add https://github.com/xumoses/sentry-taro --skill sentry-taro
 
 ## 文档
 
-| 主题                                            | 内容                                       |
-| ----------------------------------------------- | ------------------------------------------ |
-| [快速开始](./website/guide/getting-started.md)  | 安装、初始化、上报第一条异常、开启 Replay  |
-| [核心概念](./website/guide/concepts.md)         | 设计理念、关键术语与能力边界               |
-| [Session Replay](./website/guide/replay.md)     | 页面接入、采样、隐私、手动控制与排查       |
-| [Taro 构建插件](./website/guide/taro-plugin.md) | Replay 资源、release 身份与 sourcemap 上传 |
-| [API 与配置](./website/guide/api.md)            | 初始化选项、集成、性能监控、Replay 控制    |
-| [从旧包迁移](./website/guide/migration.md)      | 从 `@xumoses/sentry-miniapp` 系列包迁移    |
+| 主题                                                             | 内容                                       |
+| ---------------------------------------------------------------- | ------------------------------------------ |
+| [快速开始](https://sentry-taro.pages.dev/guide/getting-started)  | 安装、初始化、上报第一条异常、开启 Replay  |
+| [核心概念](https://sentry-taro.pages.dev/guide/concepts)         | 设计理念、关键术语与能力边界               |
+| [Session Replay](https://sentry-taro.pages.dev/guide/replay)     | 页面接入、采样、隐私、手动控制与排查       |
+| [Taro 构建插件](https://sentry-taro.pages.dev/guide/taro-plugin) | Replay 资源、release 身份与 sourcemap 上传 |
+| [API 与配置](https://sentry-taro.pages.dev/guide/api)            | 初始化选项、集成、性能监控、Replay 控制    |
+| [从旧包迁移](https://sentry-taro.pages.dev/guide/migration)      | 从 `@xumoses/sentry-miniapp` 系列包迁移    |
 
-文档站点源码在 [`website/`](./website/)，版本变化见 [CHANGELOG](./CHANGELOG.md)，设计决策见 [docs/](./docs/README.md)。
+文档站点为 [sentry-taro.pages.dev](https://sentry-taro.pages.dev/)，源码在 [`website/`](./website/)，版本变化见 [CHANGELOG](./CHANGELOG.md)，设计决策见 [docs/](./docs/README.md)。
 
 ## 反馈与贡献
 
