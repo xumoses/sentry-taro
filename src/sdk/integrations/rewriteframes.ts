@@ -1,5 +1,7 @@
 import { rewriteFramesIntegration as coreRewriteFramesIntegration } from '@sentry/core';
-import type { Integration, StackFrame } from '@sentry/core';
+import type { Event, Integration, StackFrame } from '@sentry/core';
+
+import { appName, getSystemInfo } from '../crossPlatform';
 
 /** Same origin `taro-plugin` uploads WeChat final maps under (`wechat.urlPrefix` default). */
 export const DEFAULT_FRAME_PREFIX = 'https://usr/';
@@ -48,12 +50,69 @@ export function miniappFrameIteratee(
   };
 }
 
+/** The merged main-package script; subpackages keep their own path and are never shifted. */
+const MAIN_PACKAGE_SCRIPT = 'https://usr/app-service.js';
+
+/**
+ * Lines desktop WeChat runs ahead of the main-package code that WeChat's final source map
+ * describes, keyed by `<platform>/<WeChat client version>`. Columns are unaffected. Phones run
+ * the main package exactly as mapped and are never listed. Each value is measured from events
+ * of one build captured on both a phone and that desktop client; unlisted clients are left as is.
+ */
+export const DESKTOP_MAIN_PACKAGE_LINE_OFFSETS: Readonly<Record<string, number>> = {
+  'mac/4.1.15.55': 1406,
+};
+
+/** The known main-package line offset of the running desktop WeChat client, if any. */
+export function desktopMainPackageLineOffset(): number | undefined {
+  try {
+    if (appName() !== 'wechat') return undefined;
+    const info = getSystemInfo();
+    const platform = typeof info?.platform === 'string' ? info.platform.toLowerCase() : '';
+    if (platform !== 'mac' && platform !== 'windows') return undefined;
+    const offset = DESKTOP_MAIN_PACKAGE_LINE_OFFSETS[`${platform}/${String(info?.version)}`];
+    return typeof offset === 'number' && offset > 0 ? offset : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Shifts desktop main-package frames back to the lines WeChat's final source map uses. */
+function correctDesktopMainPackageLines(event: Event, offset: number): void {
+  let corrected = false;
+  for (const exception of event.exception?.values ?? []) {
+    for (const frame of exception.stacktrace?.frames ?? []) {
+      if (frame.filename !== MAIN_PACKAGE_SCRIPT) continue;
+      if (typeof frame.lineno !== 'number' || frame.lineno <= offset) continue;
+      frame.lineno -= offset;
+      corrected = true;
+    }
+  }
+  if (!corrected) return;
+  // Marks corrected events so desktop symbolication can be audited per client version.
+  event.contexts = {
+    ...event.contexts,
+    miniapp: { ...event.contexts?.['miniapp'], main_package_line_offset: offset },
+  };
+}
+
 /**
  * Official `rewriteFramesIntegration` (same name and options) with a mini-program default iteratee,
- * so default frames match the WeChat source maps uploaded by `taro-plugin`.
+ * so default frames match the WeChat source maps uploaded by `taro-plugin`. On desktop WeChat
+ * clients listed in {@link DESKTOP_MAIN_PACKAGE_LINE_OFFSETS}, main-package line numbers are first
+ * shifted to match the final map; see the FAQ for the WeChat-side cause.
  */
 export function rewriteFramesIntegration(options: RewriteFramesOptions = {}): Integration {
-  return coreRewriteFramesIntegration({
+  const integration = coreRewriteFramesIntegration({
     iteratee: options.iteratee ?? miniappFrameIteratee(options),
   });
+  const processEvent = integration.processEvent;
+  return {
+    ...integration,
+    processEvent(event, hint, client) {
+      const offset = desktopMainPackageLineOffset();
+      if (offset) correctDesktopMainPackageLines(event, offset);
+      return processEvent ? processEvent.call(integration, event, hint, client) : event;
+    },
+  };
 }
