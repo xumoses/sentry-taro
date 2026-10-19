@@ -1,26 +1,23 @@
 # 项目文档
 
-从 [README](../README.md) 的快速开始接入错误监控，再按需启用 Replay。[English README](../README.en.md) 提供英文入门说明；详细指南目前以中文为主。
+本目录保存面向维护者的设计原则、架构决策和实施记录。使用文档已迁入[项目网站](../website/guide/getting-started.md)（中英文），源码位于 [`website/`](../website/)。
 
-## 使用指南
+## 使用文档
 
-- [Replay 接入与隐私](./guides/replay.md)：初始化、页面生命周期、采样、遮罩和静态资源。
-- [Taro 构建插件](./guides/taro-plugin.md)：自动生成 Replay 样式和图片、纯 Taro 与混合宿主接入。
-- [Worker 压缩](./guides/worker.md)：复制独立资产、配置小程序 Worker 和了解失败回退行为。
-- [原生与 Taro 混合应用](./guides/hybrid-apps.md)：复用宿主 SDK，通过 bridge 接入 Taro 页面。
-- [API 与运行行为](./guides/api.md)：公共入口、Replay 控制、发送时机与功能边界。
+- [快速开始](../website/guide/getting-started.md) · [核心概念](../website/guide/concepts.md)
+- [Session Replay](../website/guide/replay.md) · [Taro 构建插件](../website/guide/taro-plugin.md) · [Worker 压缩](../website/guide/worker.md) · [原生与 Taro 混合应用](../website/guide/hybrid-apps.md)
+- [API 与配置](../website/guide/api.md) · [从旧包迁移](../website/guide/migration.md)
 - [Taro React 示例](../examples/taro-react/README.md)：使用合成数据和内存 transport 的接入片段。
 - [Agent Skill](../skills/sentry-taro/SKILL.md)（英文）：供 Claude Code、Cursor 等工具自动完成接入、Replay、构建插件配置和旧包迁移。
 
-## 升级与迁移
+## 升级说明
 
-- [旧包迁移](./migrations/legacy-packages.md)：从独立 SDK 和 Replay 包迁移到统一包；也可使用 [Agent Skill 迁移说明](../skills/sentry-taro/references/migration.md)（英文）由 Agent 辅助完成。
 - [运行时迁移说明](./migrations/phase-two-runtime.md)：10.76.2 API、Replay 控制和默认行为变化、功能支持边界。
 - [变更记录](../CHANGELOG.md)：各版本的公开变化说明。
 
 ## 贡献与维护
 
-- [贡献指南](../CONTRIBUTING.md)：反馈问题、开发环境、源码导航和检查命令。
+- [贡献指南](../CONTRIBUTING.md)（英文）：反馈问题、开发环境、源码导航和检查命令。
 - [公开回归测试方案](./plans/public-regression-testing.md)：合成复现、Vitest 回归及公开信息边界。
 - [npm 发布流程](./releases.md)：版本更新、候选校验、GitHub Actions、人工审批和 OIDC 发布。
 

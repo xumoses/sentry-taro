@@ -180,7 +180,7 @@ Sentry.init({
 
 `0.1.0-beta.6` 及更早版本默认写成 `app:///…`，与上传前缀不一致；仍在这些版本时，在 `init` 中设置
 `enableSourceMap: false` 并加入 `new Sentry.Integrations.RewriteFrames({ prefix: 'https://usr/' })`。
-升级后删除这两项即可，见[运行时迁移说明](../migrations/phase-two-runtime.md#栈帧路径)。本地测试覆盖两侧命名一致，
+升级后删除这两项即可，见[运行时迁移说明](https://github.com/xumoses/sentry-taro/blob/main/docs/migrations/phase-two-runtime.md#栈帧路径)。本地测试覆盖两侧命名一致，
 Sentry 中的实际还原仍需用真实事件确认。
 
 ## Worker 与原生 npm 打包

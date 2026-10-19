@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 使用文档从 `docs/guides/` 迁入项目网站 [`website/`](./website/guide/getting-started.md)，新增“核心概念”页和完整英文版；README 精简为概览与文档入口；贡献指南改为英文。
 - 新增英文 Agent Skill [`skills/sentry-taro`](./skills/sentry-taro/SKILL.md)，覆盖新项目接入、Replay、Taro 构建插件，以及从 `@xumoses/sentry-miniapp` / `@xumoses/sentry-miniapp-replay-taro` 迁移；可通过 `npx skills add https://github.com/xumoses/sentry-taro --skill sentry-taro` 安装。Skill 不随 npm 包发布，运行时行为不变。
 - 修复默认栈帧路径与构建插件上传前缀不一致：默认集成改为官方 core 的 `rewriteFramesIntegration`（新增同名导出），真机 `https://usr/…` 与 `appservice/…` 帧写成 `https://usr/…`，与上传产物同名；开发者工具 HTTP 帧和基础库帧保持原样。`0.1.0-beta.6` 及更早版本写成 `app:///…`，Sentry 无法匹配默认上传的映射。迁移及差异见[运行时迁移说明](./docs/migrations/phase-two-runtime.md#栈帧路径)；Sentry 中的实际还原尚待真实事件确认。
 - 弃用 `Integrations.RewriteFrames` 类（保留旧 `app:///` 行为）和非官方的 `enableSourceMap` 选项，后续 beta 移除。
@@ -10,7 +11,7 @@
 ## 0.1.0-beta.6 — 2026-10-16
 
 - 新增与官方 10.76.2 同名的 `captureConsoleIntegration`（core 重导出）和 `httpClientIntegration`，均默认不启用；宿主可替代自行包装的 `console.error` 与 HTTP 5xx 上报。
-- `httpClientIntegration` 复用 `NetworkBreadcrumbs` 对平台请求 API 的包装，事件结构与官方一致；URL 去除账号密码、query 和 fragment，请求头与 cookie 仅在 `sendDefaultPii` / `dataCollection` 允许时附带。差异见 [API 指南](./docs/guides/api.md#错误采集集成)。
+- `httpClientIntegration` 复用 `NetworkBreadcrumbs` 对平台请求 API 的包装，事件结构与官方一致；URL 去除账号密码、query 和 fragment，请求头与 cookie 仅在 `sendDefaultPii` / `dataCollection` 允许时附带。差异见 [API 指南](./website/guide/api.md#错误采集集成)。
 - 离线缓存写入失败的提示改为绕过 console 包装输出，避免被 `captureConsoleIntegration` 再次上报。
 - 低层录制器改用正式名称：`startTaroReplayRecorder`、`TARO_REPLAY_CAPTURE_MARKER`、`TaroReplayRecorder`，类型统一为 `StartTaroReplayRecorderOptions`、`TaroReplayCapture`、`TaroReplayEvent`、`TaroReplayMetadata`。`startTaroDomReplayPoc`、`TARO_DOM_REPLAY_POC_MARKER` 及 `TaroReplayPoc*`、`StartTaroDomReplayPocOptions`、`TaroDomReplayPocController` 保留为弃用别名，下一个 beta 移除；录制数据中的 marker 值不变。
 - 修复 Replay 缓冲在嵌套文档节点上折叠滚动位置的问题，与录制器的检查点处理保持一致。

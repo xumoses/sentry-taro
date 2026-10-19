@@ -24,7 +24,7 @@
 
 - 直接在 `main` 上提交，不使用 worktree 或功能分支。
 - 改动代码、依赖或产物后，运行与 CI 相同的检查，见[贡献指南](./CONTRIBUTING.md#检查改动)。只改文档时，至少运行 `vp check`。
-- 文档与面向维护者的说明使用中文；Agent Skill（`skills/`）使用英文。术语以 [CONTEXT.md](./CONTEXT.md) 为准。
+- 文档与面向维护者的说明使用中文；以下例外使用英文：Agent Skill（`skills/`）、[贡献指南](./CONTRIBUTING.md)、`README.en.md` 和网站英文页（`website/en/`）。使用文档以 `website/` 为唯一来源，中英文页面同步维护。术语以 [CONTEXT.md](./CONTEXT.md) 为准。
 - 设计决定不等于实现或验收完成。实施证据记录在 [docs/implementation/](./docs/implementation/)，不要把本地测试通过写成服务端或设备验收通过。
 
 ## 决策来源

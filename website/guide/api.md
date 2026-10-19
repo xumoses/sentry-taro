@@ -1,6 +1,6 @@
 # API 与配置
 
-本文介绍日常接入使用的 SDK API 和 Replay 控制。首次安装见[快速开始](../../README.md#快速开始)，页面录制接入见 [Replay 指南](./replay.md)。
+本文介绍日常接入使用的 SDK API 和 Replay 控制。首次安装见[快速开始](./getting-started)，页面录制接入见 [Replay 指南](./replay.md)。
 
 ## 初始化与上下文
 
@@ -177,4 +177,4 @@ Replay 的公开 `flush()` / `stop()` 不会将传输错误作为 Promise reject
 
 本包不提供完整浏览器 DOM/BOM、浏览器 Replay selector 选项或反馈弹窗。`showReportDialog()` 是兼容空操作；`captureFeedback()` 提交反馈数据，不创建 UI。
 
-Logs/Metrics 导出保留，默认关闭；是否可用还取决于你的接收服务，当前验证范围不包含这些功能。版本间的 API 和默认行为差异见[运行时迁移说明](../migrations/phase-two-runtime.md)。
+Logs/Metrics 导出保留，默认关闭；是否可用还取决于你的接收服务，当前验证范围不包含这些功能。版本间的 API 和默认行为差异见[运行时迁移说明](https://github.com/xumoses/sentry-taro/blob/main/docs/migrations/phase-two-runtime.md)。

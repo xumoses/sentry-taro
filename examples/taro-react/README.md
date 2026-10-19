@@ -24,7 +24,7 @@ pnpm add @xumoses/sentry-taro@beta
 
 示例使用虚构 DSN 与内存 transport，无需 Sentry 账号，也不会向外部服务发送数据。页面显示合成计数、Replay 状态和本地收集的 envelope 数量。
 
-点击增加计数按钮可产生页面变化；点击合成异常按钮会捕获错误并触发错误缓冲提升。录制达到最短发送时长后才会发送 Replay 分段，具体发送行为见 [API 指南](../../docs/guides/api.md)。
+点击增加计数按钮可产生页面变化；点击合成异常按钮会捕获错误并触发错误缓冲提升。录制达到最短发送时长后才会发送 Replay 分段，具体发送行为见 [API 指南](../../website/guide/api.md)。
 
 内存 transport 的成功返回只表示本地收集完成，不能证明网络发送、Sentry 接收或真实 Playback。页面上的计数由 React 渲染，本目录不提供回放播放器。
 
@@ -32,6 +32,6 @@ pnpm add @xumoses/sentry-taro@beta
 
 将 DSN 换为自己的项目配置，并移除示例的自定义 `transport`，即可使用 SDK 默认传输。示例为便于观察合成文本设置了 `maskAllText: false`；接入真实业务时删除该设置，保留默认隐私遮罩，并按业务需要配置采样。
 
-- [Replay 接入与隐私](../../docs/guides/replay.md)：采样、遮罩、生命周期以及静态样式和图片接入。
-- [Worker 压缩](../../docs/guides/worker.md)：复制和启用独立压缩脚本。
-- [原生与 Taro 混合应用](../../docs/guides/hybrid-apps.md)：从宿主取得 bridge，复用唯一 SDK 实例。
+- [Replay 接入与隐私](../../website/guide/replay.md)：采样、遮罩、生命周期以及静态样式和图片接入。
+- [Worker 压缩](../../website/guide/worker.md)：复制和启用独立压缩脚本。
+- [原生与 Taro 混合应用](../../website/guide/hybrid-apps.md)：从宿主取得 bridge，复用唯一 SDK 实例。

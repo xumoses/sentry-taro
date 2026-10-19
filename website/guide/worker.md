@@ -33,6 +33,8 @@ node scripts/copy-sentry-worker.cjs dist
 
 将命令接入现有构建流程，确保每次清理输出目录后都会重新复制。也可以使用宿主构建器的资源复制配置，最终应存在 `dist/workers/sentry-replay.js`。如果小程序根目录不是 `dist`，传入实际输出路径。
 
+[Taro 构建插件](./taro-plugin#worker-与原生-npm-打包)也可以代为复制 Worker。
+
 ## 2. 声明 Worker 目录
 
 最终微信小程序的 `app.json` 需要包含：
@@ -61,7 +63,7 @@ export const replay = Sentry.replayIntegration({
 // 将 replay 传给现有 Sentry.init 的 integrations，并继续接入页面生命周期。
 ```
 
-`workerPath` 相对于最终小程序根目录，不是宿主源码目录或 npm 包路径。默认通过 `wx.createWorker` 创建 Worker；已有 Worker 工厂的宿主可以提供 `compression.createWorker`，函数签名及返回对象要求见 [ReplayCompressionOptions 和 ReplayWorker](../../src/replay/compression.ts)。
+`workerPath` 相对于最终小程序根目录，不是宿主源码目录或 npm 包路径。默认通过 `wx.createWorker` 创建 Worker；已有 Worker 工厂的宿主可以提供 `compression.createWorker`，函数签名及返回对象要求见 [ReplayCompressionOptions 和 ReplayWorker](https://github.com/xumoses/sentry-taro/blob/main/src/replay/compression.ts)。
 
 ## 降级和验证
 
@@ -71,6 +73,6 @@ Worker 创建、握手、压缩或通信失败时，投递降级为未压缩数�
 
 验证时检查最终产物中的文件路径与 `app.json` 一致，再在宿主运行一次录制发送。`replay.bridge.getSnapshot().delivery` 可用于观察投递状态；最终以服务实际接收和 Playback 为准。开发者工具验证与目标设备验证应分别进行。
 
-独立 Worker 已内置所需压缩代码，无需在 Worker 中再次加载主线程 npm 包。复制、二次构建或分发时保留脚本内的许可证注释和附带的 `fflate.LICENSE`，并遵循包的 [LICENSE](../../LICENSE) 与 [THIRD_PARTY_NOTICES](../../THIRD_PARTY_NOTICES)。
+独立 Worker 已内置所需压缩代码，无需在 Worker 中再次加载主线程 npm 包。复制、二次构建或分发时保留脚本内的许可证注释和附带的 `fflate.LICENSE`，并遵循包的 [LICENSE](https://github.com/xumoses/sentry-taro/blob/main/LICENSE) 与 [THIRD_PARTY_NOTICES](https://github.com/xumoses/sentry-taro/blob/main/THIRD_PARTY_NOTICES)。
 
-继续阅读：[Replay 指南](./replay.md) · [混合应用](./hybrid-apps.md) · [旧包迁移](../migrations/legacy-packages.md)
+继续阅读：[Replay 指南](./replay.md) · [混合应用](./hybrid-apps.md) · [旧包迁移](./migration.md)

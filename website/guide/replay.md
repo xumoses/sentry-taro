@@ -1,4 +1,4 @@
-# Session Replay 接入指南
+# Session Replay
 
 Session Replay 将 Taro 页面结构、交互和错误关联起来，帮助你查看问题发生前后的页面变化。它需要显式开启；只使用错误监控时，无需接入下面的 integration 或页面生命周期。
 
@@ -100,7 +100,7 @@ export default function ExamplePage() {
 | `replaysOnErrorSampleRate` | 大于 `0` 时，为未选中常规会话的页面保留本地滚动缓冲，并在异常发生时按此比例决定是否上传；为 `0` 时不自动缓冲 |
 | 两者均为 `0`               | 禁用自动采样，仍可手动开始录制                                                                               |
 
-例如，`0` / `1` 表示只按异常触发发送；`0.1` / `1` 表示抽取约 10% 的常规会话，其余会话仍保留异常缓冲。缓冲上传后继续录制。可在 `replayIntegration` 中配置 `beforeErrorSampling(event)`，返回 `false` 阻止该异常触发缓冲发送；参数定义见 [ReplayCoordinatorOptions](../../src/replay/coordinator/types.ts)。
+例如，`0` / `1` 表示只按异常触发发送；`0.1` / `1` 表示抽取约 10% 的常规会话，其余会话仍保留异常缓冲。缓冲上传后继续录制。可在 `replayIntegration` 中配置 `beforeErrorSampling(event)`，返回 `false` 阻止该异常触发缓冲发送；参数定义见 [ReplayCoordinatorOptions](https://github.com/xumoses/sentry-taro/blob/main/src/replay/coordinator/types.ts)。
 
 默认出错前窗口是 **60 秒**。事件数量和字节预算可能使实际保留窗口更短，不能保证每次异常都能拿到完整 60 秒。
 
@@ -122,7 +122,7 @@ export default function ExamplePage() {
 
 媒体可以通过 `sentry-unblock` / `data-sentry-unblock` 局部放行，但 URL 仍会过滤查询参数和片段。构建时提供的可信静态图片映射是另一种逐图片放行方式，即使 `blockAllMedia: true` 也可能显示，详见[静态资源说明](./hybrid-apps.md#提供页面样式与静态图片)。不要把用户上传图片或运行时截图放入该映射。
 
-Canvas 默认关闭，开启后还需要显式节点标记和提供帧读取函数。像素无法使用文本遮罩规则处理。需要自定义接入时，参考 [TaroReplayBridge.recordCanvas 类型](../../src/replay/coordinator/types.ts)和 [Canvas 合成用例](../../test/replay/canvas.test.ts)。
+Canvas 默认关闭，开启后还需要显式节点标记和提供帧读取函数。像素无法使用文本遮罩规则处理。需要自定义接入时，参考 [TaroReplayBridge.recordCanvas 类型](https://github.com/xumoses/sentry-taro/blob/main/src/replay/coordinator/types.ts)和 [Canvas 合成用例](https://github.com/xumoses/sentry-taro/blob/main/test/replay/canvas.test.ts)。
 
 Replay 的遮罩配置不等于 SDK 所有事件字段的过滤。错误消息、手动添加的上下文和日志也应避免包含敏感内容；示例保留 `sendDefaultPii: false`、`traceNetworkBody: false`。上传前检查合成场景的录制和事件内容，再决定是否放宽默认隐私配置。
 
@@ -186,6 +186,6 @@ await Sentry.getReplay()?.stop();
 
 录制不提供浏览器计算样式或原生视图层的最终渲染时序。样式、字体、原生控件和动画可能与设备显示不同，应在实际 Sentry Playback 和目标设备上检查。
 
-附带 `sentry-taro-viewer` 只用于查看 capture 摘要、事件和 JSON，不提供真正的回放渲染。[Taro React 示例](../../examples/taro-react/README.md)使用本地收集 transport，不会向 Sentry 上传。
+附带 `sentry-taro-viewer` 只用于查看 capture 摘要、事件和 JSON，不提供真正的回放渲染。[Taro React 示例](https://github.com/xumoses/sentry-taro/blob/main/examples/taro-react/README.md)使用本地收集 transport，不会向 Sentry 上传。
 
-继续阅读：[API 参考](./api.md) · [Worker 压缩](./worker.md) · [混合应用](./hybrid-apps.md) · [旧包迁移](../migrations/legacy-packages.md)
+继续阅读：[API 参考](./api.md) · [Worker 压缩](./worker.md) · [混合应用](./hybrid-apps.md) · [旧包迁移](./migration.md)

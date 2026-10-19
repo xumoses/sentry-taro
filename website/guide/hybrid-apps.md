@@ -106,6 +106,6 @@ installTaroReplayPageLifecycle({
 
 样式和图片需要在真实 Playback 中核对。原生组件内部、最终视图层时序及浏览器计算样式不在 Taro DOM 中，因此这些回调不能保证像素级还原。开发者工具通过后，仍需在目标真机检查页面行为、隐私和运行开销。
 
-如果开启压缩，还需将独立 Worker 放入宿主最终产物并配置 `app.json`，见 [Worker 压缩](./worker.md)。从旧双包接入迁移时，同时更新宿主 npm 构建规则与旧运行时产物，见[旧包迁移](../migrations/legacy-packages.md)。
+如果开启压缩，还需将独立 Worker 放入宿主最终产物并配置 `app.json`，见 [Worker 压缩](./worker.md)。从旧双包接入迁移时，同时更新宿主 npm 构建规则与旧运行时产物，见[旧包迁移](./migration.md)。
 
 继续阅读：[Replay 指南](./replay.md) · [API 参考](./api.md) · [Worker 压缩](./worker.md)
