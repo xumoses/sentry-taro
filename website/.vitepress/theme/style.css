@@ -1,0 +1,71 @@
+/* 配色与字体沿用 Sentry 品牌风格：深紫底、Blurple 主色、粉色点缀；Rubik 正文、Roboto Mono 代码。 */
+:root {
+  --sentry-blurple: #7553ff;
+  --sentry-purple: #6c5fc7;
+  --sentry-dark-purple: #362d59;
+  --sentry-pink: #ff45a8;
+
+  --vp-font-family-base:
+    'Rubik Variable', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  --vp-font-family-mono:
+    'Roboto Mono Variable', ui-monospace, 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono',
+    'Courier New', monospace;
+
+  --vp-c-brand-1: #6c5fc7;
+  --vp-c-brand-2: #5b4cc0;
+  --vp-c-brand-3: #7553ff;
+  --vp-c-brand-soft: rgba(117, 83, 255, 0.14);
+
+  --vp-c-bg-alt: #f8f6fc;
+  --vp-c-bg-soft: #f3f0fa;
+  --vp-c-text-1: #2b2233;
+  --vp-c-divider: #e6e1f0;
+  --vp-c-gutter: #e6e1f0;
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    var(--sentry-blurple) 20%,
+    var(--sentry-pink)
+  );
+}
+
+.dark {
+  --vp-c-brand-1: #a796ff;
+  --vp-c-brand-2: #8f7cff;
+  --vp-c-brand-3: #7553ff;
+  --vp-c-brand-soft: rgba(117, 83, 255, 0.22);
+
+  --vp-c-bg: #1d1127;
+  --vp-c-bg-alt: #160d1e;
+  --vp-c-bg-elv: #251832;
+  --vp-c-bg-soft: #251832;
+  --vp-c-text-1: #ebe6ef;
+  --vp-c-divider: #3e2f4f;
+  --vp-c-gutter: #120a19;
+  --vp-code-block-bg: #160d1e;
+}
+
+:root,
+.dark {
+  --vp-button-brand-bg: var(--sentry-blurple);
+  --vp-button-brand-hover-bg: #6643f0;
+  --vp-button-brand-active-bg: #5633e0;
+}
+
+/* 字重与渲染对齐 sentry.io：保留系统默认字体平滑（VitePress 默认的 antialiased 会让字形偏细），
+   页面标题 700、小标题 600、按钮 500。 */
+body {
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+}
+
+.vp-doc h1 {
+  font-weight: 700;
+}
+
+.VPButton {
+  font-weight: 500;
+}

@@ -64,7 +64,9 @@ export default defineConfig({
   title: 'Sentry for Taro',
   cleanUrls: true,
   lastUpdated: false,
+  head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }]],
   themeConfig: {
+    logo: '/logo.svg',
     socialLinks: [{ icon: 'github', link: repo }],
     search: { provider: 'local' },
   },

@@ -97,10 +97,10 @@
     "fflate": "0.8.2"
   },
   "peerDependencies": {
+    "@sentry/cli": "^3.6.2",
     "@tarojs/runtime": "~4.2.0",
     "@tarojs/taro": "~4.2.0",
-    "react": "^18.0.0",
-    "@sentry/cli": "^3.6.2"
+    "react": "^18.0.0"
   },
   "peerDependenciesMeta": {
     "@tarojs/runtime": {
@@ -117,6 +117,8 @@
     }
   },
   "devDependencies": {
+    "@fontsource-variable/roboto-mono": "5.3.0",
+    "@fontsource-variable/rubik": "5.3.0",
     "@jridgewell/trace-mapping": "0.3.31",
     "@sentry/cli": "3.6.2",
     "@tarojs/runtime": "4.2.0",
