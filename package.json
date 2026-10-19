@@ -2,13 +2,24 @@
   "name": "@xumoses/sentry-taro",
   "version": "0.1.0",
   "description": "Sentry monitoring and opt-in session replay for Taro 4.2 React mini programs",
+  "keywords": [
+    "sentry",
+    "taro",
+    "react",
+    "wechat",
+    "miniprogram",
+    "error-monitoring",
+    "session-replay",
+    "小程序",
+    "微信小程序"
+  ],
   "license": "MIT",
   "author": "xumoses",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xumoses/sentry-taro.git"
   },
-  "homepage": "https://github.com/xumoses/sentry-taro",
+  "homepage": "https://sentry-taro.pages.dev/",
   "bugs": {
     "url": "https://github.com/xumoses/sentry-taro/issues"
   },
