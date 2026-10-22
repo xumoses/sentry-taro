@@ -1,6 +1,6 @@
 # Sentry for Taro
 
-[![npm](https://img.shields.io/npm/v/%40xumoses%2Fsentry-taro)](https://www.npmjs.com/package/@xumoses/sentry-taro)
+[![npm](https://img.shields.io/npm/v/%40xumoses%2Fsentry-taro)](https://npmx.dev/package/@xumoses/sentry-taro)
 [![CI](https://github.com/xumoses/sentry-taro/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xumoses/sentry-taro/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
