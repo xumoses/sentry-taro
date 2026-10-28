@@ -1,6 +1,6 @@
 {
   "name": "@xumoses/sentry-taro",
-  "version": "0.1.0",
+  "version": "0.1.1-beta.1",
   "description": "Sentry monitoring and opt-in session replay for Taro 4.2 React mini programs",
   "keywords": [
     "sentry",
@@ -73,7 +73,7 @@
   ],
   "publishConfig": {
     "access": "public",
-    "tag": "latest",
+    "tag": "beta",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {

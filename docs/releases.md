@@ -1,6 +1,6 @@
 # npm 发布流程
 
-常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`0.1.0-rc.1` 至 `0.1.0-rc.4` 已于 2026-10-19 通过该流程发布到 `rc`；`rc.4` 通过电脑微信验收，`main` 已更新为 `0.1.0`，待推送 `v0.1.0` tag 发布到 `latest`。`beta` 停在 `0.1.0-beta.6`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
+常规发布采用统一更新版本、Git tag 触发 GitHub Actions、人工审批后通过 npm OIDC trusted publishing 发布。`0.1.0-rc.1` 至 `0.1.0-rc.4` 已于 2026-10-19 通过该流程发布到 `rc`；`rc.4` 通过电脑微信验收，`0.1.0` 已发布到 `latest`。`beta` 渠道恢复用于 `0.1.0` 之后的修复候选，`main` 已更新为 `0.1.1-beta.1`，待推送 `v0.1.1-beta.1` tag 发布到 `beta`。准备命令只验证和生成候选；每次真正发布前必须停下，提交确切产物和检查结果供用户确认。
 
 首版通过常规 npm 认证发布；`0.1.0-beta.2` 首次完成 OIDC 发布，`0.1.0-beta.3` 至 `0.1.0-beta.6` 也已完成远端准备、Environment 审批暂停、用户批准后发布、registry 完整性和公开安装验证。`NPM_OIDC_PUBLISH_ENABLED=true`。证据见[首版发布记录](./implementation/phase-two.md#首次-npm-发布结果)、[首次 OIDC 发布记录](./implementation/phase-two.md#首次-oidc-发布结果)、[Taro 构建插件版本发布](./implementation/phase-two.md#taro-构建插件版本发布)、[微信最终映射兼容修复版本发布](./implementation/phase-two.md#微信最终映射兼容修复版本发布)、[Swiper 与共享分包映射修复版本发布](./implementation/phase-two.md#swiper-与共享分包映射修复版本发布)及[结构重构版本发布](./implementation/structural-refactor.md#010-beta6-发布)。
 
@@ -37,7 +37,7 @@ vp run release:version 0.1.0-beta.6
 
 命令同步根 `package.json` 的版本、SDK 的 `SDK_VERSION`（`src/sdk/version.ts`）和根包 `publishConfig.tag`。支持稳定版本及 `alpha.N`、`beta.N`、`rc.N` 预发布版本。它不自动提交、不创建或推送 Git tag，也不发布包。
 
-检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。`beta` 停在 `0.1.0-beta.6`；`0.1.0-rc.4` 已发布到 `rc` 并通过电脑微信验收；`main` 已更新为 `0.1.0`，尚未发布。后续版本仍须重新准备候选，公开渠道以 registry 实际状态为准。
+检查版本改动，并更新 `CHANGELOG.md` 中对应版本的说明；审查和提交后合入 `main`。发布 tag 必须严格等于 `v<package.json 的版本>`，且 tag 对应提交必须已包含在 `origin/main` 中。`0.1.0` 已发布到 `latest`；`beta` 渠道曾停在 `0.1.0-beta.6`，现用于 `0.1.0` 之后的修复候选，`main` 已更新为 `0.1.1-beta.1`，尚未发布。后续版本仍须重新准备候选，公开渠道以 registry 实际状态为准。
 
 ## 准备候选
 
