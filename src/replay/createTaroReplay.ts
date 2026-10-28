@@ -305,6 +305,7 @@ export function createTaroReplay(options: CreateTaroReplayOptions): TaroReplayHa
         ...snapshotNetworkOptions(networkOptions),
         recordCanvas: options.recordCanvas === true,
         MutationObserver: options.runtime.MutationObserver,
+        ...(options.runtime.observeEvents ? { observeEvents: options.runtime.observeEvents } : {}),
         href,
         ...(windowInfo.windowWidth === undefined ? {} : { width: windowInfo.windowWidth }),
         ...(windowInfo.windowHeight === undefined ? {} : { height: windowInfo.windowHeight }),

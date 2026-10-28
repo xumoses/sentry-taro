@@ -108,9 +108,25 @@ export type TaroReplayRecorder = Required<TaroReplayRecorderController>;
 
 export type TaroReplayNetworkOptions = NetworkDetailOptions;
 
+/** A Taro DOM event as seen after dispatch; only the fields the recorder reads. */
+export interface TaroReplayDispatchedEvent {
+  type?: string;
+  mpEvent?: { timeStamp?: number };
+}
+
+/**
+ * Subscribes to every Taro DOM event dispatch. Taro does not bubble events through
+ * the virtual DOM, so a page root listener never sees a tap on a child node.
+ */
+export type TaroReplayEventSource = (
+  listener: (event: TaroReplayDispatchedEvent, node: TaroReplayNodeLike) => void,
+) => () => void;
+
 export interface StartTaroReplayRecorderOptions extends TaroReplayNetworkOptions {
   root: TaroReplayNodeLike;
   MutationObserver: TaroReplayMutationObserverConstructor;
+  /** Taro event dispatch source; without it interactions fall back to root listeners. */
+  observeEvents?: TaroReplayEventSource;
   href?: string;
   width?: number;
   height?: number;
@@ -189,6 +205,7 @@ export interface SentryMiniappReplaySdk {
 export interface TaroReplayRuntime {
   document: { getElementById(id: string): TaroReplayNodeLike | null };
   MutationObserver: StartTaroReplayRecorderOptions['MutationObserver'];
+  observeEvents?: TaroReplayEventSource;
   getCurrentInstance(): {
     router?: {
       $taroPath?: string;

@@ -3,8 +3,9 @@ import {
   REPLAY_SESSION_IDLE_EXPIRE_MS,
   REPLAY_SESSION_IDLE_PAUSE_MS,
 } from '../recorder/constants';
-import type { TaroReplayNodeLike } from '../types';
+import type { TaroReplayEventSource, TaroReplayNodeLike } from '../types';
 import { finiteInteger } from './limits';
+import { belongsToRoot } from './roots';
 
 export type ReplayRecordingMode = 'session' | 'buffer';
 
@@ -112,9 +113,18 @@ export class ReplaySessionPolicy {
 }
 
 /** Observe only the fact of interaction; never read event values or retain payloads. */
-export function observeRootActivity(root: TaroReplayNodeLike, activity: () => void): () => void {
-  if (!root.addEventListener || !root.removeEventListener) return () => {};
+export function observeRootActivity(
+  root: TaroReplayNodeLike,
+  activity: () => void,
+  observeEvents?: TaroReplayEventSource,
+): () => void {
   const names = ['tap', 'touchstart', 'touchend', 'touchmove', 'input', 'change', 'scroll'];
+  // Taro dispatches on the bound node only, so root listeners miss child interactions.
+  if (observeEvents)
+    return observeEvents((event, node) => {
+      if (event.type && names.includes(event.type) && belongsToRoot(node, root)) activity();
+    });
+  if (!root.addEventListener || !root.removeEventListener) return () => {};
   const attached: string[] = [];
   for (const name of names) {
     try {

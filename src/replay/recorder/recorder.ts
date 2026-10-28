@@ -196,6 +196,8 @@ export function startTaroReplayRecorder(
     ctx.stopped = true;
     if (ctx.resources.timer) clearTimeout(ctx.resources.timer);
     ctx.resources.observer?.disconnect();
+    ctx.resources.unobserveEvents?.();
+    delete ctx.resources.unobserveEvents;
     for (const [name, listener] of ctx.rootListeners) {
       try {
         options.root.removeEventListener?.(name, listener);

@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 
 import type { TaroReplayBridge } from '../coordinator/types';
 import type { TaroReplayRuntime } from '../types';
+import { observeTaroEvents } from './events';
 
 type PageLifecycle = (...args: unknown[]) => unknown;
 type PageLifecycleConfig = Record<string, unknown> & {
@@ -50,6 +51,7 @@ function createRuntime(
   return {
     document,
     MutationObserver: MutationObserver as unknown as TaroReplayRuntime['MutationObserver'],
+    observeEvents: observeTaroEvents,
     getCurrentInstance: () =>
       pagePath
         ? {

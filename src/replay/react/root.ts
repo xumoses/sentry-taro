@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { ReplayCoordinatorSnapshot, TaroReplayBridge } from '../coordinator/types';
 import type { TaroReplayRuntime } from '../types';
+import { observeTaroEvents } from '../taro/events';
 
 function createRuntime(): TaroReplayRuntime {
   const taro = Taro as unknown as {
@@ -25,6 +26,7 @@ function createRuntime(): TaroReplayRuntime {
   return {
     document,
     MutationObserver: MutationObserver as unknown as TaroReplayRuntime['MutationObserver'],
+    observeEvents: observeTaroEvents,
     getCurrentInstance: () => taro.getCurrentInstance(),
     getWindowInfo: () => taro.getWindowInfo?.() || taro.getSystemInfoSync?.() || {},
     getEnv: () => taro.getEnv?.() || 'unknown',

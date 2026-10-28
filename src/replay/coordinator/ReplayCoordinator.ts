@@ -215,9 +215,13 @@ export class ReplayCoordinator implements TaroReplayBridge {
     try {
       const root = currentRoot(runtime);
       if (root)
-        this.#detachActivity = observeRootActivity(root, () => {
-          if (this.#rootRuntime === runtime) this.#userActivity();
-        });
+        this.#detachActivity = observeRootActivity(
+          root,
+          () => {
+            if (this.#rootRuntime === runtime) this.#userActivity();
+          },
+          runtime.observeEvents,
+        );
     } catch (cause) {
       this.#reportError(cause);
     }

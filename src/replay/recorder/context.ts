@@ -60,6 +60,7 @@ export interface RecorderContext {
   readonly resources: {
     timer?: ReturnType<typeof setTimeout>;
     observer?: TaroReplayMutationObserverLike;
+    unobserveEvents?: () => void;
   };
   stop(reason?: string): TaroReplayCapture;
 }

@@ -1,4 +1,4 @@
-/** Root-level tap, touch, focus and input listeners mapped to rrweb interaction events. */
+/** Taro tap, touch, focus and input dispatches mapped to rrweb interaction events. */
 
 import type { TaroReplayNodeLike } from '../types';
 import { privacyMarker } from './attributes';
@@ -19,7 +19,8 @@ import { safeInputValue } from './serializer';
 
 export function attachInteractions(ctx: RecorderContext): void {
   const root = ctx.options.root;
-  if (!root.addEventListener || !root.removeEventListener) return;
+  const observeEvents = ctx.options.observeEvents;
+  if (!observeEvents && (!root.addEventListener || !root.removeEventListener)) return;
   const interactions: Record<string, number> = {
     tap: 2,
     focus: 5,
@@ -29,16 +30,22 @@ export function attachInteractions(ctx: RecorderContext): void {
     touchcancel: 10,
   };
   let lastTouchMoveAt = -Infinity;
+  const listeners = new Map<string, InteractionListener>();
   for (const name of [...Object.keys(interactions), 'touchmove', 'input', 'change']) {
-    const listener = (event: TaroReplayScrollEventLike): void => {
+    const listener = (
+      event: TaroReplayScrollEventLike,
+      dispatchNode?: TaroReplayNodeLike,
+    ): void => {
       if (ctx.stopped) return;
       const target = event.target;
       const sid = target?.dataset?.sid ?? target?.sid ?? target?.id;
-      const node = target?.nodeType
-        ? (target as TaroReplayNodeLike)
-        : sid
-          ? ctx.nodesBySid.get(sid)
-          : undefined;
+      // The native target is the innermost node; the dispatch node is its nearest bound ancestor.
+      const node =
+        (target?.nodeType
+          ? (target as TaroReplayNodeLike)
+          : sid
+            ? ctx.nodesBySid.get(sid)
+            : undefined) ?? dispatchNode;
       if (
         !node ||
         !ctx.idsByNode.has(node) ||
@@ -109,11 +116,37 @@ export function attachInteractions(ctx: RecorderContext): void {
           data: { nodeId: idFor(ctx, node) },
         });
     };
+    listeners.set(name, listener);
+  }
+  if (observeEvents) {
+    let last: { type: string; timeStamp: number; target: unknown } | undefined;
+    ctx.resources.unobserveEvents = observeEvents((dispatched, node) => {
+      const type = dispatched.type;
+      const listener = type ? listeners.get(type) : undefined;
+      if (!type || !listener) return;
+      const event = dispatched as TaroReplayScrollEventLike;
+      // Native bubbling dispatches one gesture again on every bound ancestor.
+      const timeStamp = dispatched.mpEvent?.timeStamp;
+      const target = event.target?.dataset?.sid ?? event.target?.sid ?? event.target?.id;
+      if (typeof timeStamp === 'number') {
+        if (last?.type === type && last.timeStamp === timeStamp && last.target === target) return;
+        last = { type, timeStamp, target };
+      }
+      listener(event, node);
+    });
+    return;
+  }
+  for (const [name, listener] of listeners) {
     try {
-      root.addEventListener(name, listener);
+      root.addEventListener!(name, listener);
       ctx.rootListeners.set(name, listener);
     } catch {
       /* Unsupported native events are optional. */
     }
   }
 }
+
+type InteractionListener = (
+  event: TaroReplayScrollEventLike,
+  dispatchNode?: TaroReplayNodeLike,
+) => void;
