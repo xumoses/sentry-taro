@@ -755,7 +755,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
     if (!capture.events.length || !this.#enabled()) return;
     if (this.#segmentId === 0 && !capture.events.some((event) => event.type === 2)) return;
     this.#replayStartedAt ??= capture.startedAt;
-    const { errorIds, traceIds, segmentNames } = this.#links.take();
+    const { errorIds, traceIds, segmentNames, urls } = this.#links.take(capture);
     const segment: PendingReplaySegment = {
       capture,
       options: {
@@ -764,6 +764,7 @@ export class ReplayCoordinator implements TaroReplayBridge {
         errorIds,
         traceIds,
         segmentNames,
+        urls,
         replayStartTimestamp: this.#replayStartedAt,
       },
     };

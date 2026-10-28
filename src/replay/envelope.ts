@@ -23,6 +23,8 @@ export interface ReplayEnvelopeOptions {
   errorIds?: string[];
   traceIds?: string[];
   segmentNames?: string[];
+  /** Pages first shown in this segment; defaults to the capture's page for a standalone upload. */
+  urls?: string[];
   replayType?: 'session' | 'buffer';
   segmentId?: number;
   replayStartTimestamp?: number;
@@ -67,7 +69,7 @@ export function createReplayEnvelope(
     segment_id: options.segmentId || 0,
     replay_type: options.replayType || 'session',
     platform: 'javascript',
-    urls: [capture.href],
+    urls: options.urls ?? [capture.href],
     error_ids: options.errorIds || [],
     trace_ids: options.traceIds || [],
     segment_names: options.segmentNames || [],

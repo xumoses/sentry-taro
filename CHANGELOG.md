@@ -4,6 +4,7 @@
 
 - 修复小程序 API 失败（如 `request:fail timeout`、`hideLoading:fail …`）造成的未处理 rejection 在 Sentry 中以 SDK 压缩后的函数名（`value`、`e.value`、`h`）为标题，并随 SDK 版本拆成多个 issue：这类 rejection 的 reason 是 `{ errMsg }` 普通对象，`@sentry/core` 为它生成的合成堆栈只有 SDK 处理函数和框架帧。现在以 `errMsg` 作为异常值（`Error: request:fail timeout`），不附带堆栈帧，原对象（含 `errno` 等）仍在 `extra.__serialized__`。升级后这类事件会按 `errMsg` 归入新的 issue，旧 issue 可以 resolve；不含 `errMsg` 的普通对象仍按 core 的合成异常处理。
 - 修复 Taro DOM Replay 不记录点击：录制器在页面根节点上监听 `tap`、`touchstart` 等事件，但 Taro 只在带原生事件绑定的节点上派发、不在虚拟 DOM 中冒泡，根节点永远收不到子节点的交互，因此 recording 中没有 `ui.click` 面包屑和 rrweb MouseInteraction，Sentry 的 dead/rage click 一直为 0。现改为通过 Taro 运行时的 `dispatchTaroEventFinish` 钩子观察派发（在应用处理函数之后，原生冒泡造成的重复派发只记一次），点击产生 `ui.click` 面包屑和 MouseInteraction，触摸与聚焦同样记录；空闲暂停的“用户活动”判断也改用同一来源，点击会恢复暂停的会话。只能观察到 Taro 实际派发的事件：点在自身及祖先都没有事件处理函数的元素上时，小程序不会派发，也不会被记录。`TaroReplayRuntime` 和 `startTaroReplayRecorder` 的选项新增可选的 `observeEvents`；未提供时仍回退到根节点监听。
+- 修复 Replay 每个 segment 的 replay_event 都重复上报当前页面 URL，导致 Sentry 的 `count_urls` 等于 segment 数、页面列表中同一页面出现几十次。现与官方 Replay 一致，`urls` 只包含本 segment 中新进入的页面：第一个 segment 带上起始页面，停留在同一页面的后续 segment 发送空数组，切换页面（包括返回之前的页面）的 segment 带上新页面；error-buffer 转为完整会话时，补发的第一个 segment 带上缓冲窗口内经过的页面。失败重试的 segment 保持原有 `urls`，不会重复计数。升级后新录制的 replay 的 `count_urls` 反映实际页面跳转次数，已上报的 replay 不受影响。
 
 ## 0.1.0 — 2026-10-19
 
