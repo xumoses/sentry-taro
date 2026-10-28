@@ -81,4 +81,52 @@ describe('GlobalHandlers（真 @sentry/core 集成）', () => {
     expect(val.value).toContain('boom from platform');
     expect(val.mechanism).toEqual({ type: 'onerror', handled: false });
   });
+
+  /** 注册 wx.onUnhandledRejection 后初始化，返回平台调用的 rejection 处理函数。 */
+  function initForRejection(): (res: { reason: unknown; promise: Promise<any> }) => void {
+    let handler: ((res: { reason: unknown; promise: Promise<any> }) => void) | undefined;
+    g.wx.onUnhandledRejection = vi.fn((h: typeof handler) => {
+      handler = h;
+    });
+    init({
+      dsn: 'https://test@o0.ingest.sentry.io/0',
+      enableAutoSessionTracking: false,
+      transport: () => ({
+        send: (env: any) => {
+          captured.push(env);
+          return Promise.resolve({ statusCode: 200 });
+        },
+        flush: () => Promise.resolve(true),
+      }),
+    } as any);
+    expect(typeof handler).toBe('function');
+    return handler!;
+  }
+
+  it('API 失败的 { errMsg } rejection → 以 errMsg 为值，不带 SDK 内部帧', async () => {
+    const onRejection = initForRejection();
+    const reason = { errMsg: 'request:fail timeout', errno: 5 };
+    onRejection({ reason, promise: Promise.resolve() });
+    await flush(2000);
+
+    const errEvent = collectEvents(captured).find((e) => e.exception?.values?.length);
+    expect(errEvent).toBeDefined();
+    const val = errEvent.exception.values[0];
+    expect(val.type).toBe('Error');
+    expect(val.value).toBe('request:fail timeout');
+    expect(val.mechanism).toEqual({ type: 'onunhandledrejection', handled: false });
+    expect(val.stacktrace).toBeUndefined();
+    expect(errEvent.extra.__serialized__).toEqual(reason);
+  });
+
+  it('不含 errMsg 的普通对象 rejection 仍按 core 的合成异常处理', async () => {
+    const onRejection = initForRejection();
+    onRejection({ reason: { code: 1 }, promise: Promise.resolve() });
+    await flush(2000);
+
+    const errEvent = collectEvents(captured).find((e) => e.exception?.values?.length);
+    const val = errEvent.exception.values[0];
+    expect(val.value).toContain('Object captured as exception with keys: code');
+    expect(val.mechanism.synthetic).toBe(true);
+  });
 });

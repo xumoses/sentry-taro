@@ -2,6 +2,7 @@ import { captureException, getCurrentScope } from '@sentry/core';
 import type { Integration, IntegrationFn } from '@sentry/core';
 
 import { sdk } from '../crossPlatform';
+import { isPlainObject } from '../helpers';
 
 /** JSDoc */
 interface GlobalHandlersIntegrations {
@@ -18,6 +19,20 @@ interface GlobalHandlersIntegrations {
 function errorFromOnErrorString(message: string): Error {
   const error = new Error(message);
   error.stack = message;
+  return error;
+}
+
+/**
+ * Failed mini-program APIs reject with a plain `{ errMsg }` object instead of an Error. Its
+ * synthetic stack holds only this handler and framework frames, so Sentry would title and group
+ * the event by minified SDK function names. Use `errMsg` as the message and keep no frames.
+ */
+function errorFromApiFailure(reason: unknown): Error | undefined {
+  if (!isPlainObject(reason) || typeof reason['errMsg'] !== 'string') {
+    return undefined;
+  }
+  const error = new Error(reason['errMsg']);
+  error.stack = `Error: ${reason['errMsg']}`;
   return error;
 }
 
@@ -120,7 +135,8 @@ export class GlobalHandlers implements Integration {
         reason: string | Error;
         promise: Promise<any>;
       }) => {
-        const error = typeof reason === 'string' ? new Error(reason) : reason;
+        const apiError = errorFromApiFailure(reason);
+        const error = typeof reason === 'string' ? new Error(reason) : (apiError ?? reason);
         captureException(error, {
           mechanism: {
             type: 'onunhandledrejection',
@@ -129,6 +145,8 @@ export class GlobalHandlers implements Integration {
           data: {
             promise,
           },
+          // Keeps the other fields (such as `errno`) under the key core uses for plain objects.
+          ...(apiError ? { captureContext: { extra: { __serialized__: reason } } } : {}),
         });
       };
       sdk().onUnhandledRejection?.(this._rejectionHandler);

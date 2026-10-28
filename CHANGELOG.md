@@ -1,5 +1,9 @@
 # Changelog
 
+## 未发布
+
+- 修复小程序 API 失败（如 `request:fail timeout`、`hideLoading:fail …`）造成的未处理 rejection 在 Sentry 中以 SDK 压缩后的函数名（`value`、`e.value`、`h`）为标题，并随 SDK 版本拆成多个 issue：这类 rejection 的 reason 是 `{ errMsg }` 普通对象，`@sentry/core` 为它生成的合成堆栈只有 SDK 处理函数和框架帧。现在以 `errMsg` 作为异常值（`Error: request:fail timeout`），不附带堆栈帧，原对象（含 `errno` 等）仍在 `extra.__serialized__`。升级后这类事件会按 `errMsg` 归入新的 issue，旧 issue 可以 resolve；不含 `errMsg` 的普通对象仍按 core 的合成异常处理。
+
 ## 0.1.0 — 2026-10-19
 
 首个正式版，发布到 npm `latest`。运行时代码与 `0.1.0-rc.4` 相同；该候选已在首个验证项目中通过电脑微信验收（错误上报、Replay 录制与 Playback、默认上传映射后的栈帧还原），记录见[正式版实施记录](./docs/implementation/release-0.1.0.md)。手机微信仍为待验证。
