@@ -32,7 +32,7 @@ yarn add @xumoses/sentry-taro
 
 :::
 
-需要锁定版本时，在包名后加上具体版本号，例如 `@xumoses/sentry-taro@0.1.0`。
+需要锁定版本时，在包名后加上具体版本号，例如 `@xumoses/sentry-taro@0.1.1`。
 
 ## 2. 初始化错误监控
 

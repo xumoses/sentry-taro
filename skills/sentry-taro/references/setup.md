@@ -8,7 +8,7 @@ pnpm add @xumoses/sentry-taro
 # yarn add @xumoses/sentry-taro
 ```
 
-Use the project's package manager. The npm `latest` tag points to the stable `0.1.0`; pin an exact version (e.g. `@xumoses/sentry-taro@0.1.0`) when the project requires it. Do not install `@beta` (frozen at `0.1.0-beta.6`) or `@rc`.
+Use the project's package manager. The npm `latest` tag points to the stable `0.1.1`; pin an exact version (e.g. `@xumoses/sentry-taro@0.1.1`) when the project requires it. Do not install `@beta` (fix candidates, currently `0.1.1-beta.1`) or `@rc`.
 
 Peer dependencies (`@tarojs/taro` / `@tarojs/runtime` `~4.2.0`, `react` `^18`) are optional and come from the Taro project. `@sentry/cli` is only needed for sourcemap upload (see `build-plugin.md`).
 

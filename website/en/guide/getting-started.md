@@ -32,7 +32,7 @@ yarn add @xumoses/sentry-taro
 
 :::
 
-To pin a release, append an exact version, e.g. `@xumoses/sentry-taro@0.1.0`.
+To pin a release, append an exact version, e.g. `@xumoses/sentry-taro@0.1.1`.
 
 ## 2. Initialize error monitoring
 

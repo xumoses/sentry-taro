@@ -41,5 +41,6 @@
 - [结构重构计划](./plans/structural-refactor.md)：分层收敛、范围裁剪、官方 API 对齐的分期、门槛与范围决定。
 - [结构重构实施记录](./implementation/structural-refactor.md)：第一阶段的提交、验证结果和未完成项。
 - [正式版 0.1.0 实施记录](./implementation/release-0.1.0.md)：候选电脑微信验收与正式版准备。
+- [修复版 0.1.1 实施记录](./implementation/release-0.1.1.md)：`0.1.1-beta.1` 体验版验收与正式版准备。
 - [第一阶段记录](./implementation/phase-one.md)：原候选包的本地验收与公开回归。
 - [第二阶段记录](./implementation/phase-two.md)：工具链迁移、运行时对齐、发布和设备验证状态。
