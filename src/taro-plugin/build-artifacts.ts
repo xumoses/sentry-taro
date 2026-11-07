@@ -294,12 +294,16 @@ export function writeReplayWorker(options: WriteReplayWorkerOptions): string {
 
 /**
  * For miniprogram-ci packNpmManually when using the SDK's self-contained native entry.
- * Do not apply globally when the application separately imports these Sentry packages.
+ * That entry bundles `@sentry/core` and `fflate`, which stay runtime dependencies only
+ * for the ESM build; packNpm would otherwise pack them too (and cannot resolve fflate's
+ * `main`). Do not apply globally when the application separately imports these packages.
  */
 export function getSentryMiniProgramNpmIgnores(): string[] {
   return [
     'node_modules/@sentry/core/**',
     'node_modules/@sentry/conventions/**',
+    'node_modules/fflate/**',
     'node_modules/@xumoses/sentry-taro/node_modules/@sentry/core/**',
+    'node_modules/@xumoses/sentry-taro/node_modules/fflate/**',
   ];
 }

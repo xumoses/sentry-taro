@@ -98,7 +98,7 @@ async function main() {
   for (const file of dryRun.files) {
     assert.match(
       file.path,
-      /^(?:dist\/|package\.json$|README(?:\.en)?\.md$|LICENSE$|THIRD_PARTY_NOTICES$)/,
+      /^(?:dist\/|miniprogram_dist\/(?:index\.js|index\.js\.map)$|package\.json$|README(?:\.en)?\.md$|LICENSE$|THIRD_PARTY_NOTICES$)/,
       `Unexpected published file: ${file.path}`,
     );
   }

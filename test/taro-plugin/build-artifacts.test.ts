@@ -339,6 +339,8 @@ test('returns isolated native packing ignores for the dependencies already bundl
   expect(ignores).toContain('node_modules/@sentry/core/**');
   expect(ignores).toContain('node_modules/@sentry/conventions/**');
   expect(ignores).toContain('node_modules/@xumoses/sentry-taro/node_modules/@sentry/core/**');
+  expect(ignores).toContain('node_modules/fflate/**');
+  expect(ignores).toContain('node_modules/@xumoses/sentry-taro/node_modules/fflate/**');
   ignores.push('caller-specific/**');
   expect(getSentryMiniProgramNpmIgnores()).not.toContain('caller-specific/**');
 });

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+miniprogram_dist/
 coverage/
 *.tgz
 .artifacts/

@@ -203,8 +203,12 @@ const ignores = getSentryMiniProgramNpmIgnores();
 支持 `outputRoot` 和单个 `filename`。源文件须非空，复制保持字节一致，失败清除旧目标。
 宿主仍须在 `app.json` 声明 Worker 目录并设置运行时 `workerPath`。
 
-npm ignores 辅助函数仅用于原生入口已经内置 Sentry core 的打包方式，避免重复打包
-`@sentry/core` / `@sentry/conventions`。如果应用或其他依赖直接使用这些包，应自行
+SDK 通过 `package.json` 的 `miniprogram` 字段发布原生入口 `miniprogram_dist/index.js`
+及其 `index.js.map`，`packNpmManually` 会原样复制这两个文件，打包后的入口只引用这一份
+sourcemap，SDK 帧可以还原到源码，无需宿主再平移或改写映射。该入口已经内置 Sentry core
+和 `fflate`；npm ignores 辅助函数用于跳过 `@sentry/core`、`@sentry/conventions` 和
+`fflate` 这些重复依赖（`fflate` 仍是 ESM 构建的运行时依赖，单独打包时其入口无法被
+`packNpmManually` 解析并会产生警告）。如果应用或其他依赖直接使用这些包，应自行
 评估排除范围。清空整个 npm 输出、`miniprogram-ci` 打包和微信凭据仍由宿主负责。
 
 ## 配置与官方对齐

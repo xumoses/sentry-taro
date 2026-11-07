@@ -123,6 +123,22 @@ async function main() {
     assert.ok(mainSource.includes(author), 'Bundled third-party notice missing');
     assert.ok(fs.readFileSync(path.join(root, 'THIRD_PARTY_NOTICES'), 'utf8').includes(author));
   }
+  // WeChat's npm packing copies this directory verbatim; it must stay the native entry.
+  const nativeDist = path.join(root, pkg.miniprogram);
+  assert.deepEqual(fs.readdirSync(nativeDist).sort(), ['index.js', 'index.js.map']);
+  const nativeSource = fs.readFileSync(path.join(nativeDist, 'index.js'), 'utf8');
+  assert.equal(
+    nativeSource,
+    mainSource.replace(
+      /sourceMappingURL=index\.cjs\.js\.map(\s*)$/,
+      'sourceMappingURL=index.js.map$1',
+    ),
+    'The miniprogram entry must be the CJS root with its own map reference',
+  );
+  assert.equal(nativeSource.match(/^\/\/# sourceMappingURL=/gm)?.length, 1);
+  const nativeMap = JSON.parse(fs.readFileSync(path.join(nativeDist, 'index.js.map'), 'utf8'));
+  const mainMap = JSON.parse(fs.readFileSync(path.join(dist, 'index.cjs.js.map'), 'utf8'));
+  assert.deepEqual(nativeMap, { ...mainMap, file: 'index.js' }, 'Stale miniprogram sourcemap');
   const sandbox = vm.createContext({ console, setTimeout, clearTimeout });
   const module = { exports: {} };
   const factory = vm.runInContext(

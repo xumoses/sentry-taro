@@ -23,6 +23,12 @@ allowBuilds:
   # Wrangler (website deployment only) validates its platform binaries.
   esbuild@0.28.1: true
   workerd@1.20260911.1: true
+  # miniprogram-ci (WeChat npm packing regression only) needs none of its install scripts.
+  '@parcel/watcher@2.6.0': false
+  '@swc/core@1.4.14': false
+  core-js@2.6.12: false
+  less@4.5.1: false
+  protobufjs@6.11.6: false
 
 # This alias exposes Vite 8.3.4 with the Vite Plus distribution's version.
 peerDependencyRules:

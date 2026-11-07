@@ -165,7 +165,7 @@ const ignores = getSentryMiniProgramNpmIgnores();
 
 The pure Taro plugin can set `replay.worker: {}` to write to the Taro output's `workers` directory by default; `outputRoot` and a single `filename` are supported. The source must be non-empty, copies are byte-identical, and a failure removes the stale target. The host still has to declare the Worker directory in `app.json` and set the runtime `workerPath`.
 
-The npm ignores helper is only for packaging setups where the native entry already bundles Sentry core, to avoid packing `@sentry/core` / `@sentry/conventions` twice. If your app or other dependencies use those packages directly, evaluate the exclusions yourself. Clearing the whole npm output, `miniprogram-ci` packaging and WeChat credentials remain the host's responsibility.
+The SDK publishes its native entry `miniprogram_dist/index.js` and its `index.js.map` through the `miniprogram` field in `package.json`. `packNpmManually` copies both files verbatim, so the packed entry references only that sourcemap and SDK frames resolve to source without the host shifting or rewriting maps. That entry already bundles Sentry core and `fflate`; the npm ignores helper skips the redundant `@sentry/core`, `@sentry/conventions` and `fflate` packages (`fflate` remains a runtime dependency of the ESM build, and packing it on its own triggers an unresolvable-entry warning in `packNpmManually`). If your app or other dependencies use those packages directly, evaluate the exclusions yourself. Clearing the whole npm output, `miniprogram-ci` packaging and WeChat credentials remain the host's responsibility.
 
 ## Options and official alignment
 

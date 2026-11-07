@@ -96,7 +96,7 @@ writeReplayWorker({ projectDir: process.cwd() }); // workers/sentry-replay.js
 const ignores = getSentryMiniProgramNpmIgnores(); // merge into existing packNpmManually ignores
 ```
 
-Use the npm ignores helper only when the native entry already bundles Sentry core; otherwise it may exclude packages the app needs.
+The SDK publishes its native entry as `miniprogram_dist/index.js` + `index.js.map` (package.json `miniprogram` field); `packNpmManually` copies both verbatim, so SDK frames resolve to source with no host-side map shifting. The ignores helper skips `@sentry/core`, `@sentry/conventions` and `fflate`, which that entry already bundles. Use it only when the app does not import those packages directly; otherwise it may exclude packages the app needs. Since the next release after 0.1.1, remove host workarounds that shift the packed SDK map or hand-ignore `fflate`.
 
 ## Hybrid (native host + Taro output)
 

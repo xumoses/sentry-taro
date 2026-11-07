@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { verifyMiniProgramNpm } = require('./verify-miniprogram-npm.cjs');
 
 const root = path.resolve(__dirname, '..');
 const pkg = require('../package.json');
@@ -40,13 +41,44 @@ function run(command, args, cwd, label, timeout = 120_000) {
   }
 }
 
-function main() {
+function install(directory, offline, linker) {
+  const installArgs = [
+    'install',
+    '--ignore-scripts',
+    '--ignore-workspace',
+    '--no-frozen-lockfile',
+    // pnpm 12 no longer reads these non-registry settings from .npmrc.
+    '--config.auto-install-peers=false',
+    `--config.node-linker=${linker}`,
+    '--registry=https://registry.npmjs.org/',
+    '--reporter=append-only',
+    ...(offline ? ['--offline'] : []),
+  ];
+  // An online fetch can legitimately use pnpm's request/retry budget before
+  // reporting a network error. Keep declaration/runtime checks bounded separately.
+  const installTimeout = offline ? 120_000 : 300_000;
+  const pnpmCli = process.env.npm_execpath;
+  if (pnpmCli && /(?:^|[\\/])pnpm\.(?:c?js)$/.test(pnpmCli)) {
+    run(
+      process.execPath,
+      [pnpmCli, ...installArgs],
+      directory,
+      'Tarball installation',
+      installTimeout,
+    );
+  } else {
+    run('pnpm', installArgs, directory, 'Tarball installation', installTimeout);
+  }
+}
+
+async function main() {
   const { tarball, offline } = argumentsFor(process.argv.slice(2));
   assert.ok(
     tarball.endsWith('.tgz') && fs.statSync(tarball).isFile(),
     'Expected an existing npm tarball',
   );
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'sentry-taro-consumer-'));
+  let native;
   try {
     fs.writeFileSync(
       path.join(directory, 'package.json'),
@@ -84,33 +116,7 @@ function main() {
     for (const name of ['consumer.ts', 'consumer.cjs', 'plugin-consumer.cjs']) {
       fs.copyFileSync(path.join(__dirname, 'fixtures', name), path.join(directory, name));
     }
-    const installArgs = [
-      'install',
-      '--ignore-scripts',
-      '--ignore-workspace',
-      '--no-frozen-lockfile',
-      // pnpm 12 no longer reads these non-registry settings from .npmrc.
-      '--config.auto-install-peers=false',
-      '--config.node-linker=isolated',
-      '--registry=https://registry.npmjs.org/',
-      '--reporter=append-only',
-      ...(offline ? ['--offline'] : []),
-    ];
-    // An online fetch can legitimately use pnpm's request/retry budget before
-    // reporting a network error. Keep declaration/runtime checks bounded separately.
-    const installTimeout = offline ? 120_000 : 300_000;
-    const pnpmCli = process.env.npm_execpath;
-    if (pnpmCli && /(?:^|[\\/])pnpm\.(?:c?js)$/.test(pnpmCli)) {
-      run(
-        process.execPath,
-        [pnpmCli, ...installArgs],
-        directory,
-        'Tarball installation',
-        installTimeout,
-      );
-    } else {
-      run('pnpm', installArgs, directory, 'Tarball installation', installTimeout);
-    }
+    install(directory, offline, 'isolated');
     for (const peer of [
       'react',
       '@types/react',
@@ -135,17 +141,39 @@ function main() {
     );
     run(process.execPath, ['consumer.cjs', pkg.version], directory, 'Consumer runtime');
     run(process.execPath, ['plugin-consumer.cjs'], directory, 'Packed Taro plugin');
+
+    // Native WeChat projects install with npm's flat layout and pack with miniprogram-ci.
+    // A sibling directory keeps pnpm from treating it as part of the first consumer;
+    // packNpm finds no packages under a symlinked path such as macOS's /var/folders.
+    native = fs.mkdtempSync(
+      path.join(fs.realpathSync(os.tmpdir()), 'sentry-taro-native-consumer-'),
+    );
+    fs.writeFileSync(
+      path.join(native, 'package.json'),
+      JSON.stringify({
+        name: 'synthetic-sentry-taro-native-consumer',
+        private: true,
+        packageManager: pkg.packageManager,
+        dependencies: { [pkg.name]: `file:${tarball}` },
+      }),
+    );
+    install(native, offline, 'hoisted');
+    const packed = await verifyMiniProgramNpm(native);
+    console.log(
+      `WeChat npm packing passed: no warnings, only ${pkg.name} packed (${packed.files.join(', ')}), ` +
+        `one sourceMappingURL, map resolves to ${packed.source}:${packed.line}.`,
+    );
     console.log(
       'Packed consumer passed: isolated install, strict declarations, no React/Taro/CLI peers.',
     );
   } finally {
-    fs.rmSync(directory, { recursive: true, force: true, maxRetries: 3 });
+    for (const target of [directory, native].filter(Boolean)) {
+      fs.rmSync(target, { recursive: true, force: true, maxRetries: 3 });
+    }
   }
 }
 
-try {
-  main();
-} catch (error) {
+main().catch((error) => {
   console.error(`Consumer verification failed: ${error.message}`);
   process.exitCode = 1;
-}
+});

@@ -30,6 +30,7 @@
   },
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.mjs",
+  "miniprogram": "miniprogram_dist",
   "types": "./dist/types/src/index.d.ts",
   "exports": {
     ".": {
@@ -66,6 +67,7 @@
   },
   "files": [
     "dist",
+    "miniprogram_dist",
     "README.md",
     "README.en.md",
     "LICENSE",
@@ -141,6 +143,7 @@
     "@vitest/coverage-v8": "5.0.4",
     "acorn": "8.19.0",
     "adm-zip": "0.6.0",
+    "miniprogram-ci": "2.1.31",
     "picomatch": "4.0.3",
     "postcss": "8.5.30",
     "postcss-selector-parser": "7.1.1",

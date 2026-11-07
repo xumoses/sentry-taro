@@ -1,5 +1,12 @@
 # Changelog
 
+## 未发布
+
+- 修复原生 npm 构建后 SDK 的 sourcemap 丢失：包原先只有 `main`（`dist/index.cjs.js`），微信 `packNpmManually` 会给它包一层模块头并保留内层 `//# sourceMappingURL=index.cjs.js.map`，却不复制这份 map，上传编译时报 `ENOENT … index.cjs.js.map`，SDK 帧无法还原。现在通过 `package.json` 的 `"miniprogram": "miniprogram_dist"` 发布原生入口 `miniprogram_dist/index.js` 及 `index.js.map`（与 CJS 根入口相同，只改了 map 引用），`packNpmManually` 原样复制，打包后的入口只引用这份 map，并能映射回 SDK 源码。Taro/webpack 使用的 `exports`、`main`、`module` 不变；npm 包新增 `miniprogram_dist/` 两个文件。
+- `getSentryMiniProgramNpmIgnores()` 新增 `node_modules/fflate/**` 和 `node_modules/@xumoses/sentry-taro/node_modules/fflate/**`：原生入口已内置 `fflate`，单独打包时 `packNpmManually` 无法解析其入口并报 `Npm package entry file not found`。`fflate` 仍是 ESM 构建的运行时依赖（见 ADR-0004）；应用自己直接使用 `fflate` 时需从结果中去掉这两项。
+- 升级后，原生宿主可以删除平移打包后 SDK map 的脚本和手写的 `fflate` 忽略项；已在使用 `getSentryMiniProgramNpmIgnores()` 时无需其他改动。
+- `vp run verify:consumer` 新增以 `miniprogram-ci` 的 `packNpmManually` 真实打包 tarball 的检查：无警告、只产出 SDK 一个包、入口只有一条 `sourceMappingURL`、map 存在并映射回 `src/`。`miniprogram-ci` 以精确版本加入 devDependencies，安装脚本在 `pnpm-workspace.yaml` 中关闭。
+
 ## 0.1.1 — 2026-10-29
 
 修复版，发布到 npm `latest`。运行时代码与 `0.1.1-beta.1` 相同；该候选已在首个验证项目的体验版中，以电脑微信（Mac）和手机微信（iOS）通过验收，记录见[0.1.1 实施记录](./docs/implementation/release-0.1.1.md)。从 `0.1.0` 升级无需改动，修复内容见下方 `0.1.1-beta.1` 条目。

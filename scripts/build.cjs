@@ -1,5 +1,5 @@
 const { spawnSync } = require('node:child_process');
-const { cpSync, readdirSync, readFileSync, writeFileSync } = require('node:fs');
+const { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { resolve, join, dirname, relative } = require('node:path');
 
 const root = resolve(__dirname, '..');
@@ -45,3 +45,27 @@ cpSync(
 );
 cpSync(join(root, 'devtools'), join(root, 'dist/devtools'), { recursive: true });
 run('vp', ['run', 'build:types']);
+
+// WeChat's npm packing copies a package's "miniprogram" directory verbatim, maps
+// included, while a "main" file is wrapped in a module header that keeps an inner
+// sourceMappingURL to a map it never copies. Publish the self-contained native
+// entry there under the index.js name the packer and the mini program resolve.
+const nativeDist = join(root, 'miniprogram_dist');
+rmSync(nativeDist, { recursive: true, force: true });
+mkdirSync(nativeDist);
+const nativeSource = readFileSync(join(root, 'dist/index.cjs.js'), 'utf8');
+const sourceMapComment = '//# sourceMappingURL=index.cjs.js.map';
+if (!nativeSource.trimEnd().endsWith(sourceMapComment)) {
+  throw new Error('The native entry no longer ends with its sourcemap comment');
+}
+writeFileSync(
+  join(nativeDist, 'index.js'),
+  nativeSource.replace(
+    /\/\/# sourceMappingURL=index\.cjs\.js\.map(\s*)$/,
+    '//# sourceMappingURL=index.js.map$1',
+  ),
+);
+const nativeMap = JSON.parse(readFileSync(join(root, 'dist/index.cjs.js.map'), 'utf8'));
+nativeMap.file = 'index.js';
+// miniprogram_dist is a sibling of dist, so relative sources keep their base.
+writeFileSync(join(nativeDist, 'index.js.map'), JSON.stringify(nativeMap));
