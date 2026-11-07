@@ -9,7 +9,7 @@ const source = fs.readFileSync(
   'utf8',
 );
 assert(
-  source.includes('Copyright (c) 2023 Arjun Barrett'),
+  source.includes('Copyright (c) 2026 Arjun Barrett'),
   'Bundled fflate MIT notice is required',
 );
 let receive;

@@ -31,7 +31,7 @@ for (const name of ['Buffer', 'atob', 'TextDecoder', 'TextEncoder']) {
 assert(
   fs
     .readFileSync(path.join(root, 'index.cjs.js'), 'utf8')
-    .includes('Copyright (c) 2023 Arjun Barrett'),
+    .includes('Copyright (c) 2026 Arjun Barrett'),
   'Bundled fflate MIT notice is required in the native entry',
 );
 const { decodeReplayAssetData } = load(path.join(root, 'index.cjs.js'));
