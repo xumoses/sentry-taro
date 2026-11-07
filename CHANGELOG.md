@@ -1,6 +1,8 @@
 # Changelog
 
-## 未发布
+## 0.1.2-beta.1 — 2026-11-07
+
+`0.1.1` 之后的修复候选，发布到 npm `beta`；`latest` 仍为 `0.1.1`。以下修复已用本地 tarball 在首个验证项目中完成原生 npm 打包与 Taro 构建验证；微信上传编译和真实事件的栈帧还原待验证。从 `0.1.1` 升级无需改动。
 
 - 修复原生 npm 构建后 SDK 的 sourcemap 丢失：包原先只有 `main`（`dist/index.cjs.js`），微信 `packNpmManually` 会给它包一层模块头并保留内层 `//# sourceMappingURL=index.cjs.js.map`，却不复制这份 map，上传编译时报 `ENOENT … index.cjs.js.map`，SDK 帧无法还原。现在通过 `package.json` 的 `"miniprogram": "miniprogram_dist"` 发布原生入口 `miniprogram_dist/index.js` 及 `index.js.map`（与 CJS 根入口相同，只改了 map 引用），`packNpmManually` 原样复制，打包后的入口只引用这份 map，并能映射回 SDK 源码。Taro/webpack 使用的 `exports`、`main`、`module` 不变；npm 包新增 `miniprogram_dist/` 两个文件。
 - `getSentryMiniProgramNpmIgnores()` 新增 `node_modules/fflate/**` 和 `node_modules/@xumoses/sentry-taro/node_modules/fflate/**`：原生入口已内置 `fflate`，单独打包时 `packNpmManually` 无法解析其入口并报 `Npm package entry file not found`。`fflate` 仍是 ESM 构建的运行时依赖（见 ADR-0004）；应用自己直接使用 `fflate` 时需从结果中去掉这两项。
