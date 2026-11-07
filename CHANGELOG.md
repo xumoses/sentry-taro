@@ -1,7 +1,10 @@
 # Changelog
 
-## 未发布
+## 0.1.2 — 2026-11-07
 
+修复版，发布到 npm `latest`。包含 `0.1.2-beta.1` 的原生入口 sourcemap 修复（见下方条目）和以下依赖升级；从 `0.1.1` 升级无需改动。原生 npm 打包与 Taro 构建已用本地 tarball 在首个验证项目中验证，微信上传编译和真实事件的栈帧还原待验证。
+
+- `latest` 由 `0.1.1` 改为 `0.1.2`；`beta` 渠道停在 `0.1.2-beta.1`。
 - `fflate` 由 `0.8.2` 升级到 `0.8.3`，修复 [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98)（CVE-2026-45820，moderate：`unzipSync` 解析畸形 ZIP64 归档时可能死循环）。SDK 只使用 `zlibSync`（压缩 Worker）、`unzlibSync` 和 `strFromU8`（Replay 资源解码），不调用 `unzipSync`，各产物中也不含该代码，因此此前版本不受该漏洞影响；升级用于消除宿主依赖审计中的告警。原生入口、ESM 依赖与独立 Worker 均使用新版本，THIRD_PARTY_NOTICES 同步更新。
 
 ## 0.1.2-beta.1 — 2026-11-07
