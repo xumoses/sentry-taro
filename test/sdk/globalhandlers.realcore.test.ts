@@ -103,20 +103,59 @@ describe('GlobalHandlers（真 @sentry/core 集成）', () => {
     return handler!;
   }
 
-  it('API 失败的 { errMsg } rejection → 以 errMsg 为值，不带 SDK 内部帧', async () => {
+  it.each(['request:fail', 'request:fail timeout', "hideLoading:fail:toast can't be found"])(
+    'API 失败 %s 保留完整标题，不带 SDK 内部帧',
+    async (errMsg) => {
+      const onRejection = initForRejection();
+      const reason = { errMsg, errno: 5 };
+      onRejection({ reason, promise: Promise.resolve() });
+      await flush(2000);
+
+      const errEvent = collectEvents(captured).find((e) => e.exception?.values?.length);
+      expect(errEvent).toBeDefined();
+      const val = errEvent.exception.values[0];
+      expect(val.type).toBe('Error');
+      expect(val.value).toBe(errMsg);
+      expect(val.mechanism).toEqual({ type: 'onunhandledrejection', handled: false });
+      expect(val.stacktrace).toBeUndefined();
+      expect(errEvent.extra.__serialized__).toEqual(reason);
+    },
+  );
+
+  it.each(['request:ok', 'request:failed', 'message with request:fail'])(
+    '普通响应 %s 的 rejection 仍作为合成异常上报',
+    async (errMsg) => {
+      const onRejection = initForRejection();
+      const reason = { errMsg, statusCode: 503 };
+      onRejection({ reason, promise: Promise.resolve() });
+      await flush(2000);
+
+      const events = collectEvents(captured);
+      expect(events).toHaveLength(1);
+      const val = events[0].exception.values[0];
+      expect(val.value).toContain('Object captured as exception with keys: errMsg, statusCode');
+      expect(val.mechanism).toMatchObject({
+        type: 'onunhandledrejection',
+        handled: false,
+        synthetic: true,
+      });
+      expect(events[0].extra.__serialized__).toEqual(reason);
+    },
+  );
+
+  it('Error rejection 保留业务异常消息和原始栈帧', async () => {
     const onRejection = initForRejection();
-    const reason = { errMsg: 'request:fail timeout', errno: 5 };
+    const reason = Object.assign(new Error('Rejected by application'), { errMsg: 'request:ok' });
+    reason.stack = 'Error: Rejected by application\n    at validateResponse (app.js:12:4)';
     onRejection({ reason, promise: Promise.resolve() });
     await flush(2000);
 
-    const errEvent = collectEvents(captured).find((e) => e.exception?.values?.length);
-    expect(errEvent).toBeDefined();
-    const val = errEvent.exception.values[0];
-    expect(val.type).toBe('Error');
-    expect(val.value).toBe('request:fail timeout');
-    expect(val.mechanism).toEqual({ type: 'onunhandledrejection', handled: false });
-    expect(val.stacktrace).toBeUndefined();
-    expect(errEvent.extra.__serialized__).toEqual(reason);
+    const [event] = collectEvents(captured);
+    const val = event.exception.values[0];
+    expect(val.value).toBe('Rejected by application');
+    expect(val.stacktrace.frames).toContainEqual(
+      expect.objectContaining({ function: 'validateResponse', lineno: 12, colno: 4 }),
+    );
   });
 
   it('不含 errMsg 的普通对象 rejection 仍按 core 的合成异常处理', async () => {

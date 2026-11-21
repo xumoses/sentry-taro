@@ -31,8 +31,13 @@ function errorFromApiFailure(reason: unknown): Error | undefined {
   if (!isPlainObject(reason) || typeof reason['errMsg'] !== 'string') {
     return undefined;
   }
-  const error = new Error(reason['errMsg']);
-  error.stack = `Error: ${reason['errMsg']}`;
+  const errMsg = reason['errMsg'];
+  // Successful callbacks also carry errMsg (e.g. request:ok) when an app rejects the response.
+  if (!/^[a-zA-Z][a-zA-Z0-9_]*:fail(?:$|[\s:])/.test(errMsg)) {
+    return undefined;
+  }
+  const error = new Error(errMsg);
+  error.stack = `Error: ${errMsg}`;
   return error;
 }
 
