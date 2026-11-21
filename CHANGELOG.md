@@ -1,6 +1,6 @@
 # Changelog
 
-## 未发布
+## 0.1.3-beta.2 — 2026-11-21
 
 - 应用将小程序请求响应作为未处理的 Promise 拒绝原因时，SDK 对带 `request:ok` 和有效 HTTP 状态码的响应生成具名异常，例如 `MiniProgramRequestError: Request response rejected (HTTP 502)`。事件保留未处理标志和规范化后的响应字段，标题不再依赖 SDK 采集栈中的函数名。
 
