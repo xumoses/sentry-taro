@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 — 2026-11-21
+
+本修复版沿用 `0.1.3-beta.2` 的运行时逻辑，发布渠道为 npm `latest`。首个验证项目已在电脑微信体验版确认，被拒绝的 HTTP 502 响应在 Sentry 中按 `MiniProgramRequestError: Request response rejected (HTTP 502)` 显示和分组，并保留未处理标志。从 `0.1.2` 升级无需修改接入代码。两次候选的具体改动见下文。
+
 ## 0.1.3-beta.2 — 2026-11-21
 
 - 应用将小程序请求响应作为未处理的 Promise 拒绝原因时，SDK 对带 `request:ok` 和有效 HTTP 状态码的响应生成具名异常，例如 `MiniProgramRequestError: Request response rejected (HTTP 502)`。事件保留未处理标志和规范化后的响应字段，标题不再依赖 SDK 采集栈中的函数名。
