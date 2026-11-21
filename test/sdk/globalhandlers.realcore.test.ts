@@ -122,30 +122,58 @@ describe('GlobalHandlers（真 @sentry/core 集成）', () => {
     },
   );
 
-  it.each(['request:ok', 'request:failed', 'message with request:fail'])(
-    '普通响应 %s 的 rejection 仍作为合成异常上报',
-    async (errMsg) => {
+  it.each([100, 200, 404, 502, 503, 599])(
+    '被拒绝的 request:ok 响应使用 HTTP %i 生成异常标题',
+    async (statusCode) => {
       const onRejection = initForRejection();
-      const reason = { errMsg, statusCode: 503 };
+      const reason = { errMsg: 'request:ok', statusCode, data: { detail: 'synthetic' } };
       onRejection({ reason, promise: Promise.resolve() });
       await flush(2000);
 
       const events = collectEvents(captured);
       expect(events).toHaveLength(1);
-      const val = events[0].exception.values[0];
-      expect(val.value).toContain('Object captured as exception with keys: errMsg, statusCode');
-      expect(val.mechanism).toMatchObject({
-        type: 'onunhandledrejection',
-        handled: false,
-        synthetic: true,
-      });
+      const exception = events[0].exception.values[0];
+      expect(exception.type).toBe('MiniProgramRequestError');
+      expect(exception.value).toBe(`Request response rejected (HTTP ${statusCode})`);
+      expect(exception.mechanism).toEqual({ type: 'onunhandledrejection', handled: false });
+      expect(exception.stacktrace).toBeUndefined();
       expect(events[0].extra.__serialized__).toEqual(reason);
     },
   );
 
+  it.each([
+    ['request:failed', 503],
+    ['message with request:fail', 503],
+    ['uploadFile:ok', 503],
+    ['request:ok', undefined],
+    ['request:ok', '502'],
+    ['request:ok', 99],
+    ['request:ok', 600],
+    ['request:ok', 502.5],
+  ])('普通响应 %s / %s 的 rejection 仍作为合成异常上报', async (errMsg, statusCode) => {
+    const onRejection = initForRejection();
+    const reason = { errMsg, statusCode };
+    onRejection({ reason, promise: Promise.resolve() });
+    await flush(2000);
+
+    const events = collectEvents(captured);
+    expect(events).toHaveLength(1);
+    const val = events[0].exception.values[0];
+    expect(val.value).toContain('Object captured as exception with keys: errMsg, statusCode');
+    expect(val.mechanism).toMatchObject({
+      type: 'onunhandledrejection',
+      handled: false,
+      synthetic: true,
+    });
+    expect(events[0].extra.__serialized__).toEqual(reason);
+  });
+
   it('Error rejection 保留业务异常消息和原始栈帧', async () => {
     const onRejection = initForRejection();
-    const reason = Object.assign(new Error('Rejected by application'), { errMsg: 'request:ok' });
+    const reason = Object.assign(new Error('Rejected by application'), {
+      errMsg: 'request:ok',
+      statusCode: 502,
+    });
     reason.stack = 'Error: Rejected by application\n    at validateResponse (app.js:12:4)';
     onRejection({ reason, promise: Promise.resolve() });
     await flush(2000);

@@ -1,4 +1,4 @@
-import { captureException, getCurrentScope } from '@sentry/core';
+import { captureException, getCurrentScope, normalizeToSize } from '@sentry/core';
 import type { Integration, IntegrationFn } from '@sentry/core';
 
 import { sdk } from '../crossPlatform';
@@ -22,23 +22,42 @@ function errorFromOnErrorString(message: string): Error {
   return error;
 }
 
-/**
- * Failed mini-program APIs reject with a plain `{ errMsg }` object instead of an Error. Its
- * synthetic stack holds only this handler and framework frames, so Sentry would title and group
- * the event by minified SDK function names. Use `errMsg` as the message and keep no frames.
- */
-function errorFromApiFailure(reason: unknown): Error | undefined {
+// A platform rejection object has no call-site stack. Frames from constructing
+// this Error inside the handler would make Sentry group by minified SDK functions.
+function errorWithoutFrames(message: string, name = 'Error'): Error {
+  const error = new Error(message);
+  error.name = name;
+  error.stack = `${name}: ${message}`;
+  return error;
+}
+
+function describeApiRejection(reason: unknown): { error: Error; serialized: unknown } | undefined {
   if (!isPlainObject(reason) || typeof reason['errMsg'] !== 'string') {
     return undefined;
   }
-  const errMsg = reason['errMsg'];
-  // Successful callbacks also carry errMsg (e.g. request:ok) when an app rejects the response.
-  if (!/^[a-zA-Z][a-zA-Z0-9_]*:fail(?:$|[\s:])/.test(errMsg)) {
-    return undefined;
+  const { errMsg, statusCode } = reason;
+  if (/^[a-zA-Z][a-zA-Z0-9_]*:fail(?:$|[\s:])/.test(errMsg)) {
+    return { error: errorWithoutFrames(errMsg), serialized: reason };
   }
-  const error = new Error(errMsg);
-  error.stack = `Error: ${errMsg}`;
-  return error;
+  if (
+    errMsg === 'request:ok' &&
+    Number.isInteger(statusCode) &&
+    statusCode >= 100 &&
+    statusCode <= 599
+  ) {
+    return {
+      error: errorWithoutFrames(
+        `Request response rejected (HTTP ${statusCode})`,
+        'MiniProgramRequestError',
+      ),
+      // Match core's plain-object serialization limit for arbitrary response bodies.
+      serialized: normalizeToSize(
+        reason,
+        getCurrentScope().getClient()?.getOptions().normalizeDepth,
+      ),
+    };
+  }
+  return undefined;
 }
 
 /** Global handlers */
@@ -140,8 +159,9 @@ export class GlobalHandlers implements Integration {
         reason: string | Error;
         promise: Promise<any>;
       }) => {
-        const apiError = errorFromApiFailure(reason);
-        const error = typeof reason === 'string' ? new Error(reason) : (apiError ?? reason);
+        const apiRejection = describeApiRejection(reason);
+        const error =
+          typeof reason === 'string' ? new Error(reason) : (apiRejection?.error ?? reason);
         captureException(error, {
           mechanism: {
             type: 'onunhandledrejection',
@@ -151,7 +171,9 @@ export class GlobalHandlers implements Integration {
             promise,
           },
           // Keeps the other fields (such as `errno`) under the key core uses for plain objects.
-          ...(apiError ? { captureContext: { extra: { __serialized__: reason } } } : {}),
+          ...(apiRejection
+            ? { captureContext: { extra: { __serialized__: apiRejection.serialized } } }
+            : {}),
         });
       };
       sdk().onUnhandledRejection?.(this._rejectionHandler);
