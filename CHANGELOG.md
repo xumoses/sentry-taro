@@ -1,6 +1,6 @@
 # Changelog
 
-## 未发布
+## 0.1.3-beta.1 — 2026-11-21
 
 - 全局未处理 rejection 仅在 `errMsg` 以小程序 API 的 `<API 名>:fail` 开头且后接空白、冒号或字符串结尾时，以完整失败消息作为异常标题。被拒绝的 `request:ok` 响应按普通对象上报，响应状态码等字段可在 `extra.__serialized__` 中查看。
 
